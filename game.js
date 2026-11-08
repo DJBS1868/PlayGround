@@ -115,8 +115,10 @@ let bladeUserChoice = null;
 const $ = (id) => document.getElementById(id);
 function syncBladeToggle() {
   const toggle = $('bladeToggle');
-  toggle.setAttribute('aria-pressed', String(bladeIgnited));
-  toggle.innerHTML = `${bladeIgnited ? 'EXTINGUISH BLADE' : 'IGNITE BLADE'} <span>${bladeIgnited ? '✦' : '↗'}</span>`;
+  toggle.setAttribute('aria-checked', String(bladeIgnited));
+  toggle.setAttribute('aria-label', `${bladeIgnited ? 'Turn preview blade off' : 'Turn preview blade on'}`);
+  toggle.classList.toggle('is-on', bladeIgnited);
+  toggle.querySelector('.blade-power-state').textContent = bladeIgnited ? 'ON' : 'OFF';
 }
 const money = (amount) => `¤ ${Math.round(amount).toLocaleString('en-US')}`;
 
