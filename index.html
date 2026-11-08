@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101211" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23d8f36a'/%3E%3Cpath d='M10 8h20v17l-7 7H10z' fill='%23131615'/%3E%3C/svg%3E" />
+  <title>FORGE / Saber Atelier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
+  <script type="module" src="game.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Forge home"><span class="brand-mark">F</span><span>FORGE<span class="brand-slash">/</span></span></a>
+      <div class="top-center"><span class="live-dot"></span> SABER ATELIER <span class="top-divider">·</span> CORUSCANT, 09:42</div>
+      <button class="sound-toggle" id="soundToggle" aria-label="Toggle sound"><span class="sound-icon">♪</span><span>SOUND <b id="soundState">OFF</b></span></button>
+    </header>
+
+    <main class="workspace">
+      <aside class="left-rail">
+        <div class="rail-heading"><div><span class="eyebrow">YOUR WORKBENCH</span><h1>Build a<br><em>legacy.</em></h1></div><div class="build-number">01<br><span>/ 05</span></div></div>
+        <p class="intro-copy">Every saber tells a story. Choose your components, find your crystal, and make yours worth remembering.</p>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <nav class="step-list" id="stepList" aria-label="Build steps"></nav>
+        <div class="rail-bottom"><span class="tiny-orbit">✳</span><span>BUILT BY YOU, FOR THE GALAXY.</span></div>
+      </aside>
+
+      <section class="preview-panel" aria-label="3D saber preview">
+        <div class="preview-top"><div><span class="eyebrow">LIVE PREVIEW</span><span class="preview-caption">DRAG TO INSPECT <span>↗</span></span></div><button class="icon-button" id="resetView" title="Reset view">⟳</button></div>
+        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div><div class="scene-label"><span class="live-dot"></span> PROTOTYPE RENDER <span class="scene-label-right">01 — 05</span></div></div>
+        <div class="preview-bottom"><div><span class="eyebrow">CURRENT BUILD</span><strong id="previewName">The Wayfinder</strong></div><div class="crystal-readout"><span class="crystal-dot" id="crystalDot"></span><span><small>CRYSTAL</small><b id="crystalReadout">KYBER · AZURE</b></span></div><div class="price-readout"><small>EST. VALUE</small><strong id="previewPrice">¤ 2,640</strong></div></div>
+        <div class="step-controls"><button class="text-button" id="prevStep" disabled>← <span>BACK</span></button><span class="step-summary" id="stepSummary">01 / 05 &nbsp; HILT</span><button class="primary-button" id="nextStep">NEXT PART <span>→</span></button></div>
+      </section>
+
+      <aside class="choice-panel">
+        <div class="choice-header"><div><span class="eyebrow" id="categoryEyebrow">STEP 01 · FOUNDATION</span><h2 id="categoryTitle">Choose your hilt</h2></div><span class="component-count" id="componentCount">01 <i>/ 04</i></span></div>
+        <p class="choice-description" id="categoryDescription">The heart of your build. A good hilt feels like it was always meant to be yours.</p>
+        <div class="option-list" id="optionList"></div>
+        <div class="selection-note"><span class="note-icon">✳</span><span id="selectionNote">A balanced classic, made for a steady hand.</span></div>
+        <div class="choice-footer"><div class="subtotal"><span>PART VALUE</span><strong id="partValue">¤ 620</strong></div><button class="primary-button wide" id="finishButton">FINISH & SELL <span>↗</span></button></div>
+      </aside>
+    </main>
+
+    <footer class="statusbar"><span><i class="status-dot"></i> WORKBENCH ONLINE</span><span class="status-center">A GALAXY OF POSSIBILITIES, ONE PART AT A TIME.</span><span>DESIGNED TO BE YOURS <b>✳</b></span></footer>
+  </div>
+
+  <div class="sale-overlay" id="saleOverlay" aria-hidden="true"><div class="sale-card"><button class="sale-close" id="saleClose" aria-label="Close">×</button><div class="sale-spark">✳</div><span class="eyebrow">A MASTERPIECE, SOLD</span><h2>One of a kind.<br><em>Worth every credit.</em></h2><p>Your saber has found its next chapter. The choices were yours, and the galaxy noticed.</p><div class="sale-total"><span>FINAL OFFER</span><strong id="salePrice">¤ 0</strong><small>GALACTIC CREDITS</small></div><div class="sale-breakdown" id="saleBreakdown"></div><button class="primary-button wide" id="buildAnother">BUILD ANOTHER <span>↗</span></button></div></div>
+  <div class="toast" id="toast" role="status"></div>
+</body>
+</html>
