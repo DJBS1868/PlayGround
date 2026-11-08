@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#07111b">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2345d9f4' d='M4 4h3v24H4zm10-2h3v28h-3zm10 3h3v22h-3z'/%3E%3C/svg%3E">
+  <title>Jedi Temple Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark"><span></span><span></span><span></span></div><div><div class="eyebrow">JEDI ORDER · ARCHIVE SECTOR 07</div><h1>JEDI TEMPLE <b>DEFENSE</b></h1></div></div>
+      <div class="status-grid">
+        <div class="stat health-stat"><div class="stat-label"><span class="status-dot red"></span>TEMPLE HEALTH <b id="healthText">100%</b></div><div class="meter"><i id="healthBar"></i></div></div>
+        <div class="stat force-stat"><div class="stat-label"><span class="status-dot blue"></span>FORCE ENERGY <b id="forceText">100%</b></div><div class="meter"><i id="forceBar"></i></div></div>
+        <div class="stat wave-stat"><div class="stat-label">CURRENT WAVE</div><div class="wave-number"><b id="waveText">01</b><span>/ 05</span><em id="waveState">INCOMING</em></div></div>
+        <div class="stat score-stat"><div class="stat-label">SCORE <b id="scoreText">000000</b></div><div class="credits"><span>◈</span><b id="creditsText">120</b><small> CREDITS</small></div></div>
+      </div>
+      <button class="sound-button" id="soundButton" aria-label="Toggle sound">♪<span>SOUND</span></button>
+    </header>
+    <section class="arena-wrap" aria-label="Battle arena">
+      <div class="arena-frame"><canvas id="gameCanvas" aria-label="Jedi Temple battle arena"></canvas>
+        <div class="arena-caption"><span class="live-dot"></span>ARCHIVE CHAMBER <span class="caption-divider">/</span> DEFENSE GRID ACTIVE</div>
+        <div class="hint" id="hint">TAP THE ARENA TO MOVE · SELECT A DEFENSE TO DEPLOY</div>
+        <div class="wave-banner" id="waveBanner"><span>WAVE 01</span><b>INCOMING</b></div>
+        <div class="objective"><span class="objective-icon">⌖</span><div><b>ARCHIVE NODE</b><small>PROTECT AT ALL COSTS</small></div></div>
+        <div class="boss-status" id="bossStatus"><div class="boss-title">SENTINEL DROID <span>THREAT LEVEL: CRITICAL</span></div><div class="boss-meter"><i id="bossBar"></i></div></div>
+        <div class="toast" id="toast"></div>
+        <div class="modal hidden" id="shopModal"><div class="modal-card shop-card"><div class="modal-kicker">WAVE SECURED · TEMPLE ARCHIVES</div><div class="modal-emblem">✧</div><h2>WAVE COMPLETE</h2><p class="modal-copy">The archives hold. Recalibrate before the next assault.</p><div class="shop-coins"><span>◈</span><b id="shopCredits">120</b> CREDITS AVAILABLE</div><div class="upgrade-list">
+          <button class="upgrade" id="speedUpgrade"><span class="upgrade-icon">↗</span><span><b>FOOTWORK</b><small>Increase movement speed</small></span><strong>75 <small>CR</small></strong></button>
+          <button class="upgrade" id="damageUpgrade"><span class="upgrade-icon">⚔</span><span><b>FORCE ATTUNEMENT</b><small>Increase deflection damage</small></span><strong>90 <small>CR</small></strong></button>
+        </div><button class="primary-button" id="nextWave">DEPLOY NEXT WAVE <span>→</span></button><div class="shop-note">UPGRADES PERSIST FOR THE ENTIRE MISSION</div></div></div>
+        <div class="modal hidden" id="endModal"><div class="modal-card end-card"><div class="modal-kicker" id="endKicker">MISSION REPORT · TEMPLE ARCHIVES</div><div class="end-symbol" id="endSymbol">✧</div><h2 id="endTitle">TEMPLE PRESERVED!</h2><p class="modal-copy" id="endCopy">The Jedi archives remain secure.</p><div class="final-score"><span>FINAL SCORE</span><b id="finalScore">000000</b></div><button class="primary-button" id="restartButton">PLAY AGAIN <span>↻</span></button></div></div>
+      </div>
+    </section>
+    <footer class="bottom-bar">
+      <div class="controls-label"><span class="control-line"></span><div><b>DEPLOY DEFENSE</b><small>SELECT · TAP ARENA TO PLACE</small></div></div>
+      <div class="action-buttons">
+        <button class="action-button" data-build="pylon" id="pylonButton"><span class="action-icon pylon-icon">⌑</span><span class="action-copy"><b>SHIELD PYLON</b><small>SLOWS DROID MOVEMENT</small></span><span class="action-cost"><b>50</b><small>CR</small></span></button>
+        <button class="action-button" data-build="turret" id="turretButton"><span class="action-icon turret-icon">⊕</span><span class="action-copy"><b>BLASTER TURRET</b><small>AUTO-TARGETS ENEMIES</small></span><span class="action-cost"><b>70</b><small>CR</small></span></button>
+        <button class="action-button force-button" id="forceButton"><span class="cooldown-ring"><i id="cooldownSweep"></i><span>✦</span></span><span class="action-copy"><b>FORCE PUSH</b><small id="forceSub">AREA BLAST · READY</small></span><span class="force-key">F</span></button>
+      </div>
+      <div class="bottom-meta"><span class="desktop-hint">ESC CANCELS PLACEMENT</span><span class="version">JTD <i>·</i> 01</span></div>
+    </footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
