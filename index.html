@@ -21,7 +21,7 @@ const colors={ink:'#172326',deep:'#10191d',steel:'#304247',line:'#526368',cream:
 let mode='title',last=0,elapsed=0,score=0,stops=0,misses=0,toast='',toastTime=0,shake=0;
 const player={x:600,y:602,vx:0,vy:0,face:0,carried:null,interactLock:0,anim:0};
 const cars=[{name:'ARIA 07',color:'#f06d4d',number:'07',next:5,stops:0,crew:'#e28e64'},{name:'NOVA 22',color:'#68b6b0',number:'22',next:22,stops:0,crew:'#73c5b6'}];
-let active=null,entering=null,taskQueue=[],jobIndex=0,jobTime=0,jobLimit=33,carAnim=0,flashes=[],particles=[],clock=0,pausedFrom='';
+let active=null,entering=null,taskQueue=[],jobIndex=0,jobTime=0,jobLimit=33,carAnim=0,flashes=[],particles=[],clock=0,pausedFrom='',lastArrival=-Infinity;
 const PIT={x:600,y:500};
 const stations={tires:{x:448,y:311,label:'TIRE STACK',icon:'tire'},fuel:{x:750,y:310,label:'FUEL RIG',icon:'fuel'},tools:{x:600,y:290,label:'TOOL WALL',icon:'tools'}};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -106,8 +106,8 @@ function drawPitLane(){
    drawCar(c,x,y,false,Math.atan2(dy,dx));continue;
   }
   if(active||entering){
-   // Stage the next car in the middle lane near the service-box entrance; keep the bottom lane open.
-   drawCar(c,active?385:325,550,false,-.16);continue;
+   // Only show a car in the middle-lane queue after its scheduled arrival; keep the bottom lane open.
+   if(c.next<=elapsed)drawCar(c,active?385:325,550,false,-.16);continue;
   }
   if(c.next-elapsed<4&&c.next-elapsed>0){let p=1-(c.next-elapsed)/4;drawCar(c,-100+p*630,620,false)}
   else if(c.stops>0){let x=860+((elapsed*70+c.stops*120)%480);drawCar(c,x,620,false)}
@@ -225,7 +225,7 @@ function drawPause(){ctx.fillStyle='#0a1112bb';ctx.fillRect(0,0,W,H);roundedPane
 function drawGameOver(){ctx.fillStyle='#0a1112cc';ctx.fillRect(0,0,W,H);roundedPanel(370,207,460,330,'#152326f7','#d7ef6577');txt(misses>=3?'THE BOX LOST TIME':'CHEQUERED FLAG',600,252,10,colors.lime,800,'center',2.3);txt(misses>=3?'Race over':'Race complete',600,297,31,colors.cream,850,'center');line(425,330,775,330,'#ffffff2a');txt(String(score).padStart(5,'0'),600,375,37,colors.lime,900,'center');txt('FINAL SCORE',600,408,9,'#a7b5ae',800,'center',1.5);txt(`${stops} STOPS   ·   ${misses} MISSES`,600,445,11,colors.cream,700,'center',1.4);rr(ctx,500,473,200,40,6,colors.lime);txt('RACE AGAIN',600,493,11,'#172326',900,'center',1.5);txt('Click or press Enter',600,527,9,'#a5b4ac',600,'center')}
 function distance(x,y,a,b){return Math.hypot(x-a,y-b)}
 function nearStation(){for(const [kind,s] of Object.entries(stations)){if(distance(player.x,player.y,s.x,s.y)<72)return kind}return null}
-function startRace(){mode='playing';elapsed=0;score=0;stops=0;misses=0;active=null;entering=null;taskQueue=[];jobIndex=0;jobTime=0;player.x=600;player.y=606;player.carried=null;player.interactLock=0;player.target=null;toast='';toastTime=0;cars[0].next=5;cars[1].next=16;cars.forEach(c=>{c.inBox=false;c.stops=0});}
+function startRace(){mode='playing';elapsed=0;score=0;stops=0;misses=0;active=null;entering=null;lastArrival=-Infinity;taskQueue=[];jobIndex=0;jobTime=0;player.x=600;player.y=606;player.carried=null;player.interactLock=0;player.target=null;toast='';toastTime=0;cars[0].next=5;cars[1].next=40;cars.forEach(c=>{c.inBox=false;c.stops=0});}
 function beginStop(car){active=car;car.inBox=true;jobTime=0;jobLimit=39;jobIndex=0;player.carried=null;const kinds=['tire','fuel','tools'];for(let i=kinds.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[kinds[i],kinds[j]]=[kinds[j],kinds[i]]}taskQueue=kinds;toast=`${car.name} IN THE BOX — MOVE!`;toastTime=2.5;flashes.push({x:PIT.x,y:PIT.y,life:.5});}
 function say(message){toast=message;toastTime=1.8}
 function interact(){
@@ -255,7 +255,7 @@ function update(dt){
  elapsed+=dt;
  if(elapsed>=120){mode='over';return}
  // Cars peel off the lower racing lane, then settle into the upper service lane.
- if(!active&&!entering){const due=cars.filter(c=>!c.inBox&&c.next<=elapsed).sort((a,b)=>a.next-b.next)[0];if(due){entering={car:due,t:0};due.inBox=true}}
+ if(!active&&!entering){const due=cars.filter(c=>!c.inBox&&c.next<=elapsed&&elapsed-lastArrival>=35).sort((a,b)=>a.next-b.next)[0];if(due){entering={car:due,t:0};due.inBox=true;lastArrival=elapsed}}
  if(entering){entering.t+=dt;if(entering.t>=.9){const car=entering.car;entering=null;beginStop(car)}}
  if(active){jobTime+=dt;if(jobTime>=jobLimit){misses++;score=Math.max(0,score-150);shake=.3;say(`${active.name} RELEASED LATE — LOST TRACK POSITION`);let lost=active;lost.inBox=false;lost.next=elapsed+12;active=null;player.carried=null;player.x=600;player.y=606;if(misses>=3)mode='over';}}
  // movement
