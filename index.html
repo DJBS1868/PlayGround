@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070b12">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23071019' stroke='%235be6ff' d='M16 2 29 16 16 30 3 16z'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%235be6ff'/%3E%3C/svg%3E">
+  <title>Jedi Temple Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-shell" id="gameShell">
+    <canvas id="game" aria-label="Jedi Temple Defense game arena"></canvas>
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark"><span></span><i></i></div><div><div class="eyebrow">TEMPLE ARCHIVES · SECTOR 07</div><h1>JEDI TEMPLE <b>DEFENSE</b></h1></div></div>
+      <div class="status-grid">
+        <div class="stat"><div class="stat-head"><span class="stat-icon heart">✦</span><span>TEMPLE</span><strong id="healthText">100%</strong></div><div class="meter"><i id="healthBar"></i></div></div>
+        <div class="stat"><div class="stat-head"><span class="stat-icon force">◈</span><span>FORCE</span><strong id="forceText">100%</strong></div><div class="meter force-meter"><i id="forceBar"></i></div></div>
+        <div class="stat wave-stat"><div class="stat-head"><span class="stat-icon wave-icon">⌁</span><span>WAVE</span><strong id="waveText">01 <small>/ 05</small></strong></div><div class="wave-sub" id="waveSub">INCOMING · DROID PATROL</div></div>
+      </div>
+      <div class="wallet"><span class="wallet-symbol">✧</span><div><small>CREDITS</small><strong id="creditsText">120</strong></div><span class="wallet-divider"></span><div><small>SCORE</small><strong id="scoreText">0000</strong></div></div>
+    </header>
+    <div class="arena-hint"><span class="live-dot"></span><span id="hintText">TAP THE ARCHIVE FLOOR TO MOVE</span></div>
+    <div class="boss-hud" id="bossHud"><div class="boss-label"><span>◆</span> SENTINEL DROID <b id="bossHpText">100%</b></div><div class="boss-track"><i id="bossHpBar"></i></div></div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+    <footer class="bottom-bar">
+      <div class="build-tools">
+        <button class="tool-button" id="pylonBtn" type="button"><span class="tool-icon pylon-icon"><i></i></span><span class="tool-copy"><b>SHIELD PYLON</b><small>BUILD · <em>60</em></small></span><span class="tool-shortcut">01</span></button>
+        <button class="tool-button" id="turretBtn" type="button"><span class="tool-icon turret-icon"><i></i></span><span class="tool-copy"><b>BLASTER TURRET</b><small>BUILD · <em>80</em></small></span><span class="tool-shortcut">02</span></button>
+      </div>
+      <div class="bottom-right">
+        <div class="control-note"><span class="keycap">TAP</span><span>TO MOVE<br><b>HERO</b></span></div>
+        <button class="force-button" id="forceBtn" type="button"><span class="force-orbit"></span><span class="force-button-icon">✧</span><span class="force-copy"><b>FORCE PUSH</b><small id="cooldownText">READY · 10 SEC</small></span><span class="force-cooldown" id="cooldownRing"></span></button>
+      </div>
+    </footer>
+    <div class="modal-layer" id="modalLayer" hidden><section class="modal-card" id="modalCard"></section></div>
+    <div class="rotate-tip">ROTATE DEVICE FOR THE BEST DEFENSE VIEW</div>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
