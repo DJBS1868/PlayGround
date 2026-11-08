@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="auction.css" />
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
   <script type="module" src="game.js"></script>
 </head>
@@ -23,7 +24,7 @@
 
     <main class="workspace">
       <aside class="left-rail">
-        <div class="rail-heading"><div><span class="eyebrow">YOUR WORKBENCH</span><h1>Build a<br><em>legacy.</em></h1></div><div class="build-number">01<br><span>/ 05</span></div></div>
+        <div class="rail-heading"><div><span class="eyebrow">YOUR WORKBENCH</span><h1>Build a<br><em>legacy.</em></h1></div><div class="build-number">01<br><span>/ 09</span></div></div>
         <p class="intro-copy">Every saber tells a story. Choose your components, find your crystal, and make yours worth remembering.</p>
         <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
         <nav class="step-list" id="stepList" aria-label="Build steps"></nav>
@@ -32,9 +33,9 @@
 
       <section class="preview-panel" aria-label="3D saber preview">
         <div class="preview-top"><div><span class="eyebrow">LIVE PREVIEW</span><span class="preview-caption">DRAG TO INSPECT <span>↗</span></span></div><button class="icon-button" id="resetView" title="Reset view">⟳</button></div>
-        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div><div class="scene-label"><span class="live-dot"></span> PROTOTYPE RENDER <span class="scene-label-right">01 — 05</span></div></div>
+        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div><div class="scene-label"><span class="live-dot"></span> PROTOTYPE RENDER <span class="scene-label-right">01 — 09</span></div></div>
         <div class="preview-bottom"><div><span class="eyebrow">CURRENT BUILD</span><strong id="previewName">The Wayfinder</strong></div><div class="crystal-readout"><span class="crystal-dot" id="crystalDot"></span><span><small>CRYSTAL</small><b id="crystalReadout">KYBER · AZURE</b></span></div><div class="price-readout"><small>EST. VALUE</small><strong id="previewPrice">¤ 2,640</strong></div></div>
-        <div class="step-controls"><button class="text-button" id="prevStep" disabled>← <span>BACK</span></button><span class="step-summary" id="stepSummary">01 / 05 &nbsp; HILT</span><button class="primary-button" id="nextStep">NEXT PART <span>→</span></button></div>
+        <div class="step-controls"><button class="text-button" id="prevStep" disabled>← <span>BACK</span></button><span class="step-summary" id="stepSummary">01 / 09 &nbsp; HILT</span><button class="primary-button" id="nextStep">NEXT PART <span>→</span></button></div>
       </section>
 
       <aside class="choice-panel">
@@ -49,7 +50,29 @@
     <footer class="statusbar"><span><i class="status-dot"></i> WORKBENCH ONLINE</span><span class="status-center">A GALAXY OF POSSIBILITIES, ONE PART AT A TIME.</span><span>DESIGNED TO BE YOURS <b>✳</b></span></footer>
   </div>
 
-  <div class="sale-overlay" id="saleOverlay" aria-hidden="true"><div class="sale-card"><button class="sale-close" id="saleClose" aria-label="Close">×</button><div class="sale-spark">✳</div><span class="eyebrow">A MASTERPIECE, SOLD</span><h2>One of a kind.<br><em>Worth every credit.</em></h2><p>Your saber has found its next chapter. The choices were yours, and the galaxy noticed.</p><div class="sale-total"><span>FINAL OFFER</span><strong id="salePrice">¤ 0</strong><small>GALACTIC CREDITS</small></div><div class="sale-breakdown" id="saleBreakdown"></div><button class="primary-button wide" id="buildAnother">BUILD ANOTHER <span>↗</span></button></div></div>
+  <div class="sale-overlay" id="saleOverlay" aria-hidden="true">
+    <section class="auction-room" id="auctionRoom" aria-label="Galactic saber auction">
+      <header class="auction-header"><div class="auction-brand"><span class="live-dot"></span><div><span class="eyebrow">CORUSCANT EXCHANGE</span><strong>THE AFTERMARKET <i>·</i> LIVE AUCTION</strong></div></div><div class="auction-lot"><small>LOT 07 · ONE OF A KIND</small><b id="auctionBuildName">AZURE WAYFINDER</b></div><button class="sale-close" id="saleClose" aria-label="Close auction">×</button></header>
+      <div class="auction-stage" id="auctionStage">
+        <div class="auction-scanlines"></div><div class="auction-skyline"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="auction-status"><span class="live-pill"><i></i> <b id="auctionState">BIDDING OPEN</b></span><span>TIME LEFT <b id="auctionTimer">18</b></span></div>
+        <div class="auction-crowd" aria-label="Bidders">
+          <div class="bidder bidder-1" data-bidder="0"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>VEX-9</b><small>COLLECTOR</small></div>
+          <div class="bidder bidder-2" data-bidder="1"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>MASTER SOL</b><small>JEDI ARCHIVE</small></div>
+          <div class="bidder bidder-3" data-bidder="2"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>NYX KORR</b><small>BOUNTY HUNTER</small></div>
+          <div class="bidder bidder-4" data-bidder="3"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>DR. LUMA</b><small>KYBER SCHOLAR</small></div>
+          <div class="bidder bidder-5" data-bidder="4"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>JAX RENN</b><small>SMUGGLER</small></div>
+          <div class="bidder bidder-6" data-bidder="5"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>THE CURATOR</b><small>PRIVATE VAULT</small></div>
+        </div>
+        <div class="auction-podium"><div class="podium-glow"></div><div class="mini-saber"><i class="mini-blade"></i><i class="mini-hilt"></i><i class="mini-switch"></i></div><div class="podium-top"></div><div class="podium-column"><span>F O R G E</span></div><div class="podium-base"></div></div>
+        <div class="auction-product-label"><span>LOT 07</span><b id="stageBuildName">AZURE WAYFINDER</b><small>HAND-FORGED · KYBER-BOUND</small></div>
+        <div class="bid-live-card"><small>HIGHEST BID</small><strong id="auctionPrice">¤ 0</strong><span id="auctionBidder">OPENING OFFER</span></div>
+        <div class="auction-speech" id="auctionSpeech">A rare build enters the room. Who will make the first offer?</div>
+      </div>
+      <footer class="auction-footer"><div class="auction-count"><span class="live-dot"></span><span id="bidCount">0</span> BIDS <i>·</i> RESERVE MET</div><div class="auction-actions"><button class="auction-let-run" id="auctionRun">LET BIDS ROLL <span>↗</span></button><button class="primary-button" id="acceptBid">ACCEPT OFFER <span>✓</span></button></div></footer>
+      <div class="auction-result" id="auctionResult" aria-hidden="true"><div class="result-card"><div class="sale-spark">✳</div><span class="eyebrow">A MASTERPIECE, SOLD</span><h2>One of a kind.<br><em>Worth every credit.</em></h2><p id="resultCopy">Your saber has found its next chapter. The galaxy noticed.</p><div class="sale-total"><span>WINNING BID</span><strong id="salePrice">¤ 0</strong><small>GALACTIC CREDITS</small></div><div class="sale-breakdown" id="saleBreakdown"></div><button class="primary-button wide" id="buildAnother">BUILD ANOTHER <span>↗</span></button></div></div>
+    </section>
+  </div>
   <div class="toast" id="toast" role="status"></div>
 </body>
 </html>
