@@ -110,7 +110,14 @@ const options = {
 };
 const selected = Object.fromEntries(Object.keys(options).map(key => [key, 0]));
 let activeStep = 0;
+let bladeIgnited = false;
+let bladeUserChoice = null;
 const $ = (id) => document.getElementById(id);
+function syncBladeToggle() {
+  const toggle = $('bladeToggle');
+  toggle.setAttribute('aria-pressed', String(bladeIgnited));
+  toggle.innerHTML = `${bladeIgnited ? 'EXTINGUISH BLADE' : 'IGNITE BLADE'} <span>${bladeIgnited ? '✦' : '↗'}</span>`;
+}
 const money = (amount) => `¤ ${Math.round(amount).toLocaleString('en-US')}`;
 
 function selectedOption(id) { return options[id][selected[id]]; }
@@ -154,6 +161,8 @@ function renderOptions() {
   }).join('');
   document.querySelectorAll('.option-card').forEach(button => button.addEventListener('click', () => {
     selected[step.id] = Number(button.dataset.option);
+    if (step.id === 'crystal' || step.id === 'blade') bladeIgnited = true;
+    syncBladeToggle();
     renderOptions(); updateUI(); rebuildSaber(); playTone(480 + activeStep * 70, .07);
   }));
   $('selectionNote').textContent = selectedOption(step.id).note;
@@ -161,6 +170,11 @@ function renderOptions() {
 }
 function setStep(index) {
   activeStep = Math.max(0, Math.min(steps.length - 1, index));
+  if (steps[activeStep].id !== 'crystal' && steps[activeStep].id !== 'blade') {
+    bladeIgnited = bladeUserChoice === true;
+    syncBladeToggle();
+    rebuildSaber();
+  }
   renderSteps(); renderOptions();
 }
 function updateUI() {
@@ -611,7 +625,8 @@ function rebuildSaber() {
     addMesh(model, new THREE.SphereGeometry(.10, 12, 8), dark, [0, -.84, 0]);
   }
   torus(model, .29, .014, bright, -.69);
-  // Build a profile-specific energy blade from its actual geometry, not just its card label.
+  // Build the energy blade and its light only while the ignition control is on.
+  if (bladeIgnited) {
   const bladeProfile = selectedOption('blade');
   const bladeStyle = bladeProfile.style;
   const bladeLength = bladeStyle === 'long' ? 4.08 : bladeStyle === 'crossguard' ? 3.48 : 3.55;
@@ -651,6 +666,7 @@ function rebuildSaber() {
     }
   }
   const aura = new THREE.PointLight(crystal.hex, 13, 5.5); aura.position.set(0, bladeCenter - .4, 0); model.add(aura);
+  }
   model.rotation.z = -.055;
   syncAuctionSaber(); resizeAuctionScene();
   $('sceneLoading').style.opacity = '0'; setTimeout(() => { $('sceneLoading').style.display = 'none'; }, 520);
@@ -672,6 +688,13 @@ mount.addEventListener('pointermove', event => {
 });
 mount.addEventListener('pointerup', () => { pointerDown = false; });
 mount.addEventListener('pointercancel', () => { pointerDown = false; });
+$('bladeToggle').addEventListener('click', () => {
+  bladeIgnited = !bladeIgnited;
+  bladeUserChoice = bladeIgnited;
+  syncBladeToggle();
+  rebuildSaber();
+  playTone(bladeIgnited ? 620 : 340, .12);
+});
 $('resetView').addEventListener('click', () => { rotationY = -.24; rotationX = 0; autoRotate = false; });
 function animate() {
   requestAnimationFrame(animate);
@@ -693,4 +716,4 @@ function animate() {
   renderer.render(scene, camera);
   if ($('saleOverlay').classList.contains('open')) auctionRenderer.render(auctionScene, auctionCamera);
 }
-renderSteps(); renderOptions(); updateUI(); rebuildSaber(); animate();
+renderSteps(); renderOptions(); updateUI(); syncBladeToggle(); rebuildSaber(); animate();
