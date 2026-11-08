@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#101619">
+  <title>LAST STOP — Pit Lane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <canvas id="scene" aria-label="Top-down view of a busy race pit lane"></canvas>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Last Stop Pit Lane home"><span class="brand-mark">LS<span>•</span></span><span class="brand-name">LAST<span>STOP</span><small>RACE SERVICE / EST. 1987</small></span></a>
+      <div class="race-status"><span class="live-dot"></span><span>ROUND 06</span><i></i><b>HARBOR SPRINT</b></div>
+      <div class="scoreboard"><span class="score-label">TEAM SCORE</span><strong id="score">000</strong><span class="score-divider"></span><span class="lap-label">LAP <b id="lap">12</b><small>/ 24</small></span></div>
+    </header>
+    <section class="mission-card" aria-live="polite">
+      <div class="mission-kicker"><span class="flag-icon">◆</span><span id="mission-kicker">PIT WINDOW OPEN</span><span class="car-number" id="car-number">07</span></div>
+      <div class="mission-main"><div class="mission-title" id="car-name">NIGHTJAR</div><div class="timer-wrap"><span class="timer-label">BOX TIME</span><strong id="timer">00:28</strong></div></div>
+      <div class="needs" id="needs"></div>
+    </section>
+    <div class="hint-pill" id="hint"><span class="hint-key">E</span><span id="hint-text">Grab the fresh tyres</span></div>
+    <div class="toast" id="toast"></div>
+    <div class="mobile-controls" id="mobile-controls" aria-label="Touch controls">
+      <div class="stick-zone" id="stick-zone"><div class="stick-base"><div class="stick-knob" id="stick-knob"></div></div><span class="stick-caption">MOVE</span></div>
+      <button class="action-button" id="action-button"><span class="action-icon">↗</span><span id="action-label">ACTION</span></button>
+    </div>
+    <footer class="bottom-bar">
+      <div class="crew-note"><span class="crew-avatar">✦</span><div><b>ONE CREW. TWO CARS.</b><small>Keep your head on a swivel.</small></div></div>
+      <div class="controls-note"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <small>MOVE</small></span><span><kbd>E</kbd> <small>PICK UP / SERVICE</small></span></div>
+      <div class="sound-note"><span class="sound-bars"><i></i><i></i><i></i><i></i></span><span>THE PIT NEVER SLEEPS</span></div>
+    </footer>
+    <div class="start-screen" id="start-screen">
+      <div class="start-card">
+        <div class="eyebrow"><span></span> YOUR GARAGE. YOUR CALL.</div>
+        <h1>LAST<span>STOP</span></h1>
+        <p>Two drivers. One pair of hands.<br>Make every second in the box count.</p>
+        <div class="start-instructions"><div><b>01</b><span>Run to the <em>tyre rack</em> or <em>fuel rig</em> to grab a supply.</span></div><div><b>02</b><span>Get to the car and hold <em>action</em> to service it.</span></div><div><b>03</b><span>Watch the timer. The next car is already racing.</span></div></div>
+        <button class="start-button" id="start-button">OPEN THE GARAGE <span>→</span></button>
+        <div class="start-foot">MOVE <b>W A S D</b> <i>·</i> INTERACT <b>E</b> <i>·</i> MOBILE: TOUCH CONTROLS</div>
+      </div>
+      <div class="start-watermark">PIT CREW / 02</div>
+    </div>
+    <div class="end-screen hidden" id="end-screen">
+      <div class="end-card"><div class="eyebrow">CHECKERED FLAG</div><h2>SHIFT<br><span>COMPLETE</span></h2><p id="final-copy">The team made it to the flag.</p><div class="final-score"><small>FINAL TEAM SCORE</small><strong id="final-score">000</strong></div><button class="start-button" id="restart-button">RUN IT BACK <span>↻</span></button></div>
+    </div>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
