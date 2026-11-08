@@ -17,24 +17,40 @@ const options = {
     { name: 'Dune Walker', detail: 'Brushed copper · rugged', price: 740, finish: 'copper', swatch: 'copper', note: 'Warm copper, built to weather any journey.' },
     { name: 'Nightfall', detail: 'Obsidian · minimalist', price: 890, finish: 'onyx', swatch: 'onyx', note: 'A shadow-dark profile with a quiet confidence.' },
     { name: 'Aureate', detail: 'Ivory alloy · heirloom', price: 1060, finish: 'ivory', swatch: 'ivory', note: 'An elegant heirloom with a light touch.' },
+    { name: 'Tempest', detail: 'Blued steel · tactical', price: 820, finish: 'steel', swatch: 'steel', note: 'Blued steel with the cool precision of a storm front.' },
+    { name: 'Cinderline', detail: 'Burnt bronze · weathered', price: 940, finish: 'bronze', swatch: 'bronze', note: 'Scorched bronze that has already seen a few legends.' },
+    { name: 'Moonstone', detail: 'Pearl finish · serene', price: 1180, finish: 'pearl', swatch: 'pearl', note: 'A pale pearl sheen, calm as a moonlit tide.' },
+    { name: 'Verdant Vow', detail: 'Moss patina · ancient', price: 1240, finish: 'moss', swatch: 'moss', note: 'Aged verdigris and old promises, worn with pride.' },
   ],
   emitter: [
     { name: 'Ascendant', detail: 'Flared · classic', price: 360, style: 'flare', note: 'A sweeping flare that frames the blade.' },
     { name: 'Longshot', detail: 'Extended · precise', price: 480, style: 'long', note: 'A long, precise throat for a focused look.' },
     { name: 'Crownpoint', detail: 'Crowned · ornate', price: 610, style: 'crown', note: 'Crowned edges add a hint of ceremony.' },
     { name: 'Venting No. 7', detail: 'Vented · kinetic', price: 720, style: 'vent', note: 'Vented fins give this build a kinetic edge.' },
+    { name: 'Shroud', detail: 'Armored · cutaway', price: 690, style: 'shroud', note: 'Armored cutaways vent heat and hide the blade’s origin.' },
+    { name: 'Halo', detail: 'Floating ring · ethereal', price: 840, style: 'halo', note: 'A suspended halo makes the blade feel almost ceremonial.' },
+    { name: 'Serrated', detail: 'Tooth ring · aggressive', price: 560, style: 'serrated', note: 'A ring of teeth gives the emitter a predatory silhouette.' },
+    { name: 'Oracle', detail: 'Stepped bell · stately', price: 780, style: 'oracle', note: 'A stepped bell that announces the blade before it ignites.' },
   ],
   grip: [
     { name: 'Pilgrim wrap', detail: 'Leather · soft touch', price: 220, style: 'wrap', note: 'A soft wrap for long hours on the trail.' },
     { name: 'Crosshatch', detail: 'Knurled · all-weather', price: 310, style: 'knurl', note: 'A tactile crosshatch holds firm in any weather.' },
     { name: 'Field ribs', detail: 'Ridged · secure', price: 380, style: 'ribs', note: 'Close-set ribs add control and a little drama.' },
     { name: 'Core weave', detail: 'Carbon · lightweight', price: 470, style: 'carbon', note: 'Lightweight weave, engineered for speed.' },
+    { name: 'Krayt hide', detail: 'Heavy hide · old frontier', price: 350, style: 'hide', note: 'Thick hide rings, cured the way the outer rim still does it.' },
+    { name: 'Copper coil', detail: 'Conductive · warm', price: 420, style: 'coil', note: 'A live copper coil runs heat away from your palm.' },
+    { name: 'Segment scales', detail: 'Armored · grippy', price: 540, style: 'scales', note: 'Overlapping scales lock into your grip under pressure.' },
+    { name: 'Polished bore', detail: 'Smooth · fast draw', price: 390, style: 'smooth', note: 'A mirror-smooth bore for a clean, fast draw.' },
   ],
   pommel: [
     { name: 'Dissipator', detail: 'Vented · balanced', price: 180, style: 'vented', note: 'Clean venting keeps the hilt nicely balanced.' },
     { name: 'Anchor cap', detail: 'Weighted · steady', price: 260, style: 'weight', note: 'A weighted cap lends a reassuring counterbalance.' },
     { name: 'Starfang', detail: 'Pronged · striking', price: 350, style: 'fang', note: 'Three sculpted prongs leave a memorable finish.' },
     { name: 'Whisper', detail: 'Low profile · refined', price: 430, style: 'smooth', note: 'A smooth, low-profile ending for a refined build.' },
+    { name: 'Halo ring', detail: 'Floating · elegant', price: 330, style: 'ring', note: 'A free-hanging ring catches the light with every turn.' },
+    { name: 'Needle', detail: 'Spiked · aggressive', price: 290, style: 'spike', note: 'A single needle point makes the last word unmistakable.' },
+    { name: 'Monolith', detail: 'Block · brutalist', price: 470, style: 'block', note: 'A squared block anchors the build with brutalist weight.' },
+    { name: 'Bell flare', detail: 'Flared · resonant', price: 380, style: 'bell', note: 'A flared bell gives the saber a resonant, musical finish.' },
   ],
   crystal: [
     { name: 'Azure', detail: 'KYBER · steadfast', price: 760, color: '#65aaff', hex: 0x65aaff, note: 'Steadfast and clear. The color of a path well chosen.' },
@@ -42,30 +58,55 @@ const options = {
     { name: 'Solaris', detail: 'KYBER · resolute', price: 1080, color: '#ffbf63', hex: 0xffbf63, note: 'A rare golden glow for a resolute spirit.' },
     { name: 'Vesper', detail: 'KYBER · intuitive', price: 1320, color: '#c995ff', hex: 0xc995ff, note: 'Intuitive and uncommon, with a violet heart.' },
     { name: 'Ember', detail: 'KYBER · unbound', price: 1540, color: '#ff6f67', hex: 0xff6f67, note: 'An unbound fire, for those who choose their own way.' },
+    { name: 'Tidecaller', detail: 'KYBER · adaptive', price: 880, color: '#5fe8e0', hex: 0x5fe8e0, note: 'A bright cyan current, always finding the open path.' },
+    { name: 'Mistwalker', detail: 'KYBER · elusive', price: 960, color: '#6fe0b8', hex: 0x6fe0b8, note: 'Sea-green and quiet, like a shore wrapped in morning fog.' },
+    { name: 'Suncatcher', detail: 'KYBER · radiant', price: 1140, color: '#ffd166', hex: 0xffd166, note: 'Amber light that gathers every warm thing in the room.' },
+    { name: 'Orchid', detail: 'KYBER · fearless', price: 1260, color: '#ff7ad9', hex: 0xff7ad9, note: 'A vivid orchid blaze for a heart that never hedges.' },
+    { name: 'Purity', detail: 'KYBER · balanced', price: 1680, color: '#f2f6ff', hex: 0xf2f6ff, note: 'White light, perfectly balanced between every extreme.' },
+    { name: 'Deepwater', detail: 'KYBER · profound', price: 1420, color: '#6d7cff', hex: 0x6d7cff, note: 'Indigo depths with a calm that goes all the way down.' },
+    { name: 'Heartline', detail: 'KYBER · devoted', price: 1100, color: '#ff9db0', hex: 0xff9db0, note: 'A rose glow that keeps its promise through any storm.' },
+    { name: 'Springfire', detail: 'KYBER · restless', price: 1020, color: '#b8ff6e', hex: 0xb8ff6e, note: 'A restless lime spark, always ready for the next leap.' },
+    { name: 'Crimson Oath', detail: 'KYBER · unbowed', price: 1760, color: '#ff3b4e', hex: 0xff3b4e, note: 'A scarlet vow. Some blades are not meant to be gentle.' },
   ],
   accent: [
     { name: 'Palladium', detail: 'Cool silver · classic', price: 180, color: '#c9d2cd', note: 'Crisp silver detailing gives a clean, timeless finish.' },
     { name: 'Gilt', detail: 'Warm gold · heirloom', price: 310, color: '#e5bd69', note: 'Warm gold catches the light like a treasured relic.' },
     { name: 'Aurora', detail: 'Iridescent · rare', price: 460, color: '#9ad9c9', note: 'Iridescent accents shift softly with every turn.' },
     { name: 'Crimson', detail: 'Enamel · bold', price: 390, color: '#d46b5f', note: 'A flash of red enamel makes this build unmistakable.' },
+    { name: 'Antique brass', detail: 'Aged · warm', price: 250, color: '#b99a5e', note: 'Antique brass carries the warmth of a well-kept workshop.' },
+    { name: 'Chrome', detail: 'Mirror · modern', price: 340, color: '#e8eef0', note: 'Mirror chrome throws every color of the room back at it.' },
+    { name: 'Rose gold', detail: 'Soft · romantic', price: 420, color: '#e6a58d', note: 'Rose gold softens hard edges without losing any shine.' },
+    { name: 'Gunmetal', detail: 'Dark · understated', price: 300, color: '#737c80', note: 'Dark gunmetal keeps the loudest details close to the vest.' },
   ],
   blade: [
-    { name: 'Classic', detail: 'Focused · balanced', price: 240, width: .092, note: 'A balanced, focused blade with a bright core.' },
-    { name: 'Duelist', detail: 'Broad · radiant', price: 380, width: .12, note: 'A broader blade throws a bold pool of colored light.' },
-    { name: 'Whisper', detail: 'Fine · precise', price: 330, width: .068, note: 'A fine, precise beam with an elegant profile.' },
-    { name: 'Prismatic', detail: 'Unstable · rare', price: 520, width: .105, note: 'A lively, prismatic edge with an unusually bright aura.' },
+    { name: 'Classic', detail: 'Focused · balanced', price: 240, width: .092, length: 3.55, note: 'A balanced, focused blade with a bright core.' },
+    { name: 'Duelist', detail: 'Broad · radiant', price: 380, width: .12, length: 3.4, note: 'A broader blade throws a bold pool of colored light.' },
+    { name: 'Whisper', detail: 'Fine · precise', price: 330, width: .068, length: 3.7, note: 'A fine, precise beam with an elegant profile.' },
+    { name: 'Prismatic', detail: 'Unstable · rare', price: 520, width: .105, length: 3.5, glow: 17, note: 'A lively, prismatic edge with an unusually bright aura.' },
+    { name: 'Lance', detail: 'Extended · reaching', price: 430, width: .084, length: 4.1, note: 'A long lance of light for keeping the fight at a distance.' },
+    { name: 'Greatblade', detail: 'Heavy · imposing', price: 560, width: .142, length: 3.3, glow: 16, note: 'A heavy blade with the presence of a coming storm.' },
+    { name: 'Needle', detail: 'Slender · surgical', price: 300, width: .052, length: 3.75, note: 'A surgical needle of light with almost no wasted glow.' },
+    { name: 'Eclipse', detail: 'Dark aura · rare', price: 640, width: .112, length: 3.6, glow: 8, note: 'A blade that seems to drink the light around its own core.' },
   ],
   switch: [
     { name: 'Recessed stud', detail: 'Low profile · tactile', price: 120, style: 'stud', note: 'A discreet control that sits flush to the hilt.' },
     { name: 'Twin toggles', detail: 'Machined · precise', price: 210, style: 'twin', note: 'Twin controls give the hilt a precision-instrument feel.' },
     { name: 'Guarded lever', detail: 'Protected · field-ready', price: 280, style: 'lever', note: 'A guarded lever built for quick activation.' },
     { name: 'Crystal touch', detail: 'Illuminated · arcane', price: 360, style: 'touch', note: 'A luminous touchpoint puts the crystal at your fingertips.' },
+    { name: 'Slide plate', detail: 'Linear · smooth', price: 190, style: 'slider', note: 'A linear slide plate activates with one clean motion.' },
+    { name: 'Control wheel', detail: 'Rotary · tuned', price: 240, style: 'wheel', note: 'A rotary wheel lets you tune the blade like an instrument.' },
+    { name: 'Field clamp', detail: 'Mechanical · rugged', price: 320, style: 'clamp', note: 'A heavy field clamp that will not fire by accident.' },
+    { name: 'Touch pad', detail: 'Sealed · modern', price: 300, style: 'pad', note: 'A sealed touch pad, smooth under a gloved thumb.' },
   ],
   engraving: [
     { name: 'None', detail: 'Pure lines · understated', price: 0, style: 'none', note: 'Let the shape and materials speak for themselves.' },
     { name: 'Star map', detail: 'Deep etched · explorer', price: 240, style: 'stars', note: 'A tiny star map marks the route that brought you here.' },
     { name: 'Old script', detail: 'Gold inlay · ceremonial', price: 390, style: 'script', note: 'A line of ancient script makes this an heirloom.' },
     { name: 'Maker’s mark', detail: 'Custom seal · artisan', price: 320, style: 'mark', note: 'Your maker’s seal, stamped into the heart of the hilt.' },
+    { name: 'Ring bands', detail: 'Turned lines · classic', price: 170, style: 'rings', note: 'Fine turned bands catch the light along the barrel.' },
+    { name: 'Rune column', detail: 'Hand cut · mystic', price: 360, style: 'runes', note: 'A column of hand-cut runes whispers an old warning.' },
+    { name: 'Constellation', detail: 'Studded · celestial', price: 430, style: 'constellation', note: 'A scatter of tiny studs maps a private constellation.' },
+    { name: 'Motto line', detail: 'Micro etch · personal', price: 280, style: 'motto', note: 'A single etched line, small enough to keep a secret.' },
   ],
 };
 const selected = Object.fromEntries(Object.keys(options).map(key => [key, 0]));
@@ -189,6 +230,25 @@ function finishAuction() {
   $('saleBreakdown').innerHTML = breakdown.join('');
   playTone(820, .24);
 }
+function renderAuctionSaber() {
+  const hilt = selectedOption('hilt');
+  const crystal = selectedOption('crystal');
+  const accent = selectedOption('accent');
+  const blade = selectedOption('blade');
+  const bodyColors = { satin: '#a6ada3', copper: '#b7835d', onyx: '#444b48', ivory: '#d0c8b1', steel: '#637985', bronze: '#79583e', pearl: '#d7d4ca', moss: '#536c58' };
+  const saber = $('podiumSaber');
+  saber.style.setProperty('--saber-body', bodyColors[hilt.finish] || '#a6ada3');
+  saber.style.setProperty('--saber-accent', accent.color);
+  saber.style.setProperty('--saber-crystal', crystal.color);
+  saber.style.setProperty('--blade-width', `${Math.max(9, Math.min(24, blade.width * 150))}px`);
+  saber.style.setProperty('--blade-height', `${Math.round(115 + (blade.length - 3.3) * 34)}px`);
+  saber.dataset.emitter = selectedOption('emitter').style;
+  saber.dataset.grip = selectedOption('grip').style;
+  saber.dataset.pommel = selectedOption('pommel').style;
+  saber.dataset.hilt = hilt.finish;
+  saber.setAttribute('aria-label', `${buildName()} saber, ${crystal.name} ${blade.name} blade`);
+  saber.innerHTML = '<div class="podium-saber-halo"></div><span class="auction-blade"><i></i></span><span class="auction-emitter"></span><span class="auction-neck"></span><span class="auction-hilt"><i class="auction-grip"></i><i class="auction-switch"></i><i class="auction-detail auction-detail-one"></i><i class="auction-detail auction-detail-two"></i></span><span class="auction-pommel"></span>';
+}
 function placeBid() {
   if ($('auctionRoom').classList.contains('finished')) return;
   let bidderIndex = Math.floor(Math.random() * 6);
@@ -223,6 +283,7 @@ function openSale() {
   });
   $('auctionRoom').classList.remove('finished');
   $('auctionResult').classList.remove('visible'); $('auctionResult').setAttribute('aria-hidden', 'true');
+  renderAuctionSaber();
   $('auctionBuildName').textContent = buildName().toUpperCase();
   $('stageBuildName').textContent = buildName().toUpperCase();
   $('auctionPrice').textContent = money(auctionBid);
