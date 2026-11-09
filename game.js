@@ -122,6 +122,270 @@ function syncBladeToggle() {
 }
 const money = (amount) => `¤ ${Math.round(amount).toLocaleString('en-US')}`;
 
+// Small technical illustrations for each option, drawn from the same profiles and finishes as the 3D build.
+const finishHex = { satin: '#a6ada3', copper: '#b7835d', onyx: '#444b48', ivory: '#d0c8b1', teal: '#397d78', brass: '#b98a3b', frost: '#b8c9d0', patina: '#668d79' };
+const gripHex = { wrap: '#80634c', carbon: '#242f2d' };
+function iconShell(inner, glow = '#d8f36a') {
+  return `<svg viewBox="0 0 48 50" aria-hidden="true" focusable="false"><rect width="48" height="50" fill="#111613"/><ellipse cx="24" cy="25" rx="21" ry="24" fill="${glow}" opacity=".075"/><path d="M3 6V3h3M42 3h3v3M45 44v3h-3M6 47H3v-3" stroke="#d8f36a" stroke-opacity=".26" fill="none"/>${inner}</svg>`;
+}
+function metalRect(x, y, w, h, color, rx = 2) {
+  const hi = Math.max(1.4, w * .2), lo = Math.max(1.2, w * .16);
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${color}"/><rect x="${x + 1.1}" y="${y + 1}" width="${hi}" height="${h - 2}" fill="#fff" opacity=".16"/><rect x="${x + w - lo - 1.1}" y="${y + 1}" width="${lo}" height="${h - 2}" fill="#000" opacity=".24"/>`;
+}
+function barrelIcon(profile, color, accent, x, y, w, h) {
+  let out = '';
+  if (profile === 'slim') { x += w * .2; w *= .6; }
+  if (profile === 'taper') {
+    out += `<path d="M${x + w * .24} ${y}H${x + w * .76}L${x + w} ${y + h}H${x}Z" fill="${color}"/>`;
+    out += `<path d="M${x + w * .24} ${y}H${x + w * .4}L${x + w * .18} ${y + h}H${x}Z" fill="#fff" opacity=".15"/>`;
+    out += `<path d="M${x + w * .76} ${y}H${x + w * .62}L${x + w * .84} ${y + h}H${x + w}Z" fill="#000" opacity=".22"/>`;
+  } else if (profile === 'hex') {
+    out += `<path d="M${x + w * .2} ${y}H${x + w * .8}L${x + w} ${y + h * .12}V${y + h * .88}L${x + w * .8} ${y + h}H${x + w * .2}L${x} ${y + h * .88}V${y + h * .12}Z" fill="${color}"/>`;
+    out += `<path d="M${x + w * .2} ${y}H${x + w * .5}V${y + h}H${x + w * .2}L${x} ${y + h * .88}V${y + h * .12}Z" fill="#fff" opacity=".14"/>`;
+    out += `<path d="M${x + w * .5} ${y}H${x + w * .8}L${x + w} ${y + h * .12}V${y + h * .88}L${x + w * .8} ${y + h}H${x + w * .5}Z" fill="#000" opacity=".2"/>`;
+    out += `<path d="M${x + w * .2} ${y}H${x + w * .5}M${x + w * .2} ${y + h}H${x + w * .5}" stroke="#fff" stroke-opacity=".24"/>`;
+  } else if (profile === 'stacked') {
+    for (let i = 0; i < 4; i++) {
+      const sw = w - i * 1.2, sx = x + (w - sw) / 2, sy = y + i * h / 4;
+      out += `<rect x="${sx}" y="${sy}" width="${sw}" height="${h / 4 + .4}" rx="1.5" fill="${i % 2 ? color : accent}" opacity="${i % 2 ? 1 : .55}"/>`;
+      out += `<rect x="${sx + 1}" y="${sy + 1}" width="2" height="${h / 4 - 2}" fill="#fff" opacity=".14"/>`;
+    }
+  } else {
+    out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.2" fill="${color}"/>`;
+    out += `<rect x="${x + 1.2}" y="${y + 1}" width="${Math.max(1.6, w * .2)}" height="${h - 2}" fill="#fff" opacity=".16"/>`;
+    out += `<rect x="${x + w - Math.max(1.5, w * .16) - 1.2}" y="${y + 1}" width="${Math.max(1.5, w * .16)}" height="${h - 2}" fill="#000" opacity=".23"/>`;
+  }
+  if (profile === 'fluted') {
+    for (let i = 0; i < 5; i++) out += `<rect x="${x + w * (.16 + i * .17)}" y="${y + 2}" width="1.2" height="${h - 4}" rx=".6" fill="${accent}" opacity=".8"/>`;
+  } else if (profile === 'segmented') {
+    for (let i = 0; i < 5; i++) out += `<rect x="${x - 1}" y="${y + 3 + i * (h - 6) / 5}" width="${w + 2}" height="2.6" rx="1.3" fill="${i % 2 ? accent : '#202623'}"/>`;
+  } else if (profile === 'bulbous') {
+    out += `<ellipse cx="${x + w / 2}" cy="${y + h / 2}" rx="${w * .62}" ry="${h * .27}" fill="${color}"/>`;
+    out += `<ellipse cx="${x + w * .38}" cy="${y + h * .46}" rx="${w * .13}" ry="${h * .2}" fill="#fff" opacity=".14"/>`;
+    out += `<rect x="${x - 1}" y="${y + 3}" width="${w + 2}" height="2" rx="1" fill="${accent}" opacity=".85"/>`;
+    out += `<rect x="${x - 1}" y="${y + h - 5}" width="${w + 2}" height="2" rx="1" fill="${accent}" opacity=".85"/>`;
+  }
+  return out;
+}
+function hiltIcon(option, accent) {
+  const color = finishHex[option.finish] || '#a6ada3';
+  return iconShell(`
+    ${barrelIcon(option.profile, color, accent, 16, 11, 16, 29)}
+    <rect x="14" y="8" width="20" height="4.5" rx="2" fill="#252b28"/>
+    <rect x="14.5" y="9" width="19" height="1.6" rx=".8" fill="${accent}"/>
+    <rect x="14.5" y="40" width="19" height="4" rx="2" fill="#252b28"/>
+    <rect x="15" y="41" width="18" height="1.5" rx=".75" fill="${accent}" opacity=".85"/>
+    <rect x="19" y="30" width="3" height="1.8" rx=".9" fill="${accent}"/>
+    <circle cx="31" cy="33" r="1.2" fill="${accent}"/>
+  `, color);
+}
+function emitterIcon(option, bodyColor, accent) {
+  const neck = `<rect x="19" y="28" width="10" height="21" rx="2" fill="${bodyColor}"/><rect x="20.2" y="29" width="2" height="19" fill="#fff" opacity=".15"/><rect x="19" y="28.5" width="10" height="1.6" fill="${accent}" opacity=".8"/>`;
+  let top = '';
+  if (option.style === 'flare') {
+    top = `<path d="M18 31h12l5-15H13z" fill="${bodyColor}"/><path d="M18 31h3l-2-15h-3z" fill="#fff" opacity=".15"/><rect x="11.5" y="12" width="25" height="4.5" rx="2" fill="${accent}"/><rect x="13" y="13" width="22" height="1.5" rx=".75" fill="#fff" opacity=".3"/>`;
+  } else if (option.style === 'long') {
+    top = `<rect x="19" y="7" width="10" height="24" rx="2" fill="${bodyColor}"/><rect x="20.2" y="8" width="2" height="22" fill="#fff" opacity=".16"/><path d="M19 10h10l2-5H17z" fill="${accent}"/><rect x="15.5" y="3" width="17" height="2.4" rx="1.2" fill="#252b28"/>`;
+  } else if (option.style === 'crown') {
+    top = `<path d="M17 31h14l3-13H14z" fill="${bodyColor}"/><path d="M17 31h3l-1.5-13H14z" fill="#fff" opacity=".15"/><rect x="12.5" y="17" width="23" height="3.5" rx="1.7" fill="${accent}"/><path d="M13.5 18l2.5-8 2.5 8zM19 18l2.5-8 2.5 8zM24.5 18l2.5-8 2.5 8zM30 18l2.5-8 2.5 8z" fill="${accent}"/>`;
+  } else if (option.style === 'vent') {
+    top = `<path d="M18 31h12l3-14H15z" fill="${bodyColor}"/><path d="M18 31h3l-1-14h-3z" fill="#fff" opacity=".15"/><rect x="13.5" y="15" width="21" height="3.2" rx="1.6" fill="${accent}"/><rect x="13" y="20" width="2.6" height="9" rx="1.2" fill="${accent}"/><rect x="17.5" y="19" width="2.6" height="10" rx="1.2" fill="${accent}"/><rect x="22.7" y="19" width="2.6" height="10" rx="1.2" fill="${accent}"/><rect x="27.9" y="19" width="2.6" height="10" rx="1.2" fill="${accent}"/><rect x="32.4" y="20" width="2.6" height="9" rx="1.2" fill="${accent}"/>`;
+  } else if (option.style === 'needle') {
+    top = `<path d="M18 31h12l-3-14h-6z" fill="${bodyColor}"/><path d="M18 31h3l-2-14h-1z" fill="#fff" opacity=".15"/><rect x="21.2" y="13" width="5.6" height="6" rx="1.5" fill="${accent}"/><rect x="22.4" y="8" width="3.2" height="5.5" rx="1.6" fill="#252b28"/><rect x="21.4" y="8" width="5.2" height="1.4" rx=".7" fill="${accent}"/>`;
+  } else if (option.style === 'halo') {
+    top = `<path d="M18 31h12l2-13H16z" fill="${bodyColor}"/><path d="M18 31h3l-1-13h-4z" fill="#fff" opacity=".13"/><rect x="14.5" y="16" width="19" height="3" rx="1.5" fill="${accent}"/><rect x="17" y="9" width="2" height="7" fill="${accent}"/><rect x="22" y="9" width="2" height="7" fill="${accent}"/><rect x="27" y="9" width="2" height="7" fill="${accent}"/><ellipse cx="24" cy="8" rx="11" ry="3.6" fill="none" stroke="${accent}" stroke-width="2.2"/>`;
+  } else if (option.style === 'fork') {
+    top = `<path d="M18 31h12l3-14H15z" fill="${bodyColor}"/><path d="M18 31h3l-1-14h-5z" fill="#fff" opacity=".13"/><rect x="13.5" y="15" width="21" height="3.2" rx="1.6" fill="${accent}"/><path d="M17 16l-4-9 3.2-1.2 4.4 9.4z" fill="${accent}"/><path d="M31 16l4-9-3.2-1.2-4.4 9.4z" fill="${accent}"/><path d="M19.5 14l-1.2-3.2 1.6-.6 1.4 3.4z" fill="#fff" opacity=".3"/>`;
+  } else if (option.style === 'shroud') {
+    top = `<path d="M18 31h12l2-13H16z" fill="${bodyColor}"/><path d="M18 31h3l-1-13h-4z" fill="#fff" opacity=".13"/><rect x="14.5" y="16" width="19" height="3" rx="1.5" fill="${accent}"/><path d="M27 15h7l2.5 9-4.5 3-5.5-4z" fill="${bodyColor}"/><path d="M27 15h2.5l1.5 11-3 1z" fill="#fff" opacity=".13"/><rect x="33" y="11" width="2.2" height="11" rx="1.1" fill="${accent}"/>`;
+  }
+  return iconShell(neck + top, bodyColor);
+}
+function gripIcon(option, accent) {
+  const base = gripHex[option.style] || '#39413d';
+  let tex = '';
+  if (option.style === 'wrap') {
+    for (let i = 0; i < 8; i++) {
+      const y = 10 + i * 4;
+      tex += `<path d="M14 ${y}L34 ${y - 3}" stroke="#5c4735" stroke-width="2.6"/><path d="M14 ${y + 1.2}L34 ${y - 1.8}" stroke="#a58567" stroke-width=".7" opacity=".5"/>`;
+    }
+  } else if (option.style === 'knurl') {
+    for (let row = 0; row < 6; row++) for (let col = 0; col < 3; col++) {
+      const cx = 17.5 + col * 6.5, cy = 12 + row * 4.6;
+      tex += `<path d="M${cx - 2} ${cy - 1.7}L${cx + 2} ${cy + 1.7}M${cx + 2} ${cy - 1.7}L${cx - 2} ${cy + 1.7}" stroke="${accent}" stroke-width="1.1"/>`;
+    }
+  } else if (option.style === 'ribs') {
+    for (let i = 0; i < 9; i++) {
+      const y = 10 + i * 3.5;
+      tex += `<rect x="13.5" y="${y}" width="21" height="2.2" rx="1.1" fill="${accent}"/><rect x="13.5" y="${y + 2.2}" width="21" height=".8" fill="#141917"/>`;
+    }
+  } else if (option.style === 'carbon') {
+    for (let row = 0; row < 9; row++) for (let col = 0; col < 4; col++) {
+      tex += `<rect x="${14.5 + col * 4.9}" y="${10 + row * 3.4}" width="4.2" height="2.8" fill="${(row + col) % 2 ? '#141a18' : '#3b4742'}"/>`;
+    }
+    tex += `<path d="M14 12L34 38" stroke="#fff" stroke-opacity=".12" stroke-width="1"/>`;
+  } else if (option.style === 'spiral') {
+    tex = `<path d="M14 10L34 16L14 22L34 28L14 34L34 40" fill="none" stroke="#141917" stroke-width="3.4"/><path d="M14 10L34 16L14 22L34 28L14 34L34 40" fill="none" stroke="${accent}" stroke-width="2"/>`;
+  } else if (option.style === 'scales') {
+    for (let row = 0; row < 6; row++) for (let col = 0; col < 3; col++) {
+      const cx = 17.5 + col * 6.5 + (row % 2 ? 3.2 : 0), cy = 12 + row * 4.6;
+      if (cx + 3 > 34) continue;
+      tex += `<path d="M${cx - 3} ${cy}a3 3 0 0 0 6 0z" fill="${(row + col) % 2 ? accent : '#202623'}"/><path d="M${cx - 3} ${cy}a3 3 0 0 0 6 0" fill="none" stroke="#fff" stroke-opacity=".15"/>`;
+    }
+  } else if (option.style === 'studs') {
+    for (let row = 0; row < 6; row++) for (let col = 0; col < 3; col++) {
+      const cx = 17.5 + col * 6.5, cy = 12 + row * 4.6;
+      tex += `<circle cx="${cx}" cy="${cy}" r="2" fill="${accent}"/><circle cx="${cx - .6}" cy="${cy - .6}" r=".6" fill="#fff" opacity=".5"/>`;
+    }
+  } else if (option.style === 'panels') {
+    for (let i = 0; i < 3; i++) {
+      const x = 15.5 + i * 6;
+      tex += `<rect x="${x}" y="10" width="5" height="30" rx="1.3" fill="#c9d1c9" opacity=".72"/><rect x="${x}" y="10" width="1.2" height="30" fill="#fff" opacity=".3"/>`;
+    }
+  }
+  return iconShell(`
+    <rect x="14" y="5" width="20" height="40" rx="2.5" fill="${base}"/>
+    <rect x="14" y="5" width="20" height="4" rx="2" fill="#202623"/>
+    <rect x="14" y="41" width="20" height="4" rx="2" fill="#202623"/>
+    ${tex}
+    <rect x="14.5" y="9" width="2" height="32" fill="#fff" opacity=".1"/>
+    <rect x="30.5" y="9" width="2" height="32" fill="#000" opacity=".2"/>
+    <rect x="13.5" y="8.5" width="21" height="1.4" rx=".7" fill="${accent}" opacity=".7"/>
+    <rect x="13.5" y="40.2" width="21" height="1.4" rx=".7" fill="${accent}" opacity=".7"/>
+  `, accent);
+}
+function pommelIcon(option, bodyColor, accent) {
+  const upper = `<rect x="15" y="4" width="18" height="18" rx="2" fill="${bodyColor}"/><rect x="16.2" y="5" width="3" height="16" fill="#fff" opacity=".14"/><rect x="15" y="18" width="18" height="2" fill="${accent}" opacity=".85"/>`;
+  let cap = '';
+  if (option.style === 'vented') {
+    cap = `<path d="M15 20h18l3 19H12z" fill="${bodyColor}"/><path d="M15 20h4l-1 19h-6z" fill="#fff" opacity=".12"/><rect x="12" y="37" width="24" height="3.5" rx="1.7" fill="${accent}"/><rect x="15" y="24" width="1.6" height="12" fill="#202623" opacity=".8"/><rect x="19" y="24" width="1.6" height="12" fill="#202623" opacity=".8"/><rect x="23" y="24" width="1.6" height="12" fill="#202623" opacity=".8"/><rect x="27" y="24" width="1.6" height="12" fill="#202623" opacity=".8"/><rect x="31" y="24" width="1.6" height="12" fill="#202623" opacity=".8"/>`;
+  } else if (option.style === 'weight') {
+    cap = `<rect x="13" y="20" width="22" height="19" rx="3" fill="${bodyColor}"/><rect x="15" y="21.5" width="3.5" height="16" fill="#fff" opacity=".14"/><rect x="12" y="35" width="24" height="4.5" rx="2" fill="${accent}"/><rect x="14" y="20" width="20" height="2" fill="${accent}" opacity=".7"/>`;
+  } else if (option.style === 'fang') {
+    cap = `<rect x="15" y="20" width="18" height="7" rx="2" fill="${bodyColor}"/><path d="M17 26h6l-2 15z" fill="${accent}"/><path d="M25 26h6l-4 15z" fill="${accent}"/><path d="M21 26h6l-3 17z" fill="${accent}"/><path d="M22 27h1.6l-.8 10z" fill="#fff" opacity=".3"/>`;
+  } else if (option.style === 'smooth') {
+    cap = `<rect x="15" y="20" width="18" height="7" fill="${bodyColor}"/><path d="M15 26h18v3c0 8-4 12-9 12s-9-4-9-12z" fill="${bodyColor}"/><path d="M17 27h3v11c-2-2-3-5-3-8z" fill="#fff" opacity=".14"/><rect x="14.5" y="19" width="19" height="2.2" rx="1.1" fill="${accent}"/>`;
+  } else if (option.style === 'spike') {
+    cap = `<rect x="15" y="20" width="18" height="7" rx="2" fill="${bodyColor}"/><rect x="16" y="20.5" width="3" height="6" fill="#fff" opacity=".14"/><path d="M18 26h12l-6 21z" fill="${accent}"/><path d="M21 26h3l-1 14z" fill="#fff" opacity=".25"/><rect x="17" y="25" width="14" height="1.6" fill="#202623"/>`;
+  } else if (option.style === 'ring') {
+    cap = `<rect x="15" y="20" width="18" height="7" rx="2" fill="${bodyColor}"/><rect x="17.5" y="26" width="2" height="13" fill="${accent}"/><rect x="23" y="26" width="2" height="13" fill="${accent}"/><rect x="28.5" y="26" width="2" height="13" fill="${accent}"/><ellipse cx="24" cy="40" rx="9" ry="4.5" fill="none" stroke="${accent}" stroke-width="2.5"/>`;
+  } else if (option.style === 'prism') {
+    cap = `<rect x="15" y="20" width="18" height="7" rx="2" fill="${bodyColor}"/><path d="M24 25l7 5-2 11H19l-2-11z" fill="${accent}"/><path d="M24 25l-2 16h-3l-2-11z" fill="#fff" opacity=".18"/><path d="M24 25l2 16h3l2-11z" fill="#000" opacity=".18"/><rect x="15" y="19.5" width="18" height="2" fill="${accent}"/>`;
+  } else if (option.style === 'cage') {
+    cap = `<rect x="15" y="20" width="18" height="6" rx="2" fill="${bodyColor}"/><ellipse cx="24" cy="27" rx="10" ry="2.6" fill="none" stroke="${accent}" stroke-width="1.6"/><ellipse cx="24" cy="41" rx="8" ry="2.6" fill="none" stroke="${accent}" stroke-width="1.6"/><rect x="15.5" y="27" width="1.8" height="14" fill="${accent}"/><rect x="21.5" y="27" width="1.8" height="14" fill="${accent}"/><rect x="26.5" y="27" width="1.8" height="14" fill="${accent}"/><rect x="32.5" y="27" width="1.8" height="14" fill="${accent}"/><circle cx="24" cy="35" r="5" fill="#202623"/><circle cx="23" cy="34" r="1.5" fill="#fff" opacity=".2"/>`;
+  }
+  return iconShell(upper + cap, bodyColor);
+}
+function crystalIcon(option) {
+  const c = option.color;
+  return iconShell(`
+    <ellipse cx="24" cy="27" rx="13" ry="18" fill="${c}" opacity=".16"/>
+    <ellipse cx="24" cy="43" rx="10" ry="2.5" fill="${c}" opacity=".3"/>
+    <path d="M24 5l8 15-4 23H20l-4-23z" fill="${c}"/>
+    <path d="M24 5l-4 15-4 23h4l2-23z" fill="#fff" opacity=".22"/>
+    <path d="M24 5l4 15 4 23h-4l-2-23z" fill="#000" opacity=".2"/>
+    <path d="M24 5v38M17 20h14" stroke="#fff" stroke-opacity=".45" stroke-width=".8"/>
+    <circle cx="33" cy="14" r="1.2" fill="#fff" opacity=".8"/>
+    <circle cx="14" cy="29" r=".9" fill="#fff" opacity=".5"/>
+  `, c);
+}
+function accentIcon(option, bodyColor) {
+  const c = option.color;
+  return iconShell(`
+    ${metalRect(15, 5, 18, 40, bodyColor)}
+    <rect x="13.5" y="13" width="21" height="4.5" rx="2" fill="${c}" stroke="#141917" stroke-width=".6"/>
+    <rect x="13.5" y="32" width="21" height="4.5" rx="2" fill="${c}" stroke="#141917" stroke-width=".6"/>
+    <rect x="15" y="8" width="18" height="1.8" rx=".9" fill="${c}" opacity=".9"/>
+    <rect x="15" y="23" width="18" height="1.6" rx=".8" fill="${c}" opacity=".7"/>
+    <rect x="15" y="40" width="18" height="1.8" rx=".9" fill="${c}" opacity=".9"/>
+    <rect x="27.5" y="18" width="1.8" height="14" fill="${c}" opacity=".8"/>
+    <circle cx="19" cy="19" r="1.7" fill="${c}"/><circle cx="19" cy="19" r=".6" fill="#202623"/>
+    <circle cx="31" cy="28" r="1.7" fill="${c}"/><circle cx="31" cy="28" r=".6" fill="#202623"/>
+    <circle cx="19" cy="38" r="1.7" fill="${c}"/><circle cx="19" cy="38" r=".6" fill="#202623"/>
+  `, c);
+}
+function bladeIcon(option, crystalColor) {
+  const c = crystalColor;
+  let beam = '';
+  if (option.style === 'crossguard') {
+    beam = `<path d="M20.5 38h7L26.5 7h-5z" fill="${c}" opacity=".3"/><rect x="22.8" y="7" width="2.4" height="31" fill="#fff" opacity=".85"/><rect x="5" y="32" width="14" height="4" rx="2" fill="${c}" opacity=".5"/><rect x="6" y="33.2" width="12" height="1.5" fill="#fff" opacity=".85"/><rect x="29" y="32" width="14" height="4" rx="2" fill="${c}" opacity=".5"/><rect x="30" y="33.2" width="12" height="1.5" fill="#fff" opacity=".85"/>`;
+  } else if (option.style === 'prismatic') {
+    beam = `<path d="M20 38l1-7-2-4 2.5-5-2-5 2.5-6h4l2.5 6-2 5 2.5 5-2 4 1 7z" fill="${c}" opacity=".32"/><rect x="22.8" y="7" width="2.4" height="31" fill="#fff" opacity=".85"/><circle cx="17.5" cy="15" r="1" fill="#fff" opacity=".8"/><circle cx="31" cy="22" r=".8" fill="#fff" opacity=".65"/><circle cx="18" cy="30" r=".7" fill="#fff" opacity=".5"/>`;
+  } else if (option.style === 'pulse') {
+    beam = `<path d="M20.5 38h7L26.5 7h-5z" fill="${c}" opacity=".3"/><rect x="22.8" y="7" width="2.4" height="31" fill="#fff" opacity=".85"/>`;
+    for (const y of [12, 18, 24, 30, 35]) beam += `<rect x="19" y="${y}" width="10" height="1.3" rx=".65" fill="#fff" opacity=".9"/>`;
+  } else if (option.style === 'long') {
+    beam = `<path d="M20.5 38h7L27 0h-6z" fill="${c}" opacity=".3"/><rect x="22.8" y="0" width="2.4" height="38" fill="#fff" opacity=".85"/>`;
+  } else {
+    const w = option.style === 'broad' ? 11 : option.style === 'fine' ? 4.4 : 7;
+    const x = 24 - w / 2, core = option.style === 'broad' ? 3.6 : option.style === 'fine' ? 1.5 : 2.4;
+    beam = `<path d="M${x} 38h${w}l-1.5-31h-${w - 3}z" fill="${c}" opacity=".3"/><rect x="${24 - core / 2}" y="7" width="${core}" height="31" fill="#fff" opacity=".85"/>`;
+  }
+  const emitter = `<rect x="16" y="37" width="16" height="13" rx="2" fill="#303733"/><rect x="17.2" y="38" width="3" height="11" fill="#fff" opacity=".14"/><rect x="14.5" y="36" width="19" height="3" rx="1.5" fill="#c9d2cd"/><rect x="21" y="38" width="6" height="2" fill="${c}"/>`;
+  return iconShell(`<ellipse cx="24" cy="24" rx="10" ry="20" fill="${c}" opacity=".13"/>${beam}${emitter}`, c);
+}
+function switchIcon(option, crystalColor, accent) {
+  const c = crystalColor;
+  const base = `${metalRect(12, 4, 24, 42, '#303733')}<rect x="11" y="7" width="26" height="2" rx="1" fill="${accent}" opacity=".75"/><rect x="11" y="41" width="26" height="2" rx="1" fill="${accent}" opacity=".75"/><rect x="12" y="23" width="24" height="14" rx="2.5" fill="#252b28"/>`;
+  let hardware = '';
+  if (option.style === 'stud') {
+    hardware = `<ellipse cx="24" cy="28" rx="8" ry="3.2" fill="#171c19"/><circle cx="24" cy="25" r="4.2" fill="${c}"/><circle cx="22.7" cy="23.7" r="1.3" fill="#fff" opacity=".55"/><circle cx="24" cy="25" r="6.5" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".8"/>`;
+  } else if (option.style === 'twin') {
+    for (const x of [18, 30]) hardware += `<ellipse cx="${x}" cy="28" rx="5" ry="2.4" fill="#171c19"/><circle cx="${x}" cy="25" r="2.8" fill="${c}"/><circle cx="${x - .8}" cy="24.2" r=".8" fill="#fff" opacity=".5"/><circle cx="${x}" cy="25" r="4.2" fill="none" stroke="${accent}" stroke-width="1" opacity=".8"/>`;
+  } else if (option.style === 'lever') {
+    hardware = `<rect x="17" y="23" width="14" height="9" rx="2" fill="#1a201d"/><rect x="23" y="15" width="3" height="13" rx="1.5" fill="${accent}" transform="rotate(18 24 22)"/><circle cx="24" cy="23" r="2.5" fill="${c}"/><rect x="15.5" y="15" width="1.8" height="15" fill="${accent}"/><rect x="30.7" y="15" width="1.8" height="15" fill="${accent}"/>`;
+  } else if (option.style === 'touch') {
+    hardware = `<circle cx="24" cy="25" r="8" fill="none" stroke="${accent}" stroke-width="1.6"/><circle cx="24" cy="25" r="5" fill="${c}" opacity=".25"/><circle cx="24" cy="25" r="3.4" fill="${c}"/><circle cx="22.8" cy="23.8" r="1" fill="#fff" opacity=".6"/>`;
+  } else if (option.style === 'dial') {
+    hardware = `<circle cx="24" cy="25" r="8.5" fill="#1a201d" stroke="${accent}" stroke-width="1.4"/><path d="M24 16.5v2M24 31.5v2M15.5 25h2M30.5 25h2M18 19l1.4 1.4M28.6 29.6L30 31M30 19l-1.4 1.4M19.4 29.6L18 31" stroke="${accent}" stroke-width="1.2"/><circle cx="24" cy="25" r="3" fill="${c}"/><rect x="23.4" y="17" width="1.2" height="5" fill="${accent}"/>`;
+  } else if (option.style === 'slider') {
+    hardware = `<rect x="20.5" y="12" width="7" height="26" rx="3.5" fill="#171c19" stroke="${accent}" stroke-width="1.2"/><rect x="18.5" y="22" width="11" height="6" rx="2" fill="${accent}"/><circle cx="24" cy="25" r="1.5" fill="${c}"/>`;
+  } else if (option.style === 'guard') {
+    hardware = `<circle cx="24" cy="25" r="4.2" fill="${c}"/><circle cx="22.8" cy="23.8" r="1.2" fill="#fff" opacity=".5"/><path d="M14 29a10 10 0 0 1 20 0" fill="none" stroke="${accent}" stroke-width="2.2"/><rect x="13.4" y="28" width="2" height="6" fill="${accent}"/><rect x="32.6" y="28" width="2" height="6" fill="${accent}"/>`;
+  } else if (option.style === 'pulse') {
+    hardware = `<circle cx="24" cy="25" r="8.5" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".8"/><circle cx="24" cy="25" r="6" fill="none" stroke="${c}" stroke-width="1.2" opacity=".6"/><circle cx="24" cy="25" r="4" fill="${c}"/><circle cx="22.8" cy="23.8" r="1.1" fill="#fff" opacity=".55"/>`;
+  }
+  return iconShell(base + hardware, c);
+}
+function engravingIcon(option, bodyColor, accent) {
+  let art = '';
+  if (option.style === 'stars') {
+    art = `<path d="M15 32l5-8 4 4 5-11 5 6" stroke="${accent}" stroke-width="1.1" fill="none"/><circle cx="15" cy="32" r="1.3" fill="${accent}"/><circle cx="20" cy="24" r="1.5" fill="${accent}"/><circle cx="24" cy="28" r="1.2" fill="${accent}"/><circle cx="29" cy="17" r="1.7" fill="${accent}"/><circle cx="34" cy="23" r="1.3" fill="${accent}"/>`;
+  } else if (option.style === 'script') {
+    art = `<path d="M16 15c3 3-2 5 1 8s-1 5 1 8M21 14c3 4-2 5 1 9s-1 5 1 8M26 16c3 3-2 5 1 8s-1 5 1 7M31 15c2 3-1 5 1 8" stroke="#d5ad62" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="18.5" cy="35" r="1" fill="#d5ad62"/><circle cx="28.5" cy="35" r="1" fill="#d5ad62"/>`;
+  } else if (option.style === 'mark') {
+    art = `<circle cx="24" cy="25" r="8" fill="none" stroke="${accent}" stroke-width="1.3"/><circle cx="24" cy="25" r="4.5" fill="none" stroke="${accent}" stroke-width=".9"/><path d="M24 16v18M15 25h18" stroke="${accent}" stroke-width=".9"/><path d="M24 21l3 4-3 4-3-4z" fill="${accent}"/>`;
+  } else if (option.style === 'runes') {
+    art = `<path d="M15 17v14M15 17l4 4-4 3M21 31V17l4 5M27 17v14l4-4M33 31V17l-3 4 3 4" stroke="${accent}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+  } else if (option.style === 'orbit') {
+    art = `<ellipse cx="24" cy="25" rx="9" ry="5" fill="none" stroke="${accent}" stroke-width="1.2"/><ellipse cx="24" cy="25" rx="5" ry="9" fill="none" stroke="${accent}" stroke-width=".9" opacity=".7"/><path d="M15 34L33 16" stroke="${accent}" stroke-width=".9" opacity=".7"/><circle cx="31" cy="18" r="1.4" fill="${accent}"/>`;
+  } else if (option.style === 'flame') {
+    art = `<path d="M15 38c-2-5 2-7 2-11 3 3 3 6 2 8 2-2 2-4 1-6 4 3 5 6 3 9zM23 38c-2-5 2-7 2-11 3 3 3 6 2 8 2-2 2-4 1-6 4 3 5 6 3 9zM31 38c-2-5 2-7 2-11 3 3 3 6 2 8 2-2 2-4 1-6 4 3 5 6 3 9z" fill="${accent}" opacity=".9"/><rect x="14" y="38" width="20" height="1.5" rx=".75" fill="${accent}" opacity=".5"/>`;
+  } else if (option.style === 'serial') {
+    art = `<path d="M14 18h20M14 35h20" stroke="${accent}" stroke-width="1"/><path d="M16 21v11M19 21v11M21.5 22v9M24 21v11M26 23v7M28 21v11M31 22v9M33 21v11" stroke="${accent}" stroke-width="1.4"/>`;
+  } else {
+    art = `<path d="M15 16h18M15 34h18" stroke="#fff" stroke-opacity=".08"/><rect x="15" y="24" width="18" height="1" fill="#fff" opacity=".12"/><path d="M31 14l1.5 2.5" stroke="#fff" stroke-opacity=".2"/>`;
+  }
+  return iconShell(`
+    ${metalRect(12, 4, 24, 42, bodyColor)}
+    <rect x="11" y="6" width="26" height="2" fill="${accent}" opacity=".55"/>
+    <rect x="11" y="42" width="26" height="2" fill="${accent}" opacity=".55"/>
+    ${art}
+  `, accent);
+}
+function optionIcon(stepId, option, colors) {
+  const { hiltColor, accentColor, crystalColor } = colors;
+  if (stepId === 'hilt') return hiltIcon(option, accentColor);
+  if (stepId === 'emitter') return emitterIcon(option, hiltColor, accentColor);
+  if (stepId === 'grip') return gripIcon(option, accentColor);
+  if (stepId === 'pommel') return pommelIcon(option, hiltColor, accentColor);
+  if (stepId === 'crystal') return crystalIcon(option);
+  if (stepId === 'accent') return accentIcon(option, hiltColor);
+  if (stepId === 'blade') return bladeIcon(option, crystalColor);
+  if (stepId === 'switch') return switchIcon(option, crystalColor, accentColor);
+  return engravingIcon(option, hiltColor, accentColor);
+}
+
 function selectedOption(id) { return options[id][selected[id]]; }
 function totalValue() {
   const sum = Object.keys(options).reduce((total, key) => total + selectedOption(key).price, 0);
@@ -155,11 +419,13 @@ function renderOptions() {
   $('categoryTitle').textContent = step.heading;
   $('categoryDescription').textContent = step.description;
   $('componentCount').innerHTML = `${String(selected[step.id] + 1).padStart(2, '0')} <i>/ ${String(list.length).padStart(2, '0')}</i>`;
+  const hiltColor = finishHex[selectedOption('hilt').finish] || '#a6ada3';
+  const accentColor = selectedOption('accent').color;
+  const crystalColor = selectedOption('crystal').color;
   $('optionList').innerHTML = list.map((option, index) => {
-    const swatch = option.swatch === undefined ? (step.id === 'crystal' ? 'crystal' : option.style === 'ribs' || option.style === 'crown' ? 'ridged' : '') : option.swatch;
-    const swatchStyle = option.color ? ` style="--crystal:${option.color};background:radial-gradient(circle,${option.color} 0,#384a5c 32%,#202623 72%)"` : '';
     const title = step.id === 'crystal' ? `Kyber · ${option.name}` : option.name;
-    return `<button class="option-card ${selected[step.id] === index ? 'selected' : ''}" data-option="${index}" aria-pressed="${selected[step.id] === index}"><span class="option-swatch ${swatch}"${swatchStyle}></span><span class="option-copy"><strong>${title}</strong><small>${option.detail}</small></span><span class="option-price">${money(option.price)}</span></button>`;
+    const icon = optionIcon(step.id, option, { hiltColor, accentColor, crystalColor });
+    return `<button class="option-card ${selected[step.id] === index ? 'selected' : ''}" data-option="${index}" aria-pressed="${selected[step.id] === index}"><span class="option-icon">${icon}</span><span class="option-copy"><strong>${title}</strong><small>${option.detail}</small></span><span class="option-price">${money(option.price)}</span></button>`;
   }).join('');
   document.querySelectorAll('.option-card').forEach(button => button.addEventListener('click', () => {
     const scrollTop = $('optionList').scrollTop;
