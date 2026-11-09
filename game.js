@@ -142,7 +142,6 @@ function renderSteps() {
   const stepCount = String(steps.length).padStart(2, '0');
   document.querySelector('.build-number').innerHTML = `${String(activeStep + 1).padStart(2, '0')}<br><span>/ ${stepCount}</span>`;
   $('stepSummary').innerHTML = `${String(activeStep + 1).padStart(2, '0')} / ${stepCount} &nbsp; ${steps[activeStep].title.toUpperCase()}`;
-  document.querySelector('.scene-label-right').textContent = `${String(activeStep + 1).padStart(2, '0')} — ${stepCount}`;
   $('prevStep').disabled = activeStep === 0;
   const isLast = activeStep === steps.length - 1;
   $('nextStep').innerHTML = isLast ? 'SELL SABER <span>↗</span>' : 'NEXT PART <span>→</span>';
