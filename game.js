@@ -138,6 +138,7 @@ function buildName() {
 function renderSteps() {
   $('stepList').innerHTML = steps.map((step, index) => `<button class="step-item ${index === activeStep ? 'active' : ''} ${index < activeStep ? 'done' : ''}" data-step="${index}" aria-current="${index === activeStep ? 'step' : 'false'}"><span class="step-index">${index < activeStep ? '✓' : `0${index + 1}`}</span><span class="step-copy"><strong>${step.title}</strong><small>${step.kicker}</small></span>${index === activeStep ? '<span class="step-state">↗</span>' : ''}</button>`).join('');
   document.querySelectorAll('.step-item').forEach(button => button.addEventListener('click', () => setStep(Number(button.dataset.step))));
+  document.querySelector('.step-item.active')?.scrollIntoView({ block: 'nearest' });
   $('progressFill').style.width = `${((activeStep + 1) / steps.length) * 100}%`;
   const stepCount = String(steps.length).padStart(2, '0');
   document.querySelector('.build-number').innerHTML = `${String(activeStep + 1).padStart(2, '0')}<br><span>/ ${stepCount}</span>`;
@@ -161,10 +162,11 @@ function renderOptions() {
     return `<button class="option-card ${selected[step.id] === index ? 'selected' : ''}" data-option="${index}" aria-pressed="${selected[step.id] === index}"><span class="option-swatch ${swatch}"${swatchStyle}></span><span class="option-copy"><strong>${title}</strong><small>${option.detail}</small></span><span class="option-price">${money(option.price)}</span></button>`;
   }).join('');
   document.querySelectorAll('.option-card').forEach(button => button.addEventListener('click', () => {
+    const scrollTop = $('optionList').scrollTop;
     selected[step.id] = Number(button.dataset.option);
     if (step.id === 'crystal' || step.id === 'blade') bladeIgnited = true;
     syncBladeToggle();
-    renderOptions(); updateUI(); rebuildSaber(); playTone(480 + activeStep * 70, .07);
+    renderOptions(); $('optionList').scrollTop = scrollTop; updateUI(); rebuildSaber(); playTone(480 + activeStep * 70, .07);
   }));
   $('selectionNote').textContent = selectedOption(step.id).note;
   $('partValue').textContent = money(selectedOption(step.id).price);
@@ -324,9 +326,9 @@ document.addEventListener('keydown', event => {
 // A compact, fully interactive Three.js workbench: every option is assembled from real 3D geometry.
 const mount = $('sceneWrap');
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x1d2420, 9, 20);
+scene.fog = new THREE.Fog(0x1a211d, 12, 26);
 const camera = new THREE.PerspectiveCamera(36, 1, .1, 80);
-camera.position.set(5.2, 3.2, 8.8); camera.lookAt(0, 1.85, 0);
+camera.position.set(5.6, 3.35, 9.6); camera.lookAt(0, 1.95, 0);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -336,9 +338,9 @@ mount.insertBefore(renderer.domElement, mount.querySelector('.scene-vignette'));
 scene.add(new THREE.HemisphereLight(0xc9d9cf, 0x202820, 2.1));
 const keyLight = new THREE.DirectionalLight(0xffe6c6, 3.5); keyLight.position.set(4, 7, 5); keyLight.castShadow = true; keyLight.shadow.mapSize.set(1024, 1024); scene.add(keyLight);
 const rimLight = new THREE.PointLight(0x83a878, 19, 12); rimLight.position.set(-3, 3, -2); scene.add(rimLight);
-const floor = new THREE.Mesh(new THREE.CircleGeometry(5, 64), new THREE.MeshStandardMaterial({ color: 0x29302c, roughness: .8, metalness: .15 }));
-floor.rotation.x = -Math.PI / 2; floor.position.y = -1.02; floor.receiveShadow = true; scene.add(floor);
-const grid = new THREE.GridHelper(12, 24, 0x64705e, 0x3c453f); grid.position.y = -1; grid.material.transparent = true; grid.material.opacity = .22; scene.add(grid);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(8.6, 64), new THREE.MeshStandardMaterial({ color: 0x222a25, roughness: .88, metalness: .12 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -2.28; floor.receiveShadow = true; scene.add(floor);
+const grid = new THREE.GridHelper(17, 34, 0x5d6959, 0x353f39); grid.position.y = -2.27; grid.material.transparent = true; grid.material.opacity = .18; scene.add(grid);
 const turntable = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.13, .12, 64), new THREE.MeshStandardMaterial({ color: 0x252c28, metalness: .72, roughness: .32 }));
 turntable.position.set(0, -.92, 0); turntable.castShadow = true; turntable.receiveShadow = true; scene.add(turntable);
 const turntableEdge = new THREE.Mesh(new THREE.TorusGeometry(1.1, .018, 8, 64), new THREE.MeshStandardMaterial({ color: 0xc3d48c, emissive: 0x33421e, metalness: .55, roughness: .3 }));
@@ -371,6 +373,180 @@ function cylinder(parent, radiusTop, radiusBottom, height, material, y, radial =
 function torus(parent, radius, tube, material, y) {
   const mesh = addMesh(parent, new THREE.TorusGeometry(radius, tube, 10, 48), material, [0, y, 0], [Math.PI / 2, 0, 0]); return mesh;
 }
+let workshopDust = null, workshopRingGroup = null, levitationGlow = null, levitationLight = null;
+function makePegboardTexture() {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#2b332e'; context.fillRect(0, 0, 128, 128);
+  context.fillStyle = '#1a211d';
+  for (let y = 10; y < 128; y += 18) for (let x = 10; x < 128; x += 18) {
+    context.beginPath(); context.arc(x, y, 2.4, 0, Math.PI * 2); context.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(3, 1.6); texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+function makeGlowTexture(color) {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+  const context = canvas.getContext('2d');
+  const gradient = context.createRadialGradient(64, 64, 4, 64, 64, 62);
+  gradient.addColorStop(0, color); gradient.addColorStop(.36, color); gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  context.fillStyle = gradient; context.fillRect(0, 0, 128, 128);
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+function buildWorkshop() {
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x202723, roughness: .93, metalness: .06 });
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0x2a322d, roughness: .82, metalness: .16 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x3a433d, roughness: .48, metalness: .58 });
+  const tableMat = new THREE.MeshStandardMaterial({ color: 0x3b443e, roughness: .34, metalness: .72 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x5b4030, roughness: .72, metalness: .08 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x232a26, roughness: .45, metalness: .76 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x9aa69e, roughness: .3, metalness: .9 });
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xb08a4a, roughness: .34, metalness: .86 });
+  const orangeMat = new THREE.MeshStandardMaterial({ color: 0x754331, roughness: .55, metalness: .3 });
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xd8f36a });
+  const workshop = new THREE.Group(); scene.add(workshop);
+
+  // Room shell and back wall panelling.
+  const wall = addMesh(workshop, new THREE.BoxGeometry(16, 9.2, .25), wallMat, [0, 1.7, -4.75]);
+  wall.castShadow = false;
+  for (const x of [-5.4, -2.7, 0, 2.7, 5.4]) addMesh(workshop, new THREE.BoxGeometry(.1, 9, .12), trimMat, [x, 1.7, -4.6]);
+  for (const y of [-2.05, 3.45]) addMesh(workshop, new THREE.BoxGeometry(16, .1, .12), trimMat, [0, y, -4.6]);
+
+  // Pegboard with a row of hanging tools.
+  const pegboard = addMesh(workshop, new THREE.BoxGeometry(6.2, 3.0, .08), new THREE.MeshStandardMaterial({ map: makePegboardTexture(), roughness: .85, metalness: .16 }), [0, 2.0, -4.56]);
+  pegboard.castShadow = false;
+  for (const [x, y, w, h] of [[0, 3.52, 6.36, .08], [0, .48, 6.36, .08], [-3.14, 2.0, .08, 3.08], [3.14, 2.0, .08, 3.08]]) addMesh(workshop, new THREE.BoxGeometry(w, h, .1), trimMat, [x, y, -4.54]);
+  const neon = addMesh(workshop, new THREE.BoxGeometry(5.9, .035, .035), glowMat, [0, 3.6, -4.47]);
+  neon.castShadow = false;
+
+  const wrench = new THREE.Group(); wrench.position.set(-2.2, 2.28, -4.44); wrench.rotation.z = -.12; workshop.add(wrench);
+  addMesh(wrench, new THREE.BoxGeometry(.1, .82, .05), steelMat, [0, 0, 0]);
+  addMesh(wrench, new THREE.TorusGeometry(.15, .045, 8, 20, Math.PI * 1.45), steelMat, [0, .52, 0]);
+  addMesh(wrench, new THREE.BoxGeometry(.1, .16, .05), steelMat, [.11, .65, 0], [0, 0, -.4]);
+  const screwdriver = new THREE.Group(); screwdriver.position.set(-1.35, 2.25, -4.44); screwdriver.rotation.z = .12; workshop.add(screwdriver);
+  addMesh(screwdriver, new THREE.CylinderGeometry(.075, .075, .34, 12), brassMat, [0, .23, 0]);
+  addMesh(screwdriver, new THREE.CylinderGeometry(.022, .022, .6, 8), steelMat, [0, -.22, 0]);
+  addMesh(screwdriver, new THREE.ConeGeometry(.04, .1, 8), steelMat, [0, -.56, 0], [Math.PI, 0, 0]);
+  const pliers = new THREE.Group(); pliers.position.set(-.5, 2.3, -4.44); workshop.add(pliers);
+  for (const side of [-1, 1]) {
+    addMesh(pliers, new THREE.BoxGeometry(.065, .5, .04), steelMat, [side * .055, -.2, 0], [0, 0, side * .14]);
+    addMesh(pliers, new THREE.BoxGeometry(.055, .34, .04), steelMat, [side * .12, .28, 0], [0, 0, side * -.28]);
+  }
+  addMesh(pliers, new THREE.CylinderGeometry(.055, .055, .08, 10), darkMat, [0, .02, 0]);
+  const mallet = new THREE.Group(); mallet.position.set(.55, 2.3, -4.44); mallet.rotation.z = .18; workshop.add(mallet);
+  addMesh(mallet, new THREE.BoxGeometry(.07, .8, .05), woodMat, [0, -.1, 0]);
+  addMesh(mallet, new THREE.CylinderGeometry(.13, .13, .3, 12), steelMat, [0, .36, 0], [0, 0, Math.PI / 2]);
+  const spareHilt = new THREE.Group(); spareHilt.position.set(1.6, 2.15, -4.44); workshop.add(spareHilt);
+  addMesh(spareHilt, new THREE.CylinderGeometry(.1, .1, .95, 20), steelMat, [0, 0, 0], [0, 0, Math.PI / 2]);
+  for (const x of [-.3, 0, .3]) addMesh(spareHilt, new THREE.CylinderGeometry(.115, .115, .06, 20), darkMat, [x, 0, 0], [0, 0, Math.PI / 2]);
+  addMesh(spareHilt, new THREE.CylinderGeometry(.11, .11, .1, 20), brassMat, [.42, 0, 0], [0, 0, Math.PI / 2]);
+
+  // Wall shelves with parts bins.
+  for (const side of [-1, 1]) {
+    const shelfX = side * 4.15;
+    addMesh(workshop, new THREE.BoxGeometry(1.7, .09, .62), woodMat, [shelfX, 1.35, -4.35]);
+    for (const x of [shelfX - .65, shelfX + .65]) addMesh(workshop, new THREE.BoxGeometry(.07, .32, .5), trimMat, [x, 1.17, -4.35]);
+    addMesh(workshop, new THREE.BoxGeometry(.5, .34, .42), darkMat, [shelfX - .35, 1.58, -4.35]);
+    addMesh(workshop, new THREE.BoxGeometry(.5, .34, .42), panelMat, [shelfX + .35, 1.58, -4.35]);
+    const strip = addMesh(workshop, new THREE.BoxGeometry(.42, .03, .03), glowMat, [shelfX - .35, 1.58, -4.12]);
+    strip.castShadow = false;
+  }
+
+  // Heavy workshop bench.
+  addMesh(workshop, new THREE.BoxGeometry(7.4, .22, 3.9), tableMat, [0, -1.0, .15]);
+  addMesh(workshop, new THREE.BoxGeometry(7.5, .12, .12), woodMat, [0, -.96, 2.1]);
+  addMesh(workshop, new THREE.BoxGeometry(.12, .12, 3.9), woodMat, [-3.7, -.96, .15]);
+  addMesh(workshop, new THREE.BoxGeometry(.12, .12, 3.9), woodMat, [3.7, -.96, .15]);
+  for (const x of [-3.25, 3.25]) for (const z of [-1.5, 1.55]) addMesh(workshop, new THREE.BoxGeometry(.16, 1.25, .16), darkMat, [x, -1.665, z]);
+  addMesh(workshop, new THREE.BoxGeometry(6.5, .12, .12), darkMat, [0, -1.72, -1.5]);
+  addMesh(workshop, new THREE.BoxGeometry(6.5, .12, .12), darkMat, [0, -1.72, 1.55]);
+  addMesh(workshop, new THREE.BoxGeometry(.12, .12, 3.05), darkMat, [-3.25, -1.72, .02]);
+  addMesh(workshop, new THREE.BoxGeometry(6.9, .08, 3.2), panelMat, [0, -2.2, .02]);
+
+  // Rolling tool chest and a crate of spare stock.
+  addMesh(workshop, new THREE.BoxGeometry(1.5, 1.0, 1.15), orangeMat, [-2.3, -1.62, .85]);
+  for (let i = 0; i < 3; i++) {
+    addMesh(workshop, new THREE.BoxGeometry(1.34, .24, .04), darkMat, [-2.3, -1.3 - i * .28, 1.44]);
+    addMesh(workshop, new THREE.BoxGeometry(.4, .035, .035), steelMat, [-2.3, -1.3 - i * .28, 1.47]);
+  }
+  addMesh(workshop, new THREE.BoxGeometry(1.35, .8, 1.1), woodMat, [2.35, -1.76, .9]);
+  addMesh(workshop, new THREE.BoxGeometry(1.15, .07, .9), panelMat, [2.35, -1.33, .9]);
+
+  // Levitation pad built into the bench top.
+  levitationGlow = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 2.9), new THREE.MeshBasicMaterial({ map: makeGlowTexture('#d8f36a'), transparent: true, opacity: .42, blending: THREE.AdditiveBlending, depthWrite: false }));
+  levitationGlow.rotation.x = -Math.PI / 2; levitationGlow.position.y = -.842; workshop.add(levitationGlow);
+  workshopRingGroup = new THREE.Group(); workshopRingGroup.position.y = -.838; workshop.add(workshopRingGroup);
+  for (const [radius, color, opacity, arc, start] of [[.88, 0xd8f36a, .8, Math.PI * .52, 0], [.88, 0xd8f36a, .8, Math.PI * .52, Math.PI], [.64, 0x6fe8ff, .55, Math.PI * .36, Math.PI * .5]]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, .011, 6, 40, arc), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false }));
+    ring.rotation.set(Math.PI / 2, 0, start); ring.castShadow = false; workshopRingGroup.add(ring);
+  }
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    addMesh(workshop, new THREE.CylinderGeometry(.045, .06, .08, 12), darkMat, [Math.cos(a) * .87, -.82, Math.sin(a) * .87]);
+    const tip = addMesh(workshop, new THREE.SphereGeometry(.022, 10, 8), glowMat, [Math.cos(a) * .87, -.77, Math.sin(a) * .87]);
+    tip.castShadow = false;
+  }
+  levitationLight = new THREE.PointLight(0xd8f36a, 4.5, 2.8, 2); levitationLight.position.set(0, -.58, 0); workshop.add(levitationLight);
+  const contactShadow = new THREE.Mesh(new THREE.CircleGeometry(.55, 32), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .34, depthWrite: false }));
+  contactShadow.rotation.x = -Math.PI / 2; contactShadow.position.y = -.826; workshop.add(contactShadow);
+
+  // Loose bench props: tools, spare barrel sections, kyber crystals and a datapad.
+  addMesh(workshop, new THREE.CylinderGeometry(.16, .13, .34, 16), darkMat, [-2.85, -.77, 1.0]);
+  for (let i = 0; i < 5; i++) {
+    const a = i * Math.PI * 2 / 5;
+    addMesh(workshop, new THREE.CylinderGeometry(.012, .012, .52, 6), i % 2 ? steelMat : brassMat, [-2.85 + Math.cos(a) * .06, -.54, 1.0 + Math.sin(a) * .06], [0, 0, Math.cos(a) * .18]);
+  }
+  addMesh(workshop, new THREE.BoxGeometry(1.2, .07, .5), darkMat, [-1.8, -.85, 1.35]);
+  for (let i = 0; i < 3; i++) addMesh(workshop, new THREE.CylinderGeometry(.06, .07, .55, 12), i === 1 ? brassMat : steelMat, [-2.1 + i * .3, -.79, 1.35], [0, 0, Math.PI / 2]);
+  addMesh(workshop, new THREE.BoxGeometry(.95, .1, .45), darkMat, [2.55, -.83, .8]);
+  const crystalColors = [0x4a8dff, 0x48e184, 0xffe45c, 0x985cff, 0xff3b4f];
+  crystalColors.forEach((hex, i) => {
+    const material = new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: 1.1, roughness: .12, metalness: .1, transparent: true, opacity: .95 });
+    const crystal = addMesh(workshop, new THREE.OctahedronGeometry(.072, 0), material, [2.28 + i * .135, -.73, .8]);
+    crystal.scale.set(.78, 1.5, .78); crystal.castShadow = false;
+  });
+  const crystalLight = new THREE.PointLight(0x8fd8ff, 2.2, 1.5, 2); crystalLight.position.set(2.55, -.55, .8); workshop.add(crystalLight);
+  addMesh(workshop, new THREE.BoxGeometry(.9, .04, .55), darkMat, [1.55, -.86, 1.52], [0, -.25, 0]);
+  const screen = addMesh(workshop, new THREE.BoxGeometry(.72, .012, .38), new THREE.MeshBasicMaterial({ color: 0x4deaff, transparent: true, opacity: .5 }), [1.55, -.834, 1.52], [0, -.25, 0]);
+  screen.castShadow = false;
+  for (let i = 0; i < 3; i++) {
+    const line = addMesh(workshop, new THREE.BoxGeometry(.38, .006, .018), new THREE.MeshBasicMaterial({ color: 0xd8f36a, transparent: true, opacity: .8 }), [1.47, -.826, 1.43 + i * .07], [0, -.25, 0]);
+    line.castShadow = false;
+  }
+
+  // Articulated bench lamp angled at the levitation pad.
+  addMesh(workshop, new THREE.CylinderGeometry(.18, .22, .07, 20), darkMat, [2.75, -.855, -.65]);
+  addMesh(workshop, new THREE.CylinderGeometry(.025, .025, .95, 8), steelMat, [2.75, -.38, -.65], [0, 0, .12]);
+  addMesh(workshop, new THREE.CylinderGeometry(.022, .022, .8, 8), steelMat, [2.45, .2, -.55], [0, 0, -.75]);
+  const shade = addMesh(workshop, new THREE.ConeGeometry(.23, .26, 18, 1, true), darkMat, [2.05, .58, -.45], [0, 0, Math.PI / 2.5]);
+  shade.castShadow = false;
+  const bulb = addMesh(workshop, new THREE.SphereGeometry(.08, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffe0ad }), [1.97, .55, -.45]);
+  bulb.castShadow = false;
+  const lampLight = new THREE.PointLight(0xffd7a0, 8, 5.5, 2); lampLight.position.set(1.9, .55, -.35); workshop.add(lampLight);
+
+  // Pendant work light hanging over the left end of the bench.
+  addMesh(workshop, new THREE.CylinderGeometry(.012, .012, 1.4, 6), darkMat, [-2.35, 4.85, -1.0]);
+  const pendantShade = addMesh(workshop, new THREE.ConeGeometry(.34, .24, 20, 1, true), darkMat, [-2.35, 4.08, -1.0]);
+  pendantShade.castShadow = false;
+  const pendantBulb = addMesh(workshop, new THREE.SphereGeometry(.09, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffe0ad }), [-2.35, 4.0, -1.0]);
+  pendantBulb.castShadow = false;
+  const pendantLight = new THREE.PointLight(0xffd7a0, 6, 5, 2); pendantLight.position.set(-2.35, 3.9, -1.0); workshop.add(pendantLight);
+
+  // Dust motes drifting through the work light.
+  const positions = new Float32Array(110 * 3);
+  for (let i = 0; i < 110; i++) {
+    positions[i * 3] = (Math.random() - .5) * 9;
+    positions[i * 3 + 1] = -.5 + Math.random() * 4.8;
+    positions[i * 3 + 2] = -3.8 + Math.random() * 7;
+  }
+  const dustGeometry = new THREE.BufferGeometry();
+  dustGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  workshopDust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0xd8f36a, size: .018, transparent: true, opacity: .32, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true }));
+  workshop.add(workshopDust);
+}
+buildWorkshop();
 function syncAuctionSaber() {
   auctionSaberRoot.clear();
   const auctionModel = model.clone(true);
@@ -703,6 +879,12 @@ function animate() {
   if (autoRotate && !pointerDown) rotationY += .002;
   saberRoot.rotation.y += (rotationY - saberRoot.rotation.y) * .08;
   saberRoot.rotation.x += (rotationX - saberRoot.rotation.x) * .08;
+  saberRoot.position.y = .25 + Math.sin(elapsed * 1.45) * .045;
+  saberRoot.rotation.z = Math.sin(elapsed * .8) * .008;
+  if (workshopDust) { workshopDust.rotation.y = elapsed * .018; workshopDust.position.y = Math.sin(elapsed * .3) * .06; }
+  if (workshopRingGroup) workshopRingGroup.rotation.y = elapsed * .45;
+  if (levitationGlow) levitationGlow.material.opacity = .36 + (Math.sin(elapsed * 1.7) + 1) * .045;
+  if (levitationLight) levitationLight.intensity = 3.8 + (Math.sin(elapsed * 2.1) + 1) * .8;
   const pulse = 1 + Math.sin(elapsed * 4.2) * .018;
   if (model.children.length) {
     // Profile-specific blade meshes breathe together; pulse rings ripple independently.
