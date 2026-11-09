@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a21">
+  <title>Canopy Keep — Tower Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231f6347' d='M16 1 30 9v14l-14 8L2 23V9z'/%3E%3Cpath fill='none' stroke='%23e6f4df' stroke-width='2' d='m9 21 7-13 7 13M12 16h8'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Canopy Keep home">
+        <span class="brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 28 10v12L16 29 4 22V10L16 3Z"/><path d="m9 20 7-12 7 12M12 16h8"/></svg></span>
+        <span><strong>CANOPY <em>KEEP</em></strong><small>FIELD COMMAND · 01</small></span>
+      </a>
+      <div class="top-status"><span class="live-dot"></span> CAMPAIGN IN PROGRESS <i></i> THE VERDANT FRONTIER</div>
+      <button class="icon-button help-button" id="helpBtn" aria-label="How to play" title="How to play">?</button>
+    </header>
+
+    <section class="game-layout">
+      <section class="main-column">
+        <div class="hud">
+          <div class="hud-stat"><span class="stat-icon heart">♥</span><div><small>HEALTH</small><strong id="livesValue">100</strong></div></div>
+          <div class="hud-stat"><span class="stat-icon coin">◈</span><div><small>FIELD FUNDS</small><strong id="cashValue">420</strong></div></div>
+          <div class="hud-stat wave-stat"><span class="stat-icon wave-icon">⌁</span><div><small>WAVE</small><strong><span id="waveValue">0</span><span class="wave-total"> / ∞</span></strong></div></div>
+          <div class="hud-spacer"></div>
+          <div class="phase-label"><span class="phase-dot" id="phaseDot"></span><span id="phaseLabel">READY TO DEPLOY</span></div>
+        </div>
+
+        <div class="board-wrap">
+          <canvas id="gameCanvas" width="960" height="570" aria-label="Tower defense battlefield. Select a tower then click a grassy tile to place it."></canvas>
+          <div class="board-coordinates"><span>SECTOR 04-B</span><span>FIELD MAP · DAY 12</span></div>
+          <div class="selection-hint" id="selectionHint">CHOOSE A DEFENDER TO DEPLOY</div>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
+
+        <div class="battle-controls">
+          <div class="wave-info"><span class="wave-badge" id="nextWaveBadge">WAVE 01</span><span id="waveMessage">The trail is quiet. Prepare your defenses.</span></div>
+          <div class="control-actions">
+            <button class="control-btn" id="speedBtn" title="Toggle game speed"><span class="speed-glyph">»</span><span id="speedText">1×</span></button>
+            <button class="control-btn" id="pauseBtn" title="Pause or resume"><span id="pauseGlyph">Ⅱ</span><span id="pauseText">PAUSE</span></button>
+            <button class="launch-btn" id="waveBtn"><span class="launch-icon">▶</span><span id="waveBtnText">START WAVE</span></button>
+          </div>
+        </div>
+        <div class="bottom-note"><span>✦</span> Keep the trail clear. Don’t let them reach the grove.</div>
+      </section>
+
+      <aside class="command-panel">
+        <div class="panel-heading"><div><span class="eyebrow">COMMAND DECK</span><h1>Build your defense<span class="heading-period">.</span></h1></div><span class="deck-icon">⌘</span></div>
+        <p class="panel-intro">Place defenders beside the trail. Each has a different way of holding the line.</p>
+
+        <div class="section-label"><span>DEFENDERS</span><span class="label-line"></span><span class="key-hint">SELECT TO PLACE</span></div>
+        <div class="tower-list" id="towerList">
+          <button class="tower-card selected" data-tower="scout" aria-pressed="true">
+            <span class="tower-art scout-art"><span class="art-base"></span><span class="art-head"></span><span class="art-barrel"></span></span>
+            <span class="tower-copy"><strong>Trail Scout</strong><small>Quick shots · balanced</small></span>
+            <span class="tower-price"><b>100</b><small>◈</small></span>
+            <span class="tower-check">✓</span>
+          </button>
+          <button class="tower-card" data-tower="mortar" aria-pressed="false">
+            <span class="tower-art mortar-art"><span class="art-base"></span><span class="art-head"></span><span class="art-barrel"></span></span>
+            <span class="tower-copy"><strong>Thorn Mortar</strong><small>Heavy splash damage</small></span>
+            <span class="tower-price"><b>160</b><small>◈</small></span>
+            <span class="tower-check">✓</span>
+          </button>
+          <button class="tower-card" data-tower="frost" aria-pressed="false">
+            <span class="tower-art frost-art"><span class="art-base"></span><span class="art-head"></span><span class="art-barrel"></span></span>
+            <span class="tower-copy"><strong>Frost Fern</strong><small>Slows nearby enemies</small></span>
+            <span class="tower-price"><b>130</b><small>◈</small></span>
+            <span class="tower-check">✓</span>
+          </button>
+        </div>
+
+        <div class="selected-panel" id="selectedPanel">
+          <div class="selected-title"><span class="selection-mark">◎</span><span><small>SELECTED DEFENDER</small><strong id="selectedName">Trail Scout</strong></span><button id="cancelPlacement" aria-label="Cancel placement">×</button></div>
+          <div class="selected-stats"><span><small>RANGE</small><b id="selectedRange">145</b></span><span><small>FIRE RATE</small><b id="selectedRate">0.8s</b></span><span><small>DAMAGE</small><b id="selectedDamage">1</b></span></div>
+          <div class="deploy-hint"><span>⌖</span> Click an open patch of grass to place</div>
+        </div>
+
+        <div class="tower-detail" id="towerDetail" hidden>
+          <div class="selected-title"><span class="selection-mark">◎</span><span><small>DEFENDER SELECTED</small><strong id="detailName">Trail Scout</strong></span><button id="deselectTower" aria-label="Deselect tower">×</button></div>
+          <div class="upgrade-row"><span class="level-tag" id="levelTag">LVL 1</span><span class="upgrade-description" id="upgradeDescription">Sharper aim · +1 range</span></div>
+          <button class="upgrade-btn" id="upgradeBtn"><span>UPGRADE</span><b id="upgradeCost">◈ 80</b></button>
+          <button class="sell-btn" id="sellBtn">SELL DEFENDER <span id="sellValue">+70</span></button>
+        </div>
+
+        <div class="deck-footer"><div class="tip-icon">✳</div><div><strong>FIELD TIP</strong><p id="fieldTip">Position matters. Defenders can’t be placed on the trail, and overlapping ranges don’t stack.</p></div></div>
+      </aside>
+    </section>
+    <footer class="footer"><span>CANOPY KEEP <b>·</b> FIELD TEST BUILD 0.1</span><span>DEFEND THE GROVE <i>✦</i></span></footer>
+  </main>
+
+  <div class="modal-backdrop" id="helpModal" hidden>
+    <section class="help-modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <button class="modal-close" id="closeHelp" aria-label="Close help">×</button>
+      <span class="eyebrow">FIELD MANUAL · QUICK START</span><h2 id="helpTitle">Hold the trail.</h2>
+      <p>Stop the curious critters before they reach the grove. Build a little, then send the next wave.</p>
+      <ol><li><b>Choose a defender</b> from the command deck.</li><li><b>Click open grass</b> beside the winding trail to place it.</li><li><b>Start a wave</b> when your defenses are ready. Defenders fire automatically.</li><li><b>Select a placed defender</b> to upgrade or sell it. Earn funds for every critter you pop.</li></ol>
+      <div class="manual-note">Scout for steady shots · Mortar for clustered targets · Frost Fern to slow the crowd</div>
+      <button class="launch-btn modal-ok" id="gotIt">GOT IT <span>→</span></button>
+    </section>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
