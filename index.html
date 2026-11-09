@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#101211" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23d8f36a'/%3E%3Cpath d='M10 8h20v17l-7 7H10z' fill='%23131615'/%3E%3C/svg%3E" />
-  <title>FORGE / Saber Atelier</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23d8f36a'/%3E%3Cg transform='rotate(-45 20 20)' fill='%23131615'%3E%3Crect x='18' y='5' width='4' height='16' rx='2'/%3E%3Crect x='14' y='19' width='12' height='3' rx='1.5'/%3E%3Crect x='17' y='22' width='6' height='13' rx='2.5'/%3E%3C/g%3E%3C/svg%3E" />
+  <title>The Sabersmith</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#" aria-label="Forge home"><span class="brand-mark">F</span><span>FORGE<span class="brand-slash">/</span></span></a>
+      <a class="brand" href="#" aria-label="The Sabersmith home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" focusable="false"><g transform="rotate(-45 12 12)" fill="currentColor"><rect x="10.8" y="2.5" width="2.4" height="9.5" rx="1.2"/><rect x="8.6" y="11.6" width="6.8" height="1.8" rx="0.9"/><rect x="10" y="13.4" width="4" height="8.2" rx="1.5"/></g></svg></span><span>THE SABERSMITH</span></a>
       <div class="top-center"><span class="live-dot"></span> SABER ATELIER <span class="top-divider">·</span> CORUSCANT, 09:42</div>
       <button class="sound-toggle" id="soundToggle" aria-label="Toggle sound"><span class="sound-icon">♪</span><span>SOUND <b id="soundState">OFF</b></span></button>
     </header>
@@ -32,8 +32,8 @@
       </aside>
 
       <section class="preview-panel" aria-label="3D saber preview">
-        <div class="preview-top"><div><span class="eyebrow">LIVE PREVIEW</span><span class="preview-caption">DRAG TO ROTATE <span>↗</span></span></div><div class="preview-actions"><button class="blade-toggle" id="bladeToggle" type="button" role="switch" aria-checked="false" aria-label="Turn preview blade on"><span class="blade-toggle-label">BLADE POWER</span><span class="blade-power-state">OFF</span><span class="blade-switch-track" aria-hidden="true"><i></i></span></button><button class="icon-button" id="resetView" title="Reset view" aria-label="Reset saber view">⟳</button></div></div>
-        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div><div class="scene-label"><span class="live-dot"></span> PROTOTYPE RENDER <span class="scene-label-right">01 — 09</span></div></div>
+        <div class="preview-top"><div><span class="preview-caption">DRAG TO ROTATE <span>↗</span></span></div><div class="preview-actions"><button class="blade-toggle" id="bladeToggle" type="button" role="switch" aria-checked="false" aria-label="Turn preview blade on"><span class="blade-toggle-label">BLADE POWER</span><span class="blade-power-state">OFF</span><span class="blade-switch-track" aria-hidden="true"><i></i></span></button><button class="icon-button" id="resetView" title="Reset view" aria-label="Reset saber view">⟳</button></div></div>
+        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div></div>
         <div class="preview-bottom"><div><span class="eyebrow">CURRENT BUILD</span><strong id="previewName">The Wayfinder</strong></div><div class="crystal-readout"><span class="crystal-dot" id="crystalDot"></span><span><small>CRYSTAL</small><b id="crystalReadout">KYBER · AZURE</b></span></div><div class="price-readout"><small>EST. VALUE</small><strong id="previewPrice">¤ 2,640</strong></div></div>
         <div class="step-controls"><button class="text-button" id="prevStep" disabled>← <span>BACK</span></button><span class="step-summary" id="stepSummary">01 / 09 &nbsp; HILT</span><button class="primary-button" id="nextStep">NEXT PART <span>→</span></button></div>
       </section>
@@ -64,7 +64,7 @@
           <div class="bidder bidder-5" data-bidder="4"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>JAX RENN</b><small>SMUGGLER</small></div>
           <div class="bidder bidder-6" data-bidder="5"><div class="bid-tag">—</div><div class="person"><i class="head"></i><i class="body"></i><i class="arm"></i></div><b>THE CURATOR</b><small>PRIVATE VAULT</small></div>
         </div>
-        <div class="auction-podium"><div class="podium-glow"></div><canvas class="auction-saber" id="auctionSaber" aria-label="Your custom saber on the auction podium"></canvas><div class="podium-top"></div><div class="podium-column"><span>F O R G E</span></div><div class="podium-base"></div></div>
+        <div class="auction-podium"><div class="podium-glow"></div><canvas class="auction-saber" id="auctionSaber" aria-label="Your custom saber on the auction podium"></canvas><div class="podium-top"></div><div class="podium-column"><span>S A B E R S M I T H</span></div><div class="podium-base"></div></div>
         <div class="auction-product-label"><span>LOT 07</span><b id="stageBuildName">AZURE WAYFINDER</b><small>HAND-FORGED · KYBER-BOUND</small></div>
         <div class="bid-live-card"><small>HIGHEST BID</small><strong id="auctionPrice">¤ 0</strong><span id="auctionBidder">OPENING OFFER</span></div>
         <div class="auction-speech" id="auctionSpeech">A rare build enters the room. Who will make the first offer?</div>
