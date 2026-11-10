@@ -149,7 +149,7 @@
             </svg>
           </span>
           <strong>Scrap Run</strong>
-          <small>Slice crates, battle droids and stray salvage out of the air. Thermal detonators cost a life.</small>
+          <small>Slice crates, battle droids, holocrons and rare salvage out of the air. Two kinds of detonator cost a life.</small>
           <span class="activity-cta">START THE RUN <b>↗</b></span>
         </button>
 
@@ -197,10 +197,13 @@
         <div class="stage-corner stage-corner-tr" aria-hidden="true"></div>
         <div class="stage-corner stage-corner-bl" aria-hidden="true"></div>
         <div class="stage-corner stage-corner-br" aria-hidden="true"></div>
-        <div class="disassembly-readout">
-          <span class="eyebrow">ON THE PAD</span>
-          <strong id="disassemblyPartName">THE WAYFINDER</strong>
-          <small id="disassemblyPieceCount">00 PIECES · 04 ASSEMBLIES</small>
+        <svg class="part-leaders" id="disassemblyLeaders" aria-hidden="true"></svg>
+        <div class="part-labels" id="disassemblyLabels" aria-hidden="true"></div>
+        <div class="disassembly-readout" id="disassemblyReadout">
+          <span class="eyebrow" id="disassemblyDetailKicker">ON THE PAD</span>
+          <div class="disassembly-detail-head"><i class="part-detail-swatch" id="disassemblySwatch" hidden></i><strong id="disassemblyPartName">THE WAYFINDER</strong></div>
+          <small id="disassemblyPieceCount">00 PIECES · 06 ASSEMBLIES</small>
+          <p id="disassemblyDetailNote" hidden></p>
         </div>
         <div class="disassembly-hint" id="disassemblyHint">DRAG TO ROTATE · BLADE POWER DISENGAGED</div>
         <div class="disassembly-flash" id="disassemblyFlash" aria-hidden="true"></div>
@@ -235,8 +238,9 @@
         <div class="slicer-start" id="slicerStart">
           <span class="eyebrow">TRAINING PROTOCOL · 60 SECONDS</span>
           <h2>Slice the <em>salvage.</em></h2>
-          <p>Drag a glowing blade through crates, battle droids, helmets and stray gear. Chain cuts for a multiplier. Three misses ends the run — and a thermal detonator costs a life.</p>
-          <div class="slicer-legend"><span><i class="legend-crate"></i> SALVAGE</span><span><i class="legend-bomb"></i> DETONATOR · AVOID</span><span><i class="legend-blade"></i> DRAG TO SLICE</span></div>
+          <p>Drag a glowing blade through crates, battle droids, holocrons, astromechs and rare gear. Chain cuts for a multiplier. Three misses ends the run — and either detonator model costs a life.</p>
+          <p class="slicer-manifest">CRATES · BATTLE DROIDS · TROOPER HELMETS · ASTROMECHS · HOLOCRONS · SABERS · BLASTERS · MANDALORIAN STEEL</p>
+          <div class="slicer-legend"><span><i class="legend-crate"></i> SALVAGE</span><span><i class="legend-bomb"></i> DETONATORS · AVOID</span><span><i class="legend-blade"></i> DRAG TO SLICE</span></div>
           <button class="primary-button" id="slicerStartButton">START 60-SECOND RUN <span>↗</span></button>
         </div>
         <div class="slicer-over" id="slicerOver" aria-hidden="true">

@@ -711,9 +711,12 @@ let pointerDown = false, pointerX = 0, pointerY = 0, rotationX = 0, rotationY = 
 const clock = new THREE.Clock();
 
 function metal(color, roughness = .33, metalness = .82) { return new THREE.MeshStandardMaterial({ color, roughness, metalness }); }
+let saberPartTag = null;
 function addMesh(parent, geometry, material, position, rotation) {
   const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position);
-  if (rotation) mesh.rotation.set(...rotation); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  if (rotation) mesh.rotation.set(...rotation); mesh.castShadow = true; mesh.receiveShadow = true;
+  if (saberPartTag) mesh.userData.part = saberPartTag;
+  parent.add(mesh); return mesh;
 }
 function cylinder(parent, radiusTop, radiusBottom, height, material, y, radial = 48) {
   return addMesh(parent, new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radial, 1), material, [0, y, 0]);
@@ -983,6 +986,7 @@ function resizeAuctionScene() {
 }
 function rebuildSaber() {
   scene.remove(saberRoot); model = new THREE.Group(); saberRoot.clear(); saberRoot.add(model); scene.add(saberRoot);
+  saberPartTag = 'hilt';
   const hilt = selectedOption('hilt');
   const emitter = selectedOption('emitter');
   const grip = selectedOption('grip');
@@ -1011,6 +1015,7 @@ function rebuildSaber() {
     for (let i = 0; i < 5; i++) cylinder(model, .32 - i * .012, .32 - i * .012, .075, i % 2 ? bright : body, -.40 + i * .20);
   }
   const gripColor = grip.style === 'wrap' ? 0x80634c : grip.style === 'carbon' ? 0x202c2b : hilt.finish === 'copper' ? 0x655044 : 0x303734;
+  saberPartTag = 'grip';
   const gripMat = new THREE.MeshStandardMaterial({ color: gripColor, roughness: grip.style === 'wrap' ? .9 : .53, metalness: .4 });
   const gripRadius = hilt.profile === 'slim' ? .248 : .302;
   cylinder(model, gripRadius, gripRadius, .57, gripMat, -.08, hilt.profile === 'hex' ? 6 : 48);
@@ -1034,6 +1039,7 @@ function rebuildSaber() {
     for (let i = 0; i < 8; i++) { const a = i * Math.PI * 2 / 8; addMesh(model, new THREE.TorusGeometry(gripRadius + .015, .009, 6, 48), metal(0xb59676, .9, .15), [0, -.31 + i * .065, 0], [Math.PI / 2, a, .32]); }
   }
   // Emitter neck and chosen silhouette.
+  saberPartTag = 'emitter';
   cylinder(model, .20, .255, .18, dark, .64);
   cylinder(model, .24, .24, .055, bright, .76);
   const style = emitter.style;
@@ -1092,7 +1098,9 @@ function rebuildSaber() {
   const crystalMat = new THREE.MeshPhysicalMaterial({ color: crystal.hex, emissive: crystal.hex, emissiveIntensity: 1.3, roughness: .12, metalness: .12, transparent: true, opacity: .9, transmission: .1 });
   const crystalMesh = addMesh(model, new THREE.OctahedronGeometry(.125, 0), crystalMat, [0, .89, 0]);
   crystalMesh.scale.set(.72, 1.75, .72);
+  crystalMesh.userData.part = 'crystal';
   // Distinct activation hardware and its illuminated status jewel.
+  saberPartTag = 'switch';
   const switchStyle = selectedOption('switch').style;
   const button = new THREE.MeshStandardMaterial({ color: crystal.hex, emissive: crystal.hex, emissiveIntensity: .8, metalness: .4, roughness: .25 });
   const switchBase = (x = 0, y = .22, radius = .09) => addMesh(model, new THREE.CylinderGeometry(radius, radius, .055, 24), dark, [x, y, .292], [Math.PI / 2, 0, 0]);
@@ -1126,6 +1134,7 @@ function rebuildSaber() {
     torus(model, .135, .012, bright, .22);
   }
   // Individual maker's marks sit on the exposed upper barrel, above the grip.
+  saberPartTag = 'hilt';
   const engraving = selectedOption('engraving').style;
   if (engraving !== 'none') {
     const etchMat = metal(engraving === 'script' ? 0xd5ad62 : engraving === 'mark' ? accentHex : 0x87938b, .52, .45);
@@ -1179,6 +1188,7 @@ function rebuildSaber() {
     }
   }
   // Each pommel has its own recognizable silhouette and construction.
+  saberPartTag = 'pommel';
   cylinder(model, .24, .30, .15, dark, -.64);
   if (pommel.style === 'vented') {
     cylinder(model, .29, .30, .17, body, -.78);
@@ -1222,6 +1232,7 @@ function rebuildSaber() {
   }
   torus(model, .29, .014, bright, -.69);
   // Build the energy blade and its light only while the ignition control is on.
+  saberPartTag = 'blade';
   if (bladeIgnited) {
   const bladeProfile = selectedOption('blade');
   const bladeStyle = bladeProfile.style;
@@ -1263,6 +1274,7 @@ function rebuildSaber() {
   }
   const aura = new THREE.PointLight(crystal.hex, 13, 5.5); aura.position.set(0, bladeCenter - .4, 0); model.add(aura);
   }
+  saberPartTag = null;
   model.rotation.z = -.055;
   syncAuctionSaber(); resizeAuctionScene();
   $('sceneLoading').style.opacity = '0'; setTimeout(() => { $('sceneLoading').style.display = 'none'; }, 520);
@@ -1421,60 +1433,229 @@ let disassemblyDragging = false;
 let disassemblyPointerX = 0;
 let disassemblyPointerY = 0;
 let disassemblyLastUpdate = 0;
+let disassemblyCameraProgress = -1;
+let disassemblyPartInfo = {};
+let disassemblyActivePart = null;
+let disassemblyLabelEls = [];
+let disassemblyLeaderEls = [];
+let disassemblySelector = null;
+let disassemblyCrystalGlow = null;
+let disassemblyCrystalPiece = null;
+
+const DISASSEMBLY_PARTS = [
+  { id: 'emitter', slot: 2.42, ring: .42, edge: 34 },
+  { id: 'crystal', slot: 1.72, ring: .22, edge: 14 },
+  { id: 'switch', slot: 1.28, ring: .20, edge: 14 },
+  { id: 'hilt', slot: .34, ring: .44, edge: 36 },
+  { id: 'grip', slot: -.68, ring: .38, edge: 32 },
+  { id: 'pommel', slot: -1.55, ring: .34, edge: 28 }
+];
 
 function buildDisassemblySaber() {
   disassemblyRoot.clear();
   disassemblyPieces = [];
+  disassemblyCrystalPiece = null;
   disassemblyClone = model.clone(true);
   disassemblyClone.traverse(child => {
     if (child.isLight) child.visible = false;
+    if (child.userData.part === 'blade') child.visible = false;
     if (child.isMesh && child.material && child.material.isMeshBasicMaterial && child.position.y > 1.02) child.visible = false;
   });
   disassemblyRoot.add(disassemblyClone);
   const meshes = [];
   disassemblyClone.traverse(child => { if (child.isMesh && child.visible) meshes.push(child); });
-  const groupTargets = [
-    new THREE.Vector3(0, -1.5, -.65),
-    new THREE.Vector3(-1.5, -.3, .15),
-    new THREE.Vector3(1.5, .92, .15),
-    new THREE.Vector3(0, 1.95, .55)
-  ];
-  const groupCentroids = Array.from({ length: 4 }, () => new THREE.Vector3());
-  const groupCounts = [0, 0, 0, 0];
-  const groups = meshes.map(mesh => {
-    const y = mesh.position.y;
-    const group = y < -.44 ? 0 : y < .12 ? 1 : y < .72 ? 2 : 3;
-    groupCentroids[group].add(mesh.position);
-    groupCounts[group]++;
-    return group;
+
+  const groups = new Map(DISASSEMBLY_PARTS.map(part => [part.id, []]));
+  meshes.forEach(mesh => {
+    let id = mesh.userData.part;
+    if (!groups.has(id)) {
+      const y = mesh.position.y;
+      id = y >= .58 ? 'emitter' : y < -.58 ? 'pommel' : y < -.1 ? 'grip' : 'hilt';
+    }
+    groups.get(id).push(mesh);
   });
-  groupCentroids.forEach((centroid, index) => { if (groupCounts[index]) centroid.divideScalar(groupCounts[index]); });
-  const groupQuats = groupTargets.map(() => new THREE.Quaternion().setFromEuler(new THREE.Euler(
-    (Math.random() - .5) * .35,
-    (Math.random() - .5) * .55,
-    (Math.random() - .5) * .35
-  )));
-  meshes.forEach((mesh, index) => {
-    const group = groups[index];
-    const offset = mesh.position.clone().sub(groupCentroids[group]).multiplyScalar(1.3);
-    offset.applyQuaternion(groupQuats[group]);
-    const target = groupTargets[group].clone().add(offset).add(new THREE.Vector3(
-      (Math.random() - .5) * .09,
-      (Math.random() - .5) * .09,
-      (Math.random() - .5) * .09
-    ));
-    const targetQuat = groupQuats[group].clone().multiply(mesh.quaternion);
-    disassemblyPieces.push({
-      mesh,
-      home: mesh.position.clone(),
-      homeQuat: mesh.quaternion.clone(),
-      target,
-      targetQuat,
-      delay: Math.min(.34, group * .085 + Math.random() * .045),
-      phase: Math.random() * Math.PI * 2
+
+  const partMap = new Map(DISASSEMBLY_PARTS.map(part => [part.id, part]));
+  groups.forEach((list, id) => {
+    if (!list.length) return;
+    const part = partMap.get(id);
+    const centroid = new THREE.Vector3();
+    list.forEach(mesh => centroid.add(mesh.position));
+    centroid.divideScalar(list.length);
+    list.forEach(mesh => {
+      const home = mesh.position.clone();
+      const target = new THREE.Vector3(0, part.slot, 0).add(home.clone().sub(centroid));
+      target.x *= .96;
+      target.z *= .96;
+      const homeScale = mesh.scale.clone();
+      const boost = id === 'crystal' ? 1.32 : id === 'switch' ? 1.12 : 1;
+      disassemblyPieces.push({
+        mesh,
+        part: id,
+        home,
+        homeQuat: mesh.quaternion.clone(),
+        homeScale,
+        target,
+        targetQuat: mesh.quaternion.clone(),
+        targetScale: homeScale.clone().multiplyScalar(boost),
+        delay: Math.min(.3, DISASSEMBLY_PARTS.findIndex(item => item.id === id) * .045 + Math.random() * .04),
+        phase: Math.random() * Math.PI * 2
+      });
+      if (id === 'crystal') disassemblyCrystalPiece = disassemblyPieces[disassemblyPieces.length - 1];
     });
   });
-  $('disassemblyPieceCount').textContent = `${String(disassemblyPieces.length).padStart(2, '0')} PIECES · 04 ASSEMBLIES`;
+
+  const crystal = selectedOption('crystal');
+  disassemblyPartInfo = {
+    emitter: { kicker: '01 / EMITTER', option: selectedOption('emitter') },
+    crystal: { kicker: '02 / KYBER CRYSTAL', option: crystal },
+    switch: { kicker: '03 / ACTIVATION', option: selectedOption('switch') },
+    hilt: { kicker: '04 / HILT BODY', option: selectedOption('hilt') },
+    grip: { kicker: '05 / GRIP', option: selectedOption('grip') },
+    pommel: { kicker: '06 / POMMEL', option: selectedOption('pommel') }
+  };
+  buildDisassemblyLabels();
+
+  disassemblyCrystalGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(crystal.color), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  disassemblyCrystalGlow.scale.set(1.45, 1.45, 1);
+  disassemblyCrystalGlow.visible = false;
+  disassemblyRoot.add(disassemblyCrystalGlow);
+
+  disassemblySelector = new THREE.Mesh(new THREE.TorusGeometry(.5, .014, 8, 64), new THREE.MeshBasicMaterial({ color: 0xd8f36a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  disassemblySelector.rotation.x = Math.PI / 2;
+  disassemblySelector.visible = false;
+  disassemblyRoot.add(disassemblySelector);
+
+  $('disassemblyPieceCount').textContent = `${String(DISASSEMBLY_PARTS.length).padStart(2, '0')} COMPONENTS · 06 ASSEMBLIES`;
+}
+
+function buildDisassemblyLabels() {
+  const container = $('disassemblyLabels');
+  container.innerHTML = DISASSEMBLY_PARTS.map(part => {
+    const info = disassemblyPartInfo[part.id];
+    const option = info.option;
+    const color = option.color || finishHex[option.finish] || '#d8f36a';
+    return `<button type="button" class="part-label" data-part="${part.id}" style="--part-color:${color}">
+      <span class="part-label-kicker">${info.kicker}</span>
+      <strong>${option.name}</strong>
+      <span class="part-label-type">${option.detail}</span>
+      <i class="part-label-dot" aria-hidden="true"></i>
+    </button>`;
+  }).join('');
+  disassemblyLabelEls = Array.from(container.querySelectorAll('.part-label'));
+  const leaders = $('disassemblyLeaders');
+  leaders.innerHTML = DISASSEMBLY_PARTS.map(() => '<g><line/><circle r="2.2"/></g>').join('');
+  disassemblyLeaderEls = Array.from(leaders.querySelectorAll('g')).map(group => ({
+    line: group.querySelector('line'),
+    dot: group.querySelector('circle')
+  }));
+}
+
+function updateDisassemblyDetail() {
+  const kicker = $('disassemblyDetailKicker');
+  const name = $('disassemblyPartName');
+  const type = $('disassemblyPieceCount');
+  const note = $('disassemblyDetailNote');
+  const swatch = $('disassemblySwatch');
+  const readout = $('disassemblyReadout');
+  const info = disassemblyActivePart ? disassemblyPartInfo[disassemblyActivePart] : null;
+  if (info) {
+    const option = info.option;
+    kicker.textContent = info.kicker;
+    name.textContent = option.name;
+    type.textContent = option.detail.toUpperCase();
+    note.textContent = option.note;
+    note.hidden = false;
+    const color = option.color || finishHex[option.finish] || null;
+    if (color) {
+      swatch.hidden = false;
+      swatch.style.color = color;
+      swatch.style.background = color;
+    } else {
+      swatch.hidden = true;
+    }
+    readout.classList.add('is-active');
+  } else {
+    kicker.textContent = 'ON THE PAD';
+    name.textContent = buildName().toUpperCase();
+    type.textContent = disassemblyPhase === 'disassembled' ? '06 COMPONENTS · TAP A PART LABEL' : '06 COMPONENTS · SYSTEMS NOMINAL';
+    note.hidden = true;
+    swatch.hidden = true;
+    readout.classList.remove('is-active');
+  }
+}
+
+function selectDisassemblyPart(id) {
+  if (disassemblyPhase !== 'disassembled' && disassemblyPhase !== 'disassembling') return;
+  disassemblyActivePart = disassemblyActivePart === id ? null : id;
+  disassemblyLabelEls.forEach(label => label.classList.toggle('is-active', label.dataset.part === disassemblyActivePart));
+  updateDisassemblyDetail();
+  if (disassemblySelector) {
+    const part = DISASSEMBLY_PARTS.find(item => item.id === disassemblyActivePart);
+    if (part) {
+      disassemblySelector.visible = true;
+      disassemblySelector.position.set(0, part.slot, 0);
+      disassemblySelector.scale.setScalar(part.ring / .5);
+    } else {
+      disassemblySelector.visible = false;
+    }
+  }
+  playTone(disassemblyActivePart ? 540 : 420, .06);
+}
+
+$('disassemblyLabels').addEventListener('click', event => {
+  const button = event.target.closest('.part-label');
+  if (!button) return;
+  selectDisassemblyPart(button.dataset.part);
+});
+
+function updateDisassemblyLabels() {
+  const stage = $('disassemblyStage');
+  const labels = $('disassemblyLabels');
+  const leaders = $('disassemblyLeaders');
+  const show = disassemblyProgress > .72;
+  labels.classList.toggle('show', show);
+  leaders.classList.toggle('show', show);
+  labels.setAttribute('aria-hidden', show ? 'false' : 'true');
+  if (!show) return;
+  const width = stage.clientWidth;
+  const height = stage.clientHeight;
+  leaders.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  const narrow = width < 720;
+  const minLeft = width * (narrow ? .46 : .38);
+  const projected = new THREE.Vector3();
+  const anchors = [];
+  let previousBottom = -Infinity;
+  disassemblyCamera.updateMatrixWorld();
+  disassemblyRoot.updateMatrixWorld(true);
+  DISASSEMBLY_PARTS.forEach((part, index) => {
+    const label = disassemblyLabelEls[index];
+    if (!label) return;
+    projected.set(0, part.slot, 0).applyMatrix4(disassemblyRoot.matrixWorld).project(disassemblyCamera);
+    const sx = (projected.x * .5 + .5) * width;
+    const sy = (-projected.y * .5 + .5) * height;
+    const labelWidth = label.offsetWidth || 180;
+    const labelHeight = label.offsetHeight || 44;
+    let top = sy - labelHeight / 2;
+    top = Math.max(12, Math.min(height - labelHeight - 12, Math.max(top, previousBottom + 7)));
+    previousBottom = top + labelHeight;
+    const left = Math.max(minLeft, Math.min(width - labelWidth - 12, sx + (narrow ? 22 : 38)));
+    label.style.transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0)`;
+    anchors.push({ sx: sx + part.edge, sy, left, ly: top + labelHeight / 2 });
+  });
+  anchors.forEach((anchor, index) => {
+    const leader = disassemblyLeaderEls[index];
+    if (!leader) return;
+    leader.line.setAttribute('x1', anchor.sx.toFixed(1));
+    leader.line.setAttribute('y1', anchor.sy.toFixed(1));
+    leader.line.setAttribute('x2', anchor.left.toFixed(1));
+    leader.line.setAttribute('y2', anchor.ly.toFixed(1));
+    leader.dot.setAttribute('cx', anchor.sx.toFixed(1));
+    leader.dot.setAttribute('cy', anchor.sy.toFixed(1));
+    const active = DISASSEMBLY_PARTS[index].id === disassemblyActivePart;
+    leader.line.classList.toggle('is-active', active);
+    leader.dot.classList.toggle('is-active', active);
+  });
 }
 
 function updateDisassemblyUI() {
@@ -1483,6 +1664,7 @@ function updateDisassemblyUI() {
   const statusWrap = status.parentElement;
   const phase = $('disassemblyPhase');
   const caption = $('disassemblyCaption');
+  const hint = $('disassemblyHint');
   statusWrap.classList.toggle('is-busy', disassemblyPhase === 'disassembling' || disassemblyPhase === 'assembling');
   statusWrap.classList.toggle('is-open', disassemblyPhase === 'disassembled');
   if (disassemblyPhase === 'disassembling' || disassemblyPhase === 'assembling') {
@@ -1490,33 +1672,48 @@ function updateDisassemblyUI() {
     button.innerHTML = `${disassemblyPhase === 'disassembling' ? 'DISASSEMBLING' : 'ASSEMBLING'} <span>…</span>`;
     status.textContent = disassemblyPhase === 'disassembling' ? 'RELEASING CLAMPS' : 'RECALLING PARTS';
     phase.textContent = disassemblyPhase === 'disassembling' ? 'TEARDOWN IN PROGRESS' : 'REASSEMBLY IN PROGRESS';
-    caption.textContent = disassemblyPhase === 'disassembling' ? 'Component locks released. Every piece is finding its own orbit.' : 'Magnets engaged. The pieces are coming home.';
+    caption.textContent = disassemblyPhase === 'disassembling' ? 'Component locks released. Every piece is finding its own level.' : 'Magnets engaged. The pieces are coming home.';
+    hint.textContent = disassemblyPhase === 'disassembling' ? 'DRAG TO ROTATE · COMPONENT LOCKS RELEASED' : 'DRAG TO ROTATE · RECALLING COMPONENTS';
   } else if (disassemblyPhase === 'disassembled') {
     button.disabled = false;
     button.innerHTML = 'ASSEMBLE <span>✳</span>';
     status.textContent = 'DISASSEMBLED';
     phase.textContent = 'TEARDOWN COMPLETE';
-    caption.textContent = 'Every component is floating free. Bring it home when you are ready.';
+    caption.textContent = 'Every component is floating free. Tap a label to inspect it, then bring it home.';
+    hint.textContent = 'DRAG TO ROTATE · TAP A LABEL TO INSPECT';
   } else {
     button.disabled = false;
     button.innerHTML = 'DISASSEMBLE <span>✳</span>';
     status.textContent = 'ASSEMBLED';
     phase.textContent = 'SYSTEMS LOCKED';
     caption.textContent = 'All components seated. Ready for teardown.';
+    hint.textContent = 'DRAG TO ROTATE · BLADE POWER DISENGAGED';
   }
+  updateDisassemblyDetail();
+}
+
+function layoutDisassemblyCamera() {
+  const width = Math.max(1, disassemblyCanvas.clientWidth);
+  const height = Math.max(1, disassemblyCanvas.clientHeight);
+  const aspect = width / height;
+  disassemblyCamera.aspect = aspect;
+  const halfFov = THREE.MathUtils.degToRad(34) / 2;
+  const fitHeight = 2.45 + 2.7 * disassemblyProgress;
+  const fitWidth = 2.2 + 1.15 * disassemblyProgress;
+  const distance = Math.max(fitHeight / Math.tan(halfFov), fitWidth / (Math.tan(halfFov) * aspect)) + 1.15;
+  const shift = disassemblyProgress * (aspect < .9 ? .7 : .58);
+  disassemblyCamera.position.set(shift, .5, distance);
+  disassemblyCamera.lookAt(shift, .38, 0);
+  disassemblyCamera.updateProjectionMatrix();
+  disassemblyCamera.updateMatrixWorld();
+  disassemblyCameraProgress = disassemblyProgress;
 }
 
 function resizeDisassemblyScene() {
   const width = Math.max(1, disassemblyCanvas.clientWidth);
   const height = Math.max(1, disassemblyCanvas.clientHeight);
   disassemblyRenderer.setSize(width, height, false);
-  const aspect = width / height;
-  disassemblyCamera.aspect = aspect;
-  const halfFov = THREE.MathUtils.degToRad(34) / 2;
-  const distance = Math.max(2.45 / Math.tan(halfFov), 2.2 / (Math.tan(halfFov) * aspect)) + 1.15;
-  disassemblyCamera.position.set(0, .5, distance);
-  disassemblyCamera.lookAt(0, .38, 0);
-  disassemblyCamera.updateProjectionMatrix();
+  layoutDisassemblyCamera();
 }
 
 function openDisassembly() {
@@ -1529,7 +1726,8 @@ function openDisassembly() {
   disassemblySpin = -.35;
   disassemblyTilt = 0;
   disassemblyLastUpdate = 0;
-  $('disassemblyPartName').textContent = buildName().toUpperCase();
+  disassemblyActivePart = null;
+  disassemblyCameraProgress = -1;
   buildDisassemblySaber();
   updateDisassemblyUI();
   resizeDisassemblyScene();
@@ -1539,6 +1737,7 @@ function openDisassembly() {
 function closeDisassembly() {
   if (!disassemblyOpen) return;
   disassemblyOpen = false;
+  disassemblyActivePart = null;
   closeOverlayElement($('disassemblyOverlay'));
   activityBodyLock();
 }
@@ -1556,6 +1755,9 @@ $('disassembleToggle').addEventListener('click', () => {
   } else if (disassemblyPhase === 'disassembled') {
     disassemblyTarget = 0;
     disassemblyPhase = 'assembling';
+    disassemblyActivePart = null;
+    if (disassemblySelector) disassemblySelector.visible = false;
+    disassemblyLabelEls.forEach(label => label.classList.remove('is-active'));
     playTone(520, .2);
   }
   updateDisassemblyUI();
@@ -1591,21 +1793,36 @@ function updateDisassembly(delta, elapsed) {
       updateDisassemblyUI();
     }
   }
+  if (Math.abs(disassemblyCameraProgress - disassemblyProgress) > .001) layoutDisassemblyCamera();
   disassemblyPieces.forEach(piece => {
     const raw = Math.max(0, Math.min(1, (disassemblyProgress - piece.delay) / (1 - piece.delay)));
     const t = raw * raw * (3 - 2 * raw);
     piece.mesh.position.lerpVectors(piece.home, piece.target, t);
     piece.mesh.quaternion.slerpQuaternions(piece.homeQuat, piece.targetQuat, t);
-    if (t > 0) piece.mesh.position.y += Math.sin(elapsed * 1.55 + piece.phase) * .032 * t;
+    piece.mesh.scale.lerpVectors(piece.homeScale, piece.targetScale, t);
+    if (t > 0) piece.mesh.position.y += Math.sin(elapsed * 1.35 + piece.phase) * .012 * t;
+    if (piece.part === 'crystal' && t > .2) piece.mesh.rotateY(realDelta * .45 * t);
   });
-  if (!disassemblyDragging) disassemblySpin += realDelta * .2;
+  if (!disassemblyDragging) disassemblySpin += realDelta * .2 * (1 - disassemblyProgress * .94);
   disassemblyRoot.rotation.y = disassemblySpin;
   disassemblyRoot.rotation.x = disassemblyTilt;
   disassemblyRoot.rotation.z = Math.sin(elapsed * .7) * .008;
-  disassemblyRoot.position.y = .18 + Math.sin(elapsed * 1.35) * .045;
+  disassemblyRoot.position.y = .18 * (1 - disassemblyProgress) + Math.sin(elapsed * 1.35) * .045;
   disassemblyDust.rotation.y = elapsed * .035;
   disassemblyGlow.material.opacity = .2 + (Math.sin(elapsed * 1.8) + 1) * .035;
   disassemblyPadRing.material.emissiveIntensity = .24 + (Math.sin(elapsed * 2.1) + 1) * .12;
+  if (disassemblyCrystalGlow && disassemblyCrystalPiece) {
+    disassemblyCrystalGlow.visible = disassemblyProgress > .04;
+    disassemblyCrystalGlow.position.copy(disassemblyCrystalPiece.mesh.position);
+    const pulse = .16 + (Math.sin(elapsed * 2.4) + 1) * .08;
+    disassemblyCrystalGlow.material.opacity = pulse * Math.min(1, disassemblyProgress * 1.4);
+    const size = 1.32 + (Math.sin(elapsed * 1.8) + 1) * .1;
+    disassemblyCrystalGlow.scale.set(size, size, 1);
+  }
+  if (disassemblySelector && disassemblySelector.visible) {
+    disassemblySelector.material.opacity = .3 + (Math.sin(elapsed * 3) + 1) * .14;
+  }
+  updateDisassemblyLabels();
 }
 
 // ---------------------------------------------------------------------------
@@ -1633,6 +1850,7 @@ const slicer = {
   trail: [],
   stars: [],
   spawnTimer: 0,
+  bombTimer: 5,
   combo: 0,
   comboTimer: 0,
   drawing: false,
@@ -1650,13 +1868,35 @@ const slicer = {
 try { slicer.best = Math.max(0, Number(localStorage.getItem(SLICER_BEST_KEY)) || 0); } catch (_) { slicer.best = 0; }
 
 const slicerTypeMeta = {
-  crate: { points: 10, size: 80, w: 1, h: 1, colors: ['#d8f36a', '#c9a36b', '#fff5d6'] },
+  crate: { points: 10, size: 80, w: .98, h: .98, colors: ['#d8f36a', '#c9a36b', '#fff5d6'] },
   droid: { points: 15, size: 84, w: .62, h: 1.15, colors: ['#d8f36a', '#c8ad7c', '#fff5d6'] },
   helmet: { points: 20, size: 78, w: .95, h: .82, colors: ['#d8f36a', '#d9ddd4', '#fff'] },
   barrel: { points: 10, size: 78, w: .62, h: 1.05, colors: ['#d8f36a', '#8a9690', '#fff'] },
   probe: { points: 25, size: 70, w: .95, h: .95, colors: ['#d8f36a', '#6fe8ff', '#fff'] },
-  bomb: { points: 0, size: 62, w: .7, h: .7, colors: ['#ff5b4d', '#ffb15c', '#fff'] }
+  holocron: { points: 30, size: 72, w: .9, h: .9, colors: ['#d8f36a', '#ffd76f', '#8ff5ff'] },
+  astromech: { points: 20, size: 78, w: .95, h: .9, colors: ['#d8f36a', '#9fc9e8', '#fff'] },
+  blaster: { points: 25, size: 88, w: 1.1, h: .7, colors: ['#d8f36a', '#9aa69e', '#fff'] },
+  saber: { points: 35, size: 82, w: .55, h: 1.1, colors: ['#d8f36a', '#c8ad7c', '#fff'] },
+  mando: { points: 30, size: 78, w: .95, h: .86, colors: ['#d8f36a', '#8fa8b5', '#fff'] },
+  remote: { points: 20, size: 66, w: .9, h: .9, colors: ['#d8f36a', '#9aa69e', '#fff'] },
+  bomb: { points: 0, size: 64, w: .72, h: .72, colors: ['#ff5b4d', '#ffb15c', '#fff'] },
+  charge: { points: 0, size: 68, w: .72, h: .95, colors: ['#ff5b4d', '#ffb15c', '#fff'] }
 };
+const SLICER_BOMB_TYPES = new Set(['bomb', 'charge']);
+const SLICER_SALVAGE_TABLE = [
+  ['crate', 15], ['droid', 13], ['helmet', 11], ['barrel', 9], ['probe', 7],
+  ['holocron', 7], ['astromech', 9], ['blaster', 8], ['saber', 5], ['mando', 7], ['remote', 9]
+];
+const SLICER_SALVAGE_TOTAL = SLICER_SALVAGE_TABLE.reduce((total, entry) => total + entry[1], 0);
+function isSlicerBomb(type) { return SLICER_BOMB_TYPES.has(type); }
+function pickSlicerSalvage() {
+  let roll = Math.random() * SLICER_SALVAGE_TOTAL;
+  for (const [type, weight] of SLICER_SALVAGE_TABLE) {
+    roll -= weight;
+    if (roll <= 0) return type;
+  }
+  return 'crate';
+}
 
 function hexToRgb(hex) {
   const value = parseInt(hex.replace('#', ''), 16);
@@ -1750,6 +1990,7 @@ function resetSlicerGame() {
   slicer.floats.length = 0;
   slicer.trail.length = 0;
   slicer.spawnTimer = 0;
+  slicer.bombTimer = 5;
   slicer.combo = 0;
   slicer.comboTimer = 0;
   slicer.shake = 0;
@@ -1775,6 +2016,7 @@ function startSlicerRun() {
   slicer.floats.length = 0;
   slicer.trail.length = 0;
   slicer.spawnTimer = .55;
+  slicer.bombTimer = 5;
   slicer.combo = 0;
   slicer.comboTimer = 0;
   slicer.shake = 0;
@@ -1825,18 +2067,13 @@ function endSlicerRun(reason) {
 }
 
 function pickSlicerType() {
-  const activeBombs = slicer.objects.filter(object => object.type === 'bomb').length;
-  const bombChance = slicer.elapsed > 4 && activeBombs < 2 ? .09 + Math.min(.06, slicer.elapsed * .0012) : 0;
-  const roll = Math.random();
-  if (roll < bombChance) return 'bomb';
-  if (roll < .33) return 'crate';
-  if (roll < .57) return 'droid';
-  if (roll < .73) return 'helmet';
-  if (roll < .87) return 'barrel';
-  return 'probe';
+  const activeBombs = slicer.objects.filter(object => isSlicerBomb(object.type)).length;
+  const bombChance = slicer.elapsed > 4 && activeBombs < 3 ? .07 + Math.min(.04, slicer.elapsed * .0008) : 0;
+  if (Math.random() < bombChance) return Math.random() < .55 ? 'bomb' : 'charge';
+  return pickSlicerSalvage();
 }
-function spawnSlicerObject(offset = 0) {
-  const type = pickSlicerType();
+function spawnSlicerObject(offset = 0, forcedType = null) {
+  const type = forcedType || pickSlicerType();
   const meta = slicerTypeMeta[type];
   const size = meta.size * (.85 + Math.random() * .3);
   const x = Math.min(slicer.w * .88, Math.max(slicer.w * .12, slicer.w * (.16 + Math.random() * .68) + offset));
@@ -1862,7 +2099,7 @@ function spawnSlicerObject(offset = 0) {
   });
 }
 function spawnSlicerWave() {
-  const waveSize = 1 + (Math.random() < .45 ? 1 : 0) + (slicer.elapsed > 15 && Math.random() < .18 ? 1 : 0);
+  const waveSize = 1 + (Math.random() < .5 ? 1 : 0) + (slicer.elapsed > 12 && Math.random() < .22 ? 1 : 0) + (slicer.elapsed > 35 && Math.random() < .12 ? 1 : 0);
   for (let i = 0; i < waveSize; i++) spawnSlicerObject((i - (waveSize - 1) / 2) * 90);
 }
 function spawnSlicerSparks(x, y, colors, count, power = 260) {
@@ -1902,12 +2139,12 @@ function sliceSlicerObject(object, cutAngle) {
   if (index === -1) return;
   slicer.objects.splice(index, 1);
   const meta = slicerTypeMeta[object.type];
-  if (object.type === 'bomb') {
+  if (isSlicerBomb(object.type)) {
     spawnSlicerSparks(object.x, object.y, meta.colors, 26, 430);
     slicer.shake = 20;
     slicer.flash = 1;
     slicer.flashColor = '255, 70, 58';
-    addSlicerFloat(object.x, object.y - 30, 'DETONATOR', '#ff6b5c');
+    addSlicerFloat(object.x, object.y - 30, object.type === 'charge' ? 'PROTON CHARGE' : 'DETONATOR', '#ff6b5c');
     loseSlicerLife('detonator');
     return;
   }
@@ -2016,9 +2253,14 @@ function updateSlicer(delta, now) {
       endSlicerRun('time');
     } else {
       slicer.spawnTimer -= delta;
+      slicer.bombTimer -= delta;
       if (slicer.spawnTimer <= 0) {
         spawnSlicerWave();
-        slicer.spawnTimer = Math.max(.5, .9 - slicer.elapsed * .005) + Math.random() * .22;
+        slicer.spawnTimer = Math.max(.42, .82 - slicer.elapsed * .006) + Math.random() * .2;
+      }
+      if (slicer.bombTimer <= 0 && slicer.elapsed > 4) {
+        spawnSlicerObject(0, Math.random() < .55 ? 'bomb' : 'charge');
+        slicer.bombTimer = 10 + Math.random() * 4;
       }
     }
   }
@@ -2031,7 +2273,7 @@ function updateSlicer(delta, now) {
     if (object.y < slicer.h * .55) object.seen = true;
     if (object.seen && object.vy > 0 && object.y - object.radius > slicer.h + 60) {
       slicer.objects.splice(i, 1);
-      if (slicer.running && object.type !== 'bomb' && slicer.elapsed > 4) loseSlicerLife('miss');
+      if (slicer.running && !isSlicerBomb(object.type) && slicer.elapsed > 4) loseSlicerLife('miss');
       continue;
     }
     if (object.x < -260 || object.x > slicer.w + 260) slicer.objects.splice(i, 1);
@@ -2078,129 +2320,699 @@ function updateSlicer(delta, now) {
 }
 
 function drawCrateArt(context) {
-  context.fillStyle = '#6b4528';
-  roundRectPath(context, -30, -28, 60, 56, 5); context.fill();
-  context.fillStyle = '#8a5a34';
-  roundRectPath(context, -27, -25, 54, 50, 3); context.fill();
-  context.strokeStyle = '#b98745'; context.lineWidth = 3.2;
-  context.strokeRect(-22, -20, 44, 40);
-  context.strokeStyle = '#4d3320'; context.lineWidth = 2;
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(2, 24, 27, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const topGradient = context.createLinearGradient(-18, -27, 18, -12);
+  topGradient.addColorStop(0, '#d0a06a');
+  topGradient.addColorStop(1, '#8d5a34');
+  context.fillStyle = topGradient;
   context.beginPath();
-  context.moveTo(-22, -20); context.lineTo(22, 20);
-  context.moveTo(22, -20); context.lineTo(-22, 20);
+  context.moveTo(-25, -13); context.lineTo(-15, -26); context.lineTo(22, -26); context.lineTo(25, -13);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#5a3a22'; context.lineWidth = 1.4; context.stroke();
+
+  context.fillStyle = '#5b3a23';
+  context.beginPath();
+  context.moveTo(25, -13); context.lineTo(22, -26); context.lineTo(23, 23); context.lineTo(25, 23);
+  context.closePath(); context.fill();
+
+  const frontGradient = context.createLinearGradient(-24, -12, 24, 24);
+  frontGradient.addColorStop(0, '#a86d3e');
+  frontGradient.addColorStop(.55, '#7e4e2d');
+  frontGradient.addColorStop(1, '#59371f');
+  context.fillStyle = frontGradient;
+  roundRectPath(context, -25, -13, 50, 37, 3); context.fill();
+  context.strokeStyle = '#432a17'; context.lineWidth = 1.5; context.stroke();
+
+  context.fillStyle = 'rgba(255,214,160,.13)';
+  context.fillRect(-22, -10, 44, 2);
+  context.fillStyle = 'rgba(0,0,0,.18)';
+  context.fillRect(-22, 15, 44, 2);
+
+  context.strokeStyle = '#c28e52'; context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(-15, -13); context.lineTo(-15, 24);
+  context.moveTo(15, -13); context.lineTo(15, 24);
+  context.moveTo(-25, 3); context.lineTo(25, 3);
   context.stroke();
-  context.fillStyle = '#d6b37a';
-  for (const [x, y] of [[-24, -22], [24, -22], [-24, 22], [24, 22]]) {
-    context.beginPath(); context.arc(x, y, 1.9, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = 'rgba(255,222,170,.35)'; context.lineWidth = .8;
+  context.beginPath(); context.moveTo(-16.4, -12); context.lineTo(-16.4, 23); context.moveTo(13.6, -12); context.lineTo(13.6, 23); context.stroke();
+
+  context.strokeStyle = '#d7b074'; context.lineWidth = 2;
+  for (const [x, y] of [[-21, -9], [-9, -9], [9, -9], [21, -9], [-21, 20], [-9, 20], [9, 20], [21, 20]]) {
+    context.beginPath(); context.arc(x, y, 1.4, 0, Math.PI * 2); context.stroke();
   }
+
+  context.fillStyle = '#1c221c';
+  roundRectPath(context, -9, 7, 18, 8, 1.5); context.fill();
   context.fillStyle = '#d8f36a';
-  context.fillRect(-8, 21, 16, 3);
-  context.fillStyle = '#20251f';
-  context.fillRect(-6, 22, 3, 1.4);
+  context.fillRect(-7, 9.5, 14, 1.4);
+  context.fillStyle = 'rgba(255,255,255,.4)';
+  context.fillRect(-7, 8.6, 5, .7);
+  context.fillStyle = '#e7cda3';
+  context.beginPath(); context.arc(-19, 11, 2.2, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#8f6a42';
+  context.beginPath(); context.arc(-19, 11, 1.2, 0, Math.PI * 2); context.fill();
 }
 function drawDroidArt(context) {
-  context.fillStyle = '#a8916a';
-  context.strokeStyle = '#a8916a';
-  context.lineWidth = 4.5;
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.28)';
+  context.beginPath(); context.ellipse(1, 30, 19, 4.5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const limb = '#7f6c4f', limbLight = '#b59a6f';
   context.lineCap = 'round';
+  context.strokeStyle = limb; context.lineWidth = 4.2;
   context.beginPath();
-  context.moveTo(-6, -4); context.lineTo(-21, 13);
-  context.moveTo(6, -4); context.lineTo(21, 13);
-  context.moveTo(-4, 17); context.lineTo(-12, 31);
-  context.moveTo(4, 17); context.lineTo(12, 31);
+  context.moveTo(-5, -2); context.lineTo(-19, 10); context.lineTo(-16, 22);
+  context.moveTo(5, -2); context.lineTo(19, 10); context.lineTo(16, 22);
   context.stroke();
-  context.fillStyle = '#c8ad7c';
-  roundRectPath(context, -8, -10, 16, 30, 4); context.fill();
-  context.fillStyle = '#8f7b58';
-  context.fillRect(-8, 2, 16, 3);
-  context.fillRect(-8, 11, 16, 2);
-  context.fillStyle = '#c8ad7c';
-  roundRectPath(context, -9, -30, 18, 17, 5); context.fill();
-  context.fillStyle = '#2a2f2c';
-  roundRectPath(context, -5.5, -25, 11, 4, 2); context.fill();
-  context.fillStyle = '#6f5c3e';
-  context.fillRect(-2, -34, 4, 5);
+  context.strokeStyle = limbLight; context.lineWidth = 2.6;
+  context.beginPath();
+  context.moveTo(-5, -3.4); context.lineTo(-19, 8.6); context.moveTo(5, -3.4); context.lineTo(19, 8.6);
+  context.stroke();
+
+  context.strokeStyle = limb; context.lineWidth = 4.6;
+  context.beginPath();
+  context.moveTo(-4, 15); context.lineTo(-9, 27); context.lineTo(-15, 30);
+  context.moveTo(4, 15); context.lineTo(9, 27); context.lineTo(15, 30);
+  context.stroke();
+  context.fillStyle = '#4f4432';
+  for (const [x, y] of [[-19, 10], [19, 10], [-9, 27], [9, 27], [-15, 30], [15, 30]]) {
+    context.beginPath(); context.arc(x, y, 2.2, 0, Math.PI * 2); context.fill();
+  }
+
+  const torsoGradient = context.createLinearGradient(-8, -4, 8, 18);
+  torsoGradient.addColorStop(0, '#d2b583');
+  torsoGradient.addColorStop(.6, '#b3976b');
+  torsoGradient.addColorStop(1, '#8b7351');
+  context.fillStyle = torsoGradient;
+  roundRectPath(context, -8, -5, 16, 22, 3.5); context.fill();
+  context.strokeStyle = '#6e5a3e'; context.lineWidth = 1.2; context.stroke();
+  context.fillStyle = '#4b3f2d';
+  roundRectPath(context, -6, -1, 12, 5, 1.5); context.fill();
   context.fillStyle = '#d8f36a';
-  context.fillRect(-6, 21, 12, 2);
+  context.fillRect(-5, .4, 10, 1.2);
+  context.fillStyle = '#8b7351';
+  for (let i = 0; i < 3; i++) context.fillRect(-5, 8 + i * 3, 10, 1.2);
+  context.fillStyle = '#6e5a3e';
+  roundRectPath(context, -9, 2, 3, 10, 1.5); context.fill();
+  roundRectPath(context, 6, 2, 3, 10, 1.5); context.fill();
+
+  context.strokeStyle = '#6e5a3e'; context.lineWidth = 3;
+  context.beginPath(); context.moveTo(-3, -5); context.lineTo(-3, -11); context.moveTo(3, -5); context.lineTo(3, -11); context.stroke();
+
+  const headGradient = context.createLinearGradient(0, -30, 0, -13);
+  headGradient.addColorStop(0, '#e0c594');
+  headGradient.addColorStop(1, '#a98c62');
+  context.fillStyle = headGradient;
+  context.beginPath();
+  context.moveTo(-8, -13);
+  context.quadraticCurveTo(-9, -27, 0, -29);
+  context.quadraticCurveTo(9, -27, 8, -13);
+  context.lineTo(5, -11); context.lineTo(-5, -11);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#6e5a3e'; context.lineWidth = 1.3; context.stroke();
+
+  context.fillStyle = '#2a2f2c';
+  roundRectPath(context, -6, -24, 12, 4, 1.5); context.fill();
+  context.fillStyle = '#e8d3aa';
+  context.fillRect(-4.5, -22.8, 3, 1.5);
+  context.fillRect(1.5, -22.8, 3, 1.5);
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-1.4, -18, 2.8, 1.2);
+
+  context.strokeStyle = '#8b7351'; context.lineWidth = 1.8;
+  context.beginPath(); context.moveTo(0, -29); context.lineTo(0, -33); context.stroke();
+  context.fillStyle = '#d8f36a';
+  context.beginPath(); context.arc(0, -33.5, 1.3, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#c8ad7c';
+  roundRectPath(context, -11, -2, 3.5, 7, 1.5); context.fill();
+  context.fillStyle = '#6e5a3e';
+  context.fillRect(-10.4, 0, 2.3, 1.2);
 }
 function drawHelmetArt(context) {
-  context.fillStyle = '#d9ddd4';
-  context.beginPath(); context.ellipse(0, -3, 25, 22, 0, 0, Math.PI * 2); context.fill();
-  roundRectPath(context, -22, 10, 44, 11, 4); context.fill();
-  context.fillStyle = '#c3c9c0';
-  context.beginPath(); context.ellipse(-7, -7, 9, 13, -.25, 0, Math.PI * 2); context.fill();
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 24, 24, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const domeGradient = context.createLinearGradient(-18, -25, 20, 16);
+  domeGradient.addColorStop(0, '#ffffff');
+  domeGradient.addColorStop(.45, '#dde1d8');
+  domeGradient.addColorStop(1, '#9fa79d');
+  context.fillStyle = domeGradient;
+  context.beginPath();
+  context.moveTo(-25, 9);
+  context.bezierCurveTo(-25, -13, -14, -27, 0, -27);
+  context.bezierCurveTo(14, -27, 25, -13, 25, 9);
+  context.lineTo(18, 15); context.lineTo(-18, 15);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#727b73'; context.lineWidth = 1.4; context.stroke();
+
+  context.fillStyle = 'rgba(255,255,255,.75)';
+  context.beginPath(); context.ellipse(-7, -18, 7, 4, -.35, 0, Math.PI * 2); context.fill();
+
   context.fillStyle = '#1b201d';
-  roundRectPath(context, -18, -8, 36, 10, 5); context.fill();
+  context.beginPath();
+  context.moveTo(-23, -7); context.lineTo(-14, -13); context.lineTo(0, -14); context.lineTo(14, -13); context.lineTo(23, -7);
+  context.lineTo(21, -1); context.lineTo(-21, -1);
+  context.closePath(); context.fill();
+
+  context.fillStyle = '#101412';
+  context.beginPath(); context.moveTo(-19, -5); context.lineTo(-7, -9); context.lineTo(-5, -2); context.lineTo(-16, 0); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(19, -5); context.lineTo(7, -9); context.lineTo(5, -2); context.lineTo(16, 0); context.closePath(); context.fill();
+  context.fillStyle = 'rgba(110,232,255,.28)';
+  context.beginPath(); context.moveTo(-17, -4.2); context.lineTo(-9, -7.2); context.lineTo(-8, -3.8); context.lineTo(-15, -1.4); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(17, -4.2); context.lineTo(9, -7.2); context.lineTo(8, -3.8); context.lineTo(15, -1.4); context.closePath(); context.fill();
+
   context.fillStyle = '#2f3833';
-  roundRectPath(context, -10, 12, 20, 6, 2); context.fill();
-  context.fillStyle = '#8f978e';
-  for (let i = 0; i < 4; i++) context.fillRect(-16 + i * 9, 20, 5, 2.5);
-  context.strokeStyle = '#8f978e'; context.lineWidth = 1.5;
-  context.beginPath(); context.moveTo(-19, 4); context.lineTo(-23, 12); context.moveTo(19, 4); context.lineTo(23, 12); context.stroke();
+  roundRectPath(context, -10, 5, 20, 5, 2); context.fill();
+  context.fillStyle = '#1b201d';
+  for (let i = 0; i < 4; i++) context.fillRect(-8 + i * 4.5, 6.2, 2.2, 2.6);
+  context.fillStyle = '#6c756d';
+  for (let i = 0; i < 5; i++) context.fillRect(-16 + i * 8, 13, 5, 2.4);
+
+  context.strokeStyle = '#8c948c'; context.lineWidth = 1.6;
+  context.beginPath();
+  context.moveTo(-21, 1); context.lineTo(-24, 10);
+  context.moveTo(21, 1); context.lineTo(24, 10);
+  context.stroke();
+  context.fillStyle = '#7e877f';
+  context.beginPath(); context.arc(-22, 4, 3, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(22, 4, 3, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#4a524b';
+  context.beginPath(); context.arc(-22, 4, 1.2, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(22, 4, 1.2, 0, Math.PI * 2); context.fill();
 }
 function drawBarrelArt(context) {
-  const gradient = context.createLinearGradient(-18, 0, 18, 0);
-  gradient.addColorStop(0, '#4a5350');
-  gradient.addColorStop(.35, '#939e98');
-  gradient.addColorStop(1, '#4a5350');
-  context.fillStyle = gradient;
-  roundRectPath(context, -17, -29, 34, 58, 6); context.fill();
-  context.fillStyle = '#2c3431';
-  for (const y of [-19, -1, 17]) context.fillRect(-18, y, 36, 4);
   context.save();
-  roundRectPath(context, -17, -29, 34, 58, 6); context.clip();
-  context.fillStyle = '#d8f36a';
-  context.save(); context.rotate(-.6); context.fillRect(-30, 9, 60, 7); context.restore();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 30, 16, 4.5, 0, 0, Math.PI * 2); context.fill();
   context.restore();
+
+  const bodyGradient = context.createLinearGradient(-18, 0, 18, 0);
+  bodyGradient.addColorStop(0, '#3d4744');
+  bodyGradient.addColorStop(.28, '#9ba7a1');
+  bodyGradient.addColorStop(.5, '#c8d2cb');
+  bodyGradient.addColorStop(.74, '#75807b');
+  bodyGradient.addColorStop(1, '#343d3a');
+  context.fillStyle = bodyGradient;
+  roundRectPath(context, -17, -28, 34, 56, 7); context.fill();
+  context.strokeStyle = '#2a322f'; context.lineWidth = 1.4; context.stroke();
+
+  context.fillStyle = '#242c29';
+  roundRectPath(context, -19, -28, 38, 6, 3); context.fill();
+  roundRectPath(context, -19, 22, 38, 6, 3); context.fill();
+  context.fillStyle = '#4f5a56';
+  context.fillRect(-16, -27, 32, 1.6);
+  context.fillRect(-16, 25, 32, 1.2);
+
+  context.fillStyle = '#121815';
+  roundRectPath(context, -9, -9, 18, 20, 3); context.fill();
+  const coreGradient = context.createLinearGradient(0, -7, 0, 9);
+  coreGradient.addColorStop(0, '#d8ffff');
+  coreGradient.addColorStop(.45, '#6fe8ff');
+  coreGradient.addColorStop(1, '#1b6b7a');
+  context.fillStyle = coreGradient;
+  roundRectPath(context, -6.5, -6.5, 13, 15, 2); context.fill();
+  context.fillStyle = 'rgba(255,255,255,.85)';
+  roundRectPath(context, -3, -4, 6, 9, 2); context.fill();
+  context.strokeStyle = 'rgba(111,232,255,.55)'; context.lineWidth = 2;
+  context.beginPath(); context.arc(0, 1, 12, 0, Math.PI * 2); context.stroke();
+
+  context.fillStyle = '#2c3431';
+  for (const y of [-18, 17]) context.fillRect(-18, y, 36, 3.2);
+  context.save();
+  roundRectPath(context, -17, -28, 34, 56, 7); context.clip();
+  context.fillStyle = '#d8f36a';
+  context.save(); context.translate(0, 17); context.rotate(-.55); context.fillRect(-28, 0, 56, 6); context.restore();
   context.fillStyle = '#20251f';
-  context.beginPath(); context.arc(0, -25, 5, 0, Math.PI * 2); context.fill();
+  context.save(); context.translate(0, 17); context.rotate(-.55); context.fillRect(-28, 0, 56, 2); context.restore();
+  context.restore();
+
+  context.fillStyle = '#20251f';
+  context.beginPath(); context.arc(0, -23, 5.5, 0, Math.PI * 2); context.fill();
   context.fillStyle = '#6fe8ff';
-  context.beginPath(); context.arc(0, -25, 2.2, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(0, -23, 2.4, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#aab5af'; context.lineWidth = 2;
+  context.beginPath(); context.moveTo(0, -28); context.lineTo(0, -31); context.stroke();
+  context.fillStyle = '#d8f36a';
+  context.beginPath(); context.arc(0, -31.5, 1.2, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#59645f'; context.lineWidth = 2;
+  context.beginPath(); context.moveTo(-15, 8); context.lineTo(-21, 14); context.lineTo(-19, 21); context.stroke();
+  context.beginPath(); context.moveTo(15, 8); context.lineTo(21, 14); context.lineTo(19, 21); context.stroke();
 }
 function drawProbeArt(context, time) {
-  context.strokeStyle = '#59645f'; context.lineWidth = 2.4; context.lineCap = 'round';
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 29, 18, 4.5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.strokeStyle = '#4f5a55'; context.lineWidth = 2.6; context.lineCap = 'round';
   context.beginPath();
-  context.moveTo(-13, -5); context.lineTo(-26, 14);
-  context.moveTo(13, -5); context.lineTo(26, 14);
-  context.moveTo(-4, 16); context.lineTo(-13, 29);
-  context.moveTo(4, 16); context.lineTo(13, 29);
-  context.moveTo(-7, -18); context.lineTo(-14, -30);
-  context.moveTo(7, -18); context.lineTo(14, -30);
+  context.moveTo(-12, 0); context.lineTo(-22, 8); context.lineTo(-24, 20);
+  context.moveTo(12, 0); context.lineTo(22, 8); context.lineTo(24, 20);
+  context.moveTo(-8, 12); context.lineTo(-14, 23); context.lineTo(-11, 29);
+  context.moveTo(8, 12); context.lineTo(14, 23); context.lineTo(11, 29);
+  context.moveTo(-4, -15); context.lineTo(-9, -25);
+  context.moveTo(4, -15); context.lineTo(9, -25);
   context.stroke();
-  context.fillStyle = '#2b322e';
-  context.beginPath(); context.arc(0, 0, 17, 0, Math.PI * 2); context.fill();
-  context.strokeStyle = '#59645f'; context.lineWidth = 2;
-  context.beginPath(); context.arc(0, 0, 17, 0, Math.PI * 2); context.stroke();
-  const glow = .55 + .45 * Math.sin(time * 5);
-  context.fillStyle = `rgba(255, 76, 68, ${glow})`;
-  context.shadowColor = '#ff4d4d'; context.shadowBlur = 13;
-  context.beginPath(); context.arc(0, -1, 5.4, 0, Math.PI * 2); context.fill();
-  context.shadowBlur = 0;
+  context.fillStyle = '#7d8983';
+  for (const [x, y] of [[-22, 8], [22, 8], [-14, 23], [14, 23], [-9, -25], [9, -25]]) {
+    context.beginPath(); context.arc(x, y, 1.8, 0, Math.PI * 2); context.fill();
+  }
+
+  const bodyGradient = context.createRadialGradient(-5, -5, 2, 0, 0, 20);
+  bodyGradient.addColorStop(0, '#5c6962');
+  bodyGradient.addColorStop(.55, '#2e3732');
+  bodyGradient.addColorStop(1, '#121714');
+  context.fillStyle = bodyGradient;
+  context.beginPath(); context.arc(0, 0, 18, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#65726b'; context.lineWidth = 1.8;
+  context.beginPath(); context.arc(0, 0, 18, 0, Math.PI * 2); context.stroke();
+
+  context.strokeStyle = 'rgba(160,175,165,.3)'; context.lineWidth = 1;
+  context.beginPath(); context.arc(0, 0, 13, .4, 2.3); context.stroke();
+  context.beginPath(); context.arc(0, 0, 9, 3.4, 5.6); context.stroke();
+  context.fillStyle = '#1c2320';
+  for (const [x, y, r] of [[-11, -8, 2.2], [10, 8, 2], [-10, 10, 1.8], [12, -8, 1.8]]) {
+    context.beginPath(); context.arc(x, y, r, 0, Math.PI * 2); context.fill();
+  }
+
+  const glow = .6 + .4 * Math.sin(time * 5);
+  context.save();
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 14 + glow * 10;
+  context.fillStyle = `rgba(255,74,62,${.7 + glow * .3})`;
+  context.beginPath(); context.arc(0, -1, 5.8, 0, Math.PI * 2); context.fill();
+  context.restore();
+  context.fillStyle = '#fff';
+  context.beginPath(); context.arc(-1.6, -2.4, 1.7, 0, Math.PI * 2); context.fill();
   context.fillStyle = '#111614';
-  context.beginPath(); context.arc(0, -1, 2.1, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(0, -1, 2.2, 0, Math.PI * 2); context.fill();
+
   context.fillStyle = '#d8f36a';
-  context.fillRect(-8, 8, 16, 2);
+  context.fillRect(-7, 12, 14, 2);
+  context.fillStyle = '#0f1412';
+  context.fillRect(-4, 13, 2, 1);
+  context.fillRect(2, 13, 2, 1);
+}
+function drawHolocronArt(context, time) {
+  context.save();
+  const glow = context.createRadialGradient(0, 0, 2, 0, 0, 32);
+  glow.addColorStop(0, 'rgba(143,245,255,.32)');
+  glow.addColorStop(.55, 'rgba(143,245,255,.1)');
+  glow.addColorStop(1, 'rgba(143,245,255,0)');
+  context.fillStyle = glow;
+  context.beginPath(); context.arc(0, 0, 32, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.save();
+  context.shadowColor = '#8ff5ff'; context.shadowBlur = 12;
+  context.fillStyle = 'rgba(83,210,224,.32)';
+  context.beginPath(); context.moveTo(-18, -14); context.lineTo(-4, -24); context.lineTo(18, -15); context.lineTo(18, 13); context.lineTo(4, 23); context.lineTo(-18, 14); context.closePath(); context.fill();
+  context.restore();
+
+  context.fillStyle = '#d8b56a';
+  context.beginPath(); context.moveTo(-18, -14); context.lineTo(-4, -24); context.lineTo(18, -15); context.lineTo(4, -5); context.closePath(); context.fill();
+  context.fillStyle = '#b48f4d';
+  context.beginPath(); context.moveTo(18, -15); context.lineTo(18, 13); context.lineTo(4, 23); context.lineTo(4, -5); context.closePath(); context.fill();
+  context.fillStyle = '#8f6d39';
+  context.beginPath(); context.moveTo(-18, -14); context.lineTo(4, -5); context.lineTo(4, 23); context.lineTo(-18, 14); context.closePath(); context.fill();
+
+  context.fillStyle = 'rgba(105,236,245,.5)';
+  context.beginPath(); context.moveTo(-14, -11); context.lineTo(-4, -18); context.lineTo(13, -12); context.lineTo(3, -6); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(-14, -6); context.lineTo(1, 1); context.lineTo(1, 17); context.lineTo(-14, 11); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(14, -10); context.lineTo(14, 10); context.lineTo(6, 16); context.lineTo(6, -3); context.closePath(); context.fill();
+
+  context.strokeStyle = '#f0d48e'; context.lineWidth = 1.8;
+  context.beginPath();
+  context.moveTo(-18, -14); context.lineTo(-4, -24); context.lineTo(18, -15); context.lineTo(18, 13); context.lineTo(4, 23); context.lineTo(-18, 14); context.closePath();
+  context.moveTo(-4, -24); context.lineTo(4, -5); context.lineTo(4, 23);
+  context.moveTo(4, -5); context.lineTo(18, -15);
+  context.moveTo(-18, -14); context.lineTo(4, -5);
+  context.moveTo(-18, 14); context.lineTo(4, -5);
+  context.stroke();
+
+  context.fillStyle = '#fff8d8';
+  context.beginPath(); context.arc(0, -3, 3.2, 0, Math.PI * 2); context.fill();
+  context.save();
+  context.shadowColor = '#8ff5ff'; context.shadowBlur = 14;
+  context.strokeStyle = 'rgba(143,245,255,.8)'; context.lineWidth = 1.2;
+  context.beginPath(); context.arc(0, -3, 6 + Math.sin(time * 2) * 1.4, 0, Math.PI * 2); context.stroke();
+  context.restore();
+
+  for (const [x, y, s] of [[-24, -18, 2.2], [24, 8, 1.8], [-20, 21, 1.6], [23, -22, 1.4]]) {
+    context.fillStyle = '#8ff5ff';
+    context.save(); context.shadowColor = '#8ff5ff'; context.shadowBlur = 8;
+    context.fillRect(x, y, s, s); context.restore();
+  }
+}
+function drawAstromechArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 25, 23, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const domeGradient = context.createLinearGradient(-22, -22, 22, 12);
+  domeGradient.addColorStop(0, '#eef3f0');
+  domeGradient.addColorStop(.4, '#b8c5c6');
+  domeGradient.addColorStop(1, '#6f7d80');
+  context.fillStyle = domeGradient;
+  context.beginPath(); context.arc(0, 10, 23, Math.PI, 0); context.closePath(); context.fill();
+  context.strokeStyle = '#4f5c5e'; context.lineWidth = 1.5; context.stroke();
+
+  context.fillStyle = '#6d7c80';
+  roundRectPath(context, -24, 7, 48, 9, 4); context.fill();
+  context.strokeStyle = '#394447'; context.lineWidth = 1.2; context.stroke();
+  context.fillStyle = '#aab7b8';
+  for (let i = 0; i < 7; i++) { context.beginPath(); context.arc(-18 + i * 6, 11.5, 1.1, 0, Math.PI * 2); context.fill(); }
+
+  context.fillStyle = '#2f6d8c';
+  context.beginPath(); context.moveTo(-21, 2); context.lineTo(-12, -12); context.lineTo(-4, -10); context.lineTo(-10, 3); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(8, -15); context.lineTo(18, -6); context.lineTo(16, 3); context.lineTo(7, -3); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(-2, -20); context.lineTo(5, -21); context.lineTo(7, -14); context.lineTo(0, -12); context.closePath(); context.fill();
+  context.fillStyle = '#3f89ad';
+  context.fillRect(-16, 4, 10, 3);
+  context.fillRect(9, -4, 7, 2.6);
+
+  context.fillStyle = '#151b1d';
+  context.beginPath(); context.arc(0, -5, 7, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#20282a';
+  context.beginPath(); context.arc(0, -5, 5.4, 0, Math.PI * 2); context.fill();
+  context.save();
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 12;
+  context.fillStyle = '#ff4d4d';
+  context.beginPath(); context.arc(0, -5, 3.4, 0, Math.PI * 2); context.fill();
+  context.restore();
+  context.fillStyle = '#ffd7d2';
+  context.beginPath(); context.arc(-1, -6.4, 1.1, 0, Math.PI * 2); context.fill();
+
+  context.strokeStyle = '#9aa8a9'; context.lineWidth = 1.8;
+  context.beginPath(); context.moveTo(7, -18); context.lineTo(9, -28); context.stroke();
+  context.fillStyle = '#d8f36a';
+  context.beginPath(); context.arc(9, -29, 1.4, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#5f6c6e'; context.lineWidth = 1.2;
+  context.beginPath(); context.arc(0, 10, 18, Math.PI * 1.1, Math.PI * 1.9); context.stroke();
+}
+function drawBlasterArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(0, 16, 27, 4.5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const bodyGradient = context.createLinearGradient(0, -10, 0, 10);
+  bodyGradient.addColorStop(0, '#59645f');
+  bodyGradient.addColorStop(.45, '#2c3531');
+  bodyGradient.addColorStop(1, '#151b18');
+  context.fillStyle = bodyGradient;
+  roundRectPath(context, -28, -5, 48, 11, 2.5); context.fill();
+  context.strokeStyle = '#0d1210'; context.lineWidth = 1.3; context.stroke();
+
+  context.fillStyle = '#202824';
+  roundRectPath(context, 14, -3.2, 15, 5.4, 1.5); context.fill();
+  context.fillStyle = '#68746e';
+  context.fillRect(17, -2.2, 12, 1);
+  context.fillStyle = '#0e1311';
+  roundRectPath(context, 27, -3.8, 3, 6.6, 1); context.fill();
+
+  context.fillStyle = '#343d39';
+  roundRectPath(context, -24, -9, 18, 5, 2); context.fill();
+  context.strokeStyle = '#75817b'; context.lineWidth = 1;
+  context.strokeRect(-22, -8, 14, 2.6);
+
+  context.fillStyle = '#1b221f';
+  roundRectPath(context, -10, -14, 16, 8, 2.5); context.fill();
+  context.fillStyle = '#3d4843';
+  roundRectPath(context, -8, -12.5, 12, 5, 1.8); context.fill();
+  context.fillStyle = '#0e1311';
+  context.beginPath(); context.arc(7, -9.5, 3, 0, Math.PI * 2); context.fill();
+  context.fillStyle = 'rgba(111,232,255,.55)';
+  context.beginPath(); context.arc(7, -9.5, 1.8, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#111614';
+  roundRectPath(context, -1, -15, 3, 3, 1); context.fill();
+
+  context.fillStyle = '#232b27';
+  context.beginPath(); context.moveTo(-8, 5); context.lineTo(1, 5); context.lineTo(4, 17); context.lineTo(-4, 17); context.closePath(); context.fill();
+  context.strokeStyle = '#5f6b65'; context.lineWidth = 1;
+  context.beginPath(); context.moveTo(-6, 7); context.lineTo(-3, 15); context.stroke();
+
+  context.fillStyle = '#2c3531';
+  context.beginPath(); context.moveTo(-28, -4); context.lineTo(-21, -4); context.lineTo(-24, 8); context.lineTo(-30, 10); context.closePath(); context.fill();
+  context.fillStyle = '#3c4641';
+  context.beginPath(); context.moveTo(-27, 2); context.lineTo(-20, 2); context.lineTo(-22, 10); context.lineTo(-27, 11); context.closePath(); context.fill();
+
+  context.fillStyle = '#d8f36a';
+  context.fillRect(4, -3.5, 5, 1.5);
+  context.fillStyle = 'rgba(255,255,255,.45)';
+  context.fillRect(-26, -3.6, 30, .7);
+}
+function drawSaberArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 30, 13, 4, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.save();
+  context.translate(0, 0); context.rotate(.06);
+  const metalGradient = context.createLinearGradient(-8, 0, 8, 0);
+  metalGradient.addColorStop(0, '#4c5652');
+  metalGradient.addColorStop(.28, '#c3ccc5');
+  metalGradient.addColorStop(.5, '#eef2e9');
+  metalGradient.addColorStop(.76, '#8b9690');
+  metalGradient.addColorStop(1, '#3b4541');
+  context.fillStyle = metalGradient;
+  roundRectPath(context, -6.5, -20, 13, 42, 4); context.fill();
+  context.strokeStyle = '#2a332f'; context.lineWidth = 1.2; context.stroke();
+
+  context.fillStyle = '#202824';
+  roundRectPath(context, -8, -23, 16, 5, 2); context.fill();
+  context.fillStyle = '#68746e';
+  context.fillRect(-7, -22.2, 14, 1);
+  context.fillStyle = '#b9c3bc';
+  roundRectPath(context, -7.5, -28, 15, 6, 2); context.fill();
+  context.fillStyle = '#202824';
+  context.fillRect(-5.5, -27, 11, 2.2);
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-1, -26.4, 2, 1.2);
+
+  context.fillStyle = '#6b4528';
+  roundRectPath(context, -7, -6, 14, 18, 3); context.fill();
+  context.strokeStyle = '#9a6b3f'; context.lineWidth = 1.4;
+  for (let i = 0; i < 4; i++) { context.beginPath(); context.moveTo(-7, -4 + i * 4); context.lineTo(7, -4 + i * 4); context.stroke(); }
+
+  context.fillStyle = '#202824';
+  roundRectPath(context, -6.5, 12, 13, 4, 1.5); context.fill();
+  context.fillStyle = '#4f5b55';
+  roundRectPath(context, -6, 16, 12, 5, 2); context.fill();
+  context.fillStyle = '#151b18';
+  roundRectPath(context, -5, 20, 10, 4, 1.5); context.fill();
+
+  context.save();
+  context.shadowColor = '#6fe8ff'; context.shadowBlur = 10;
+  context.fillStyle = 'rgba(111,232,255,.85)';
+  context.fillRect(-2.4, -12, 4.8, 5.5);
+  context.restore();
+  context.fillStyle = 'rgba(255,255,255,.7)';
+  context.fillRect(-1.2, -11, 1.2, 3.5);
+
+  context.fillStyle = 'rgba(255,255,255,.5)';
+  context.fillRect(-5, -19, 1.4, 34);
+  context.restore();
+}
+function drawMandoArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 25, 23, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const domeGradient = context.createLinearGradient(-20, -26, 20, 18);
+  domeGradient.addColorStop(0, '#c3d2d8');
+  domeGradient.addColorStop(.35, '#8096a1');
+  domeGradient.addColorStop(.7, '#536873');
+  domeGradient.addColorStop(1, '#35454e');
+  context.fillStyle = domeGradient;
+  context.beginPath();
+  context.moveTo(-24, 9);
+  context.bezierCurveTo(-24, -12, -13, -26, 0, -26);
+  context.bezierCurveTo(13, -26, 24, -12, 24, 9);
+  context.lineTo(18, 17); context.lineTo(9, 19); context.lineTo(-9, 19); context.lineTo(-18, 17);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#2e3d45'; context.lineWidth = 1.5; context.stroke();
+
+  context.fillStyle = '#1a2328';
+  context.beginPath();
+  context.moveTo(-17, -4); context.lineTo(-10, -11); context.lineTo(0, -12); context.lineTo(10, -11); context.lineTo(17, -4);
+  context.lineTo(12, 4); context.lineTo(5, 4); context.lineTo(5, 17); context.lineTo(-5, 17); context.lineTo(-5, 4); context.lineTo(-12, 4);
+  context.closePath(); context.fill();
+  context.fillStyle = 'rgba(111,232,255,.18)';
+  context.beginPath(); context.moveTo(-14, -3); context.lineTo(-8, -8); context.lineTo(-1, -9); context.lineTo(-1, 1); context.lineTo(-9, 1); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(14, -3); context.lineTo(8, -8); context.lineTo(1, -9); context.lineTo(1, 1); context.lineTo(9, 1); context.closePath(); context.fill();
+
+  context.fillStyle = '#2c3a42';
+  context.beginPath(); context.moveTo(-22, 4); context.lineTo(-14, 0); context.lineTo(-14, 12); context.lineTo(-20, 15); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(22, 4); context.lineTo(14, 0); context.lineTo(14, 12); context.lineTo(20, 15); context.closePath(); context.fill();
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-20, 6, 4, 1.4);
+  context.fillRect(16, 6, 4, 1.4);
+
+  context.fillStyle = '#4a5d67';
+  context.beginPath(); context.arc(-21, -1, 4, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(21, -1, 4, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#202a2f';
+  context.beginPath(); context.arc(-21, -1, 1.7, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(21, -1, 1.7, 0, Math.PI * 2); context.fill();
+
+  context.strokeStyle = '#9fb2bc'; context.lineWidth = 2;
+  context.beginPath(); context.moveTo(18, -12); context.lineTo(23, -23); context.stroke();
+  context.fillStyle = '#d8f36a';
+  context.beginPath(); context.arc(23, -24, 1.8, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#26343b'; context.lineWidth = 1;
+  context.beginPath(); context.moveTo(-17, 14); context.lineTo(-8, 15); context.moveTo(9, 16); context.lineTo(17, 15); context.stroke();
+}
+function drawRemoteArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.24)';
+  context.beginPath(); context.ellipse(1, 25, 17, 4, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const bodyGradient = context.createRadialGradient(-6, -7, 2, 0, 0, 20);
+  bodyGradient.addColorStop(0, '#8c9891');
+  bodyGradient.addColorStop(.5, '#46524c');
+  bodyGradient.addColorStop(1, '#151b18');
+  context.fillStyle = bodyGradient;
+  context.beginPath(); context.arc(0, 0, 19, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#68756e'; context.lineWidth = 1.6;
+  context.beginPath(); context.arc(0, 0, 19, 0, Math.PI * 2); context.stroke();
+
+  context.strokeStyle = 'rgba(180,195,185,.28)'; context.lineWidth = 1;
+  for (const r of [14, 9]) { context.beginPath(); context.arc(0, 0, r, .3, Math.PI * 1.7); context.stroke(); }
+  context.fillStyle = '#1b2320';
+  for (const [x, y] of [[-12, -8], [11, 9], [-9, 11], [13, -7]]) { context.beginPath(); context.arc(x, y, 2, 0, Math.PI * 2); context.fill(); }
+
+  context.save();
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 12;
+  context.fillStyle = '#ff4d4d';
+  context.beginPath(); context.arc(0, -2, 4.6, 0, Math.PI * 2); context.fill();
+  context.restore();
+  context.fillStyle = '#fff';
+  context.beginPath(); context.arc(-1.2, -3.4, 1.2, 0, Math.PI * 2); context.fill();
+
+  context.strokeStyle = '#8f9c95'; context.lineWidth = 1.6;
+  context.beginPath(); context.moveTo(6, -17); context.lineTo(9, -26); context.stroke();
+  context.fillStyle = '#d8f36a';
+  context.beginPath(); context.arc(9, -27, 1.4, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#6fe8ff';
+  for (const [x, y] of [[-15, 4], [15, -3], [0, 18]]) { context.beginPath(); context.arc(x, y, 1.2, 0, Math.PI * 2); context.fill(); }
 }
 function drawBombArt(context, time) {
   const pulse = .5 + .5 * Math.sin(time * 11);
   context.save();
-  context.shadowColor = '#ff4d4d';
-  context.shadowBlur = 14 + pulse * 16;
+  const aura = context.createRadialGradient(0, 0, 6, 0, 0, 30);
+  aura.addColorStop(0, `rgba(255,80,65,${.24 + pulse * .16})`);
+  aura.addColorStop(1, 'rgba(255,80,65,0)');
+  context.fillStyle = aura;
+  context.beginPath(); context.arc(0, 0, 30, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.save();
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 14 + pulse * 12;
   context.fillStyle = '#202622';
   context.beginPath(); context.arc(0, 0, 20, 0, Math.PI * 2); context.fill();
   context.restore();
-  context.strokeStyle = '#5b6660'; context.lineWidth = 3;
-  context.beginPath(); context.arc(0, 0, 20, 0, Math.PI * 2); context.stroke();
-  context.strokeStyle = '#9aa69e'; context.lineWidth = 2;
-  context.beginPath(); context.arc(0, 0, 13, .3, Math.PI * 1.55); context.stroke();
-  context.fillStyle = `rgba(255, 74, 62, ${.55 + pulse * .45})`;
-  context.shadowColor = '#ff4d4d'; context.shadowBlur = 18;
-  context.beginPath(); context.arc(0, 0, 6.5 + pulse * 1.4, 0, Math.PI * 2); context.fill();
-  context.shadowBlur = 0;
-  context.fillStyle = '#fff';
-  context.beginPath(); context.arc(-2, -2.5, 1.6, 0, Math.PI * 2); context.fill();
+
+  const sphereGradient = context.createRadialGradient(-6, -7, 2, 0, 0, 21);
+  sphereGradient.addColorStop(0, '#5d6861');
+  sphereGradient.addColorStop(.55, '#2b342f');
+  sphereGradient.addColorStop(1, '#101512');
+  context.fillStyle = sphereGradient;
+  context.beginPath(); context.arc(0, 0, 19.5, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#78847d'; context.lineWidth = 1.6;
+  context.beginPath(); context.arc(0, 0, 19.5, 0, Math.PI * 2); context.stroke();
+
+  context.fillStyle = '#b9c3bc';
+  roundRectPath(context, -20, -3.6, 40, 7.2, 3); context.fill();
+  context.fillStyle = '#4c5752';
+  context.fillRect(-19, -1, 38, 1.2);
+  context.fillStyle = '#1b211e';
+  for (const x of [-13, -4.5, 4.5, 13]) { context.beginPath(); context.arc(x, 0, 2.1, 0, Math.PI * 2); context.fill(); }
+  context.fillStyle = `rgba(255,74,62,${.6 + pulse * .4})`;
+  for (const x of [-8.5, 8.5]) { context.beginPath(); context.arc(x, 0, 1.5, 0, Math.PI * 2); context.fill(); }
+
+  context.fillStyle = '#353f39';
+  roundRectPath(context, -7, -24, 14, 6, 2); context.fill();
+  context.fillStyle = '#9aa69e';
+  roundRectPath(context, -4.5, -27, 9, 4, 1.5); context.fill();
+  context.fillStyle = `rgba(255,74,62,${.65 + pulse * .35})`;
+  context.beginPath(); context.arc(0, -27.5, 2.2, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#b9c3bc'; context.lineWidth = 1.4;
+  context.beginPath(); context.arc(0, 0, 13, .35, 1.5); context.stroke();
+  context.beginPath(); context.arc(0, 0, 13, 3.5, 4.7); context.stroke();
+
   context.fillStyle = '#d8f36a';
-  context.fillRect(-9, -23, 18, 2);
+  context.fillRect(-9, 15, 18, 1.8);
+  context.fillStyle = '#101512';
+  for (let i = 0; i < 4; i++) context.fillRect(-7 + i * 4.4, 15.5, 1.6, .8);
+}
+function drawChargeArt(context, time) {
+  const pulse = .5 + .5 * Math.sin(time * 9 + 1.2);
+  context.save();
+  const aura = context.createRadialGradient(0, 0, 4, 0, 0, 31);
+  aura.addColorStop(0, `rgba(255,90,60,${.22 + pulse * .18})`);
+  aura.addColorStop(1, 'rgba(255,90,60,0)');
+  context.fillStyle = aura;
+  context.beginPath(); context.arc(0, 0, 31, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.fillStyle = '#1c2320';
+  roundRectPath(context, -11, -22, 22, 44, 8); context.fill();
+  const bodyGradient = context.createLinearGradient(-12, 0, 12, 0);
+  bodyGradient.addColorStop(0, '#3a443e');
+  bodyGradient.addColorStop(.3, '#8f9b94');
+  bodyGradient.addColorStop(.55, '#bcc6bf');
+  bodyGradient.addColorStop(1, '#2f3833');
+  context.fillStyle = bodyGradient;
+  roundRectPath(context, -9.5, -21, 19, 42, 7); context.fill();
+  context.strokeStyle = '#5e6a63'; context.lineWidth = 1.2; context.stroke();
+
+  context.fillStyle = '#222a26';
+  for (const side of [-1, 1]) {
+    roundRectPath(context, side * 12 - (side < 0 ? 3 : 0), -14, 3, 28, 1.5); context.fill();
+  }
+  context.fillStyle = '#39433d';
+  for (let i = 0; i < 3; i++) context.fillRect(-12, -9 + i * 9, 3, 4);
+
+  context.fillStyle = '#121815';
+  roundRectPath(context, -5.5, -8, 11, 20, 3); context.fill();
+  context.save();
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 12 + pulse * 8;
+  context.fillStyle = `rgba(255,74,62,${.6 + pulse * .4})`;
+  roundRectPath(context, -3.4, -5.5, 6.8, 15, 2); context.fill();
+  context.restore();
+  context.fillStyle = 'rgba(255,255,255,.7)';
+  context.fillRect(-1.2, -4, 1.4, 10);
+
+  context.fillStyle = '#d8f36a';
+  context.save(); context.translate(0, 15); context.rotate(-.35); context.fillRect(-13, 0, 26, 4); context.restore();
+  context.fillStyle = '#151b18';
+  context.save(); context.translate(0, 15); context.rotate(-.35);
+  for (let i = 0; i < 4; i++) context.fillRect(-12 + i * 7, 0, 3, 4);
+  context.restore();
+
+  context.fillStyle = '#2a332e';
+  roundRectPath(context, -7, -26, 14, 6, 2); context.fill();
+  context.strokeStyle = '#9aa69e'; context.lineWidth = 1.6;
+  context.beginPath(); context.moveTo(0, -26); context.lineTo(0, -31); context.stroke();
+  context.save();
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 10;
+  context.fillStyle = `rgba(255,74,62,${.6 + pulse * .4})`;
+  context.beginPath(); context.arc(0, -32, 2.4, 0, Math.PI * 2); context.fill();
+  context.restore();
+  context.fillStyle = '#6fe8ff';
+  context.beginPath(); context.arc(0, 22, 1.4, 0, Math.PI * 2); context.fill();
 }
 function drawSlicerArt(context, type, time) {
   if (type === 'crate') drawCrateArt(context);
@@ -2208,7 +3020,27 @@ function drawSlicerArt(context, type, time) {
   else if (type === 'helmet') drawHelmetArt(context);
   else if (type === 'barrel') drawBarrelArt(context);
   else if (type === 'probe') drawProbeArt(context, time);
+  else if (type === 'holocron') drawHolocronArt(context, time);
+  else if (type === 'astromech') drawAstromechArt(context);
+  else if (type === 'blaster') drawBlasterArt(context);
+  else if (type === 'saber') drawSaberArt(context);
+  else if (type === 'mando') drawMandoArt(context);
+  else if (type === 'remote') drawRemoteArt(context);
+  else if (type === 'charge') drawChargeArt(context, time);
   else drawBombArt(context, time);
+}
+const slicerArtCache = new Map();
+function getSlicerArt(type) {
+  if (slicerArtCache.has(type)) return slicerArtCache.get(type);
+  const scale = 4;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 60 * scale;
+  const context = canvas.getContext('2d');
+  context.translate(30 * scale, 30 * scale);
+  context.scale(scale, scale);
+  drawSlicerArt(context, type, 0);
+  slicerArtCache.set(type, canvas);
+  return canvas;
 }
 function drawSlicerBackground(time) {
   const context = slicerCtx;
@@ -2281,7 +3113,7 @@ function drawSlicer(now) {
     if (piece.side < 0) context.rect(-46, -46, 92, 46);
     else context.rect(-46, 0, 92, 46);
     context.clip();
-    drawSlicerArt(context, piece.type, now);
+    context.drawImage(getSlicerArt(piece.type), -30, -30, 60, 60);
     context.strokeStyle = 'rgba(216, 243, 106, .85)';
     context.lineWidth = 1.8;
     context.shadowColor = '#d8f36a';
@@ -2295,7 +3127,16 @@ function drawSlicer(now) {
     context.translate(object.x, object.y);
     context.rotate(object.angle);
     context.scale(object.size / 60, object.size / 60);
-    drawSlicerArt(context, object.type, now);
+    if (isSlicerBomb(object.type)) {
+      drawSlicerArt(context, object.type, now);
+      context.strokeStyle = `rgba(255, 90, 70, ${.2 + .16 * Math.sin(now * 6 + object.seed)})`;
+      context.lineWidth = 1.2;
+      context.setLineDash([3, 5]);
+      context.beginPath(); context.arc(0, 0, 26, 0, Math.PI * 2); context.stroke();
+      context.setLineDash([]);
+    } else {
+      context.drawImage(getSlicerArt(object.type), -30, -30, 60, 60);
+    }
     context.restore();
   }
   context.save();
