@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="auction.css" />
   <link rel="stylesheet" href="collection.css" />
+  <link rel="stylesheet" href="activities.css" />
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
   <script type="module" src="game.js"></script>
 </head>
@@ -28,7 +29,7 @@
         <div class="rail-heading"><div><span class="eyebrow">YOUR WORKBENCH</span><h1>Build a<br><em>legacy.</em></h1></div><div class="build-number">01<br><span>/ 09</span></div></div>
         <nav class="atelier-nav" aria-label="Your atelier">
           <button type="button" class="atelier-nav-button" id="collectionButton"><span>✧</span> COLLECTION <b id="collectionCount">00</b></button>
-          <button type="button" class="atelier-nav-button" id="activitiesButton"><span>↗</span> ACTIVITIES <small>SOON</small></button>
+          <button type="button" class="atelier-nav-button" id="activitiesButton"><span>↗</span> ACTIVITIES <small>03</small></button>
         </nav>
         <p class="intro-copy">Every saber tells a story. Choose your components, find your crystal, and make yours worth remembering.</p>
         <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
@@ -102,6 +103,154 @@
       <div class="auction-result" id="auctionResult" aria-hidden="true"><div class="result-card"><div class="sale-spark">✳</div><span class="eyebrow">A MASTERPIECE, SOLD</span><h2>One of a kind.<br><em>Worth every credit.</em></h2><p id="resultCopy">Your saber has found its next chapter. The galaxy noticed.</p><div class="sale-total"><span>WINNING BID</span><strong id="salePrice">¤ 0</strong><small>GALACTIC CREDITS</small></div><div class="sale-breakdown" id="saleBreakdown"></div><button class="primary-button wide" id="buildAnother">BUILD ANOTHER <span>↗</span></button></div></div>
     </section>
   </div>
+  <div class="activities-overlay" id="activitiesOverlay" aria-hidden="true">
+    <section class="activities-room" role="dialog" aria-modal="true" aria-labelledby="activitiesTitle">
+      <header class="activities-header">
+        <div class="activities-brand"><span class="live-dot"></span><div><span class="eyebrow">SABER ATELIER · OFF-DUTY</span><strong id="activitiesTitle">ACTIVITIES</strong></div></div>
+        <span class="activities-clock">CORUSCANT · <b id="activitiesClock">09:42</b></span>
+        <button class="sale-close" id="activitiesClose" aria-label="Close activities">×</button>
+      </header>
+      <div class="activities-intro">
+        <div><span class="eyebrow">THREE WAYS TO SPEND THE NIGHT</span><h2>Step away from the <em>bench.</em></h2></div>
+        <p>Take a build apart, cut some salvage out of the sky, or wait for a challenger. The atelier never really sleeps.</p>
+      </div>
+      <div class="activity-grid">
+        <button type="button" class="activity-card" id="activityDisassemble">
+          <span class="activity-index">01 / TEARDOWN</span>
+          <span class="activity-art" aria-hidden="true">
+            <svg viewBox="0 0 120 130" focusable="false">
+              <path d="M60 8v114" stroke="#d8f36a" stroke-opacity=".18" stroke-dasharray="2 5"/>
+              <rect x="45" y="12" width="30" height="13" rx="3" fill="#b8c9d0"/><rect x="49" y="15" width="4" height="7" fill="#fff" opacity=".28"/><rect x="42" y="25" width="36" height="3" rx="1.5" fill="#d8f36a"/>
+              <rect x="48" y="38" width="24" height="17" rx="2" fill="#668d79"/><rect x="52" y="41" width="3" height="11" fill="#fff" opacity=".24"/>
+              <rect x="43" y="65" width="34" height="22" rx="3" fill="#80634c"/><path d="M45 70h30M45 76h30M45 82h30" stroke="#b99b78" stroke-width="1.2" opacity=".7"/>
+              <rect x="49" y="97" width="22" height="14" rx="2" fill="#b7835d"/><rect x="52" y="100" width="3" height="8" fill="#fff" opacity=".22"/>
+              <path d="M44 119h32" stroke="#c9d2cd" stroke-width="3" stroke-linecap="round"/><path d="M52 122l-4 6M68 122l4 6" stroke="#d8f36a" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="60" cy="55" r="4" fill="#4a8dff" opacity=".8"/><circle cx="60" cy="55" r="8" fill="none" stroke="#4a8dff" stroke-opacity=".3"/>
+            </svg>
+          </span>
+          <strong>Disassembly Bay</strong>
+          <small>Pull your saber apart piece by piece, watch it float, then bring every component home.</small>
+          <span class="activity-cta">ENTER THE BAY <b>↗</b></span>
+        </button>
+
+        <button type="button" class="activity-card" id="activitySlicer">
+          <span class="activity-index">02 / SALVAGE</span>
+          <span class="activity-art" aria-hidden="true">
+            <svg viewBox="0 0 120 130" focusable="false">
+              <path d="M20 96L100 34" stroke="#d8f36a" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+              <path d="M20 96L100 34" stroke="#fff" stroke-width=".8" stroke-linecap="round" opacity=".8"/>
+              <g transform="rotate(-8 42 76)">
+                <rect x="20" y="54" width="44" height="44" rx="4" fill="#7a5232"/><rect x="26" y="60" width="32" height="32" rx="2" fill="none" stroke="#b98745" stroke-width="3"/><path d="M24 68h36M24 84h36" stroke="#4d3320" stroke-width="2" opacity=".8"/><circle cx="30" cy="64" r="1.6" fill="#e8cfa8"/><circle cx="54" cy="88" r="1.6" fill="#e8cfa8"/>
+              </g>
+              <g transform="rotate(11 82 78)">
+                <rect x="76" y="40" width="15" height="17" rx="5" fill="#c8ad7c"/><rect x="79" y="44" width="9" height="3" rx="1.5" fill="#2a2f2c"/><rect x="82" y="57" width="3" height="24" fill="#a8916a"/><path d="M75 63l-8 14M92 63l8 14" stroke="#a8916a" stroke-width="3" stroke-linecap="round"/><path d="M78 81l-4 20M87 81l4 20" stroke="#8f7b58" stroke-width="3" stroke-linecap="round"/>
+              </g>
+              <circle cx="96" cy="26" r="2" fill="#d8f36a"/><circle cx="24" cy="30" r="1.4" fill="#d8f36a" opacity=".6"/><circle cx="104" cy="98" r="1.8" fill="#d8f36a" opacity=".5"/>
+            </svg>
+          </span>
+          <strong>Scrap Run</strong>
+          <small>Slice crates, battle droids and stray salvage out of the air. Thermal detonators cost a life.</small>
+          <span class="activity-cta">START THE RUN <b>↗</b></span>
+        </button>
+
+        <button type="button" class="activity-card is-locked" id="activityDuel" aria-label="Training Duel, coming soon">
+          <span class="activity-index">03 / DUEL</span>
+          <span class="activity-art" aria-hidden="true">
+            <svg viewBox="0 0 120 130" focusable="false">
+              <g opacity=".72">
+                <path d="M24 112L52 62" stroke="#4a8dff" stroke-width="5" stroke-linecap="round" opacity=".28"/>
+                <path d="M24 112L52 62" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".85"/>
+                <rect x="18" y="108" width="15" height="9" rx="2" transform="rotate(31 25 112)" fill="#9aa69e"/>
+                <path d="M96 112L68 62" stroke="#ff3b4f" stroke-width="5" stroke-linecap="round" opacity=".28"/>
+                <path d="M96 112L68 62" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".85"/>
+                <rect x="87" y="108" width="15" height="9" rx="2" transform="rotate(-31 94 112)" fill="#9aa69e"/>
+                <circle cx="60" cy="54" r="12" fill="none" stroke="#d8f36a" stroke-opacity=".4" stroke-dasharray="3 4"/>
+                <path d="M52 54h16M60 46v16" stroke="#d8f36a" stroke-width="1.2" opacity=".7"/>
+              </g>
+            </svg>
+            <span class="activity-lock">⌁</span>
+          </span>
+          <strong>Training Duel</strong>
+          <small>A challenger is still making their way in from the Outer Rim. The training ring is being prepared.</small>
+          <span class="activity-cta soon">COMING SOON</span>
+        </button>
+      </div>
+      <footer class="activities-footer">
+        <span><i class="status-dot"></i> ATELIER RECREATION PROTOCOL</span>
+        <span class="activities-footer-center">NO CREDITS REQUIRED · ALL SALVAGE BELONGS TO THE FINDER</span>
+        <span>CHOOSE YOUR DISTRACTION <b>✳</b></span>
+      </footer>
+    </section>
+  </div>
+
+  <div class="activity-stage-overlay" id="disassemblyOverlay" aria-hidden="true">
+    <section class="disassembly-room" role="dialog" aria-modal="true" aria-labelledby="disassemblyTitle">
+      <header class="activity-stage-header">
+        <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">ACTIVITY 01 · TEARDOWN</span><strong id="disassemblyTitle">DISASSEMBLY BAY</strong></div></div>
+        <div class="stage-status"><span class="stage-status-light"></span><span id="disassemblyStatus">ASSEMBLED</span></div>
+        <button class="sale-close" id="disassemblyClose" aria-label="Close disassembly bay">×</button>
+      </header>
+      <div class="disassembly-stage" id="disassemblyStage">
+        <canvas id="disassemblyCanvas" aria-label="Your lightsaber floating over the disassembly pad"></canvas>
+        <div class="stage-floor-grid" aria-hidden="true"></div>
+        <div class="stage-corner stage-corner-tl" aria-hidden="true"></div>
+        <div class="stage-corner stage-corner-tr" aria-hidden="true"></div>
+        <div class="stage-corner stage-corner-bl" aria-hidden="true"></div>
+        <div class="stage-corner stage-corner-br" aria-hidden="true"></div>
+        <div class="disassembly-readout">
+          <span class="eyebrow">ON THE PAD</span>
+          <strong id="disassemblyPartName">THE WAYFINDER</strong>
+          <small id="disassemblyPieceCount">00 PIECES · 04 ASSEMBLIES</small>
+        </div>
+        <div class="disassembly-hint" id="disassemblyHint">DRAG TO ROTATE · BLADE POWER DISENGAGED</div>
+        <div class="disassembly-flash" id="disassemblyFlash" aria-hidden="true"></div>
+      </div>
+      <footer class="activity-stage-footer">
+        <div class="stage-copy"><span class="eyebrow" id="disassemblyPhase">SYSTEMS LOCKED</span><p id="disassemblyCaption">All components seated. Ready for teardown.</p></div>
+        <div class="stage-actions">
+          <button class="text-button" id="disassemblyBack">← BACK TO ACTIVITIES</button>
+          <button class="primary-button" id="disassembleToggle">DISASSEMBLE <span>✳</span></button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <div class="activity-stage-overlay slicer-overlay" id="slicerOverlay" aria-hidden="true">
+    <section class="slicer-room" role="dialog" aria-modal="true" aria-labelledby="slicerTitle">
+      <header class="activity-stage-header">
+        <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">ACTIVITY 02 · SALVAGE</span><strong id="slicerTitle">SCRAP RUN</strong></div></div>
+        <div class="slicer-hud">
+          <span class="hud-stat"><small>SCORE</small><b id="slicerScore">0</b></span>
+          <span class="hud-stat"><small>BEST</small><b id="slicerBest">0</b></span>
+          <span class="hud-stat"><small>TIME</small><b id="slicerTimer">60</b></span>
+          <span class="hud-stat hud-lives"><small>LIVES</small><b id="slicerLives">◆ ◆ ◆</b></span>
+        </div>
+        <button class="sale-close" id="slicerClose" aria-label="Close scrap run">×</button>
+      </header>
+      <div class="slicer-stage" id="slicerStage">
+        <canvas id="slicerCanvas" aria-label="Scrap run slicing arena"></canvas>
+        <div class="slicer-vignette" aria-hidden="true"></div>
+        <div class="slicer-combo" id="slicerCombo" aria-hidden="true">x2</div>
+        <div class="slicer-banner" id="slicerBanner" aria-hidden="true">DRAG TO SLICE</div>
+        <div class="slicer-start" id="slicerStart">
+          <span class="eyebrow">TRAINING PROTOCOL · 60 SECONDS</span>
+          <h2>Slice the <em>salvage.</em></h2>
+          <p>Drag a glowing blade through crates, battle droids, helmets and stray gear. Chain cuts for a multiplier. Three misses ends the run — and a thermal detonator costs a life.</p>
+          <div class="slicer-legend"><span><i class="legend-crate"></i> SALVAGE</span><span><i class="legend-bomb"></i> DETONATOR · AVOID</span><span><i class="legend-blade"></i> DRAG TO SLICE</span></div>
+          <button class="primary-button" id="slicerStartButton">START 60-SECOND RUN <span>↗</span></button>
+        </div>
+        <div class="slicer-over" id="slicerOver" aria-hidden="true">
+          <span class="eyebrow" id="slicerOverEyebrow">RUN COMPLETE</span>
+          <h2 id="slicerOverTitle">Nice cutting.</h2>
+          <p id="slicerOverCopy">The salvage floor is clear.</p>
+          <div class="slicer-final"><span>FINAL SCORE</span><strong id="slicerFinalScore">0</strong><small id="slicerNewBest">PERSONAL BEST</small></div>
+          <div class="stage-actions"><button class="primary-button" id="slicerRestart">RUN IT AGAIN <span>↗</span></button><button class="text-button" id="slicerBack">← BACK TO ACTIVITIES</button></div>
+        </div>
+      </div>
+      <footer class="slicer-footer"><span><i class="status-dot"></i> SALVAGE CHUTE OPEN</span><span class="slicer-footer-center" id="slicerFooterStatus">AWAITING RUN</span><span>KEEP YOUR GUARD UP <b>✳</b></span></footer>
+    </section>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
 </body>
 </html>

@@ -517,7 +517,7 @@ $('keepClose').addEventListener('click', closeKeepPrompt);
 $('keepOverlay').addEventListener('click', event => { if (event.target === $('keepOverlay')) closeKeepPrompt(); });
 $('saberNameInput').addEventListener('keydown', event => { if (event.key === 'Enter') keepCurrentSaber(); });
 $('collectionButton').addEventListener('click', () => openCollection());
-$('activitiesButton').addEventListener('click', () => showToast('Activities are coming soon.'));
+$('activitiesButton').addEventListener('click', () => openActivities());
 $('collectionClose').addEventListener('click', closeCollection);
 $('backToWorkbench').addEventListener('click', closeCollection);
 $('emptyBack').addEventListener('click', closeCollection);
@@ -652,8 +652,8 @@ $('buildAnother').addEventListener('click', () => {
   $('toast').textContent = 'A fresh workbench. A new story.'; $('toast').classList.add('show'); setTimeout(() => $('toast').classList.remove('show'), 2200);
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { closeSale(); closeCollection(); closeKeepPrompt(); }
-  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open');
+  if (event.key === 'Escape') { closeSale(); closeCollection(); closeKeepPrompt(); closeSlicer(); closeDisassembly(); closeActivities(); }
+  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open') || $('activitiesOverlay').classList.contains('open') || $('disassemblyOverlay').classList.contains('open') || $('slicerOverlay').classList.contains('open');
   if (overlayOpen) return;
   if (event.key === 'ArrowRight') nextStep();
   if (event.key === 'ArrowLeft') setStep(activeStep - 1);
@@ -1292,9 +1292,12 @@ $('bladeToggle').addEventListener('click', () => {
   playTone(bladeIgnited ? 620 : 340, .12);
 });
 $('resetView').addEventListener('click', () => { rotationY = -.24; rotationX = 0; autoRotate = false; });
+let lastAnimateTime = 0;
 function animate() {
   requestAnimationFrame(animate);
   const elapsed = clock.getElapsedTime();
+  const delta = Math.min(.05, Math.max(0, elapsed - lastAnimateTime));
+  lastAnimateTime = elapsed;
   if (autoRotate && !pointerDown) rotationY += .002;
   saberRoot.rotation.y += (rotationY - saberRoot.rotation.y) * .08;
   saberRoot.rotation.x += (rotationX - saberRoot.rotation.x) * .08;
@@ -1317,8 +1320,1026 @@ function animate() {
   auctionSaberRoot.rotation.x += (rotationX - auctionSaberRoot.rotation.x) * .035;
   collectionSaberRoot.rotation.y += (rotationY - collectionSaberRoot.rotation.y) * .025;
   collectionSaberRoot.position.y = .12 + Math.sin(elapsed * 1.35) * .08;
-  renderer.render(scene, camera);
+  const activityCover = disassemblyOpen || slicer.open || $('activitiesOverlay').classList.contains('open');
+  if (!activityCover) renderer.render(scene, camera);
   if ($('saleOverlay').classList.contains('open')) auctionRenderer.render(auctionScene, auctionCamera);
   if ($('collectionOverlay').classList.contains('open') && collection.length) collectionRenderer.render(collectionScene, collectionCamera);
+  if (disassemblyOpen) {
+    updateDisassembly(delta, elapsed);
+    disassemblyRenderer.render(disassemblyScene, disassemblyCamera);
+  }
 }
-renderSteps(); renderOptions(); updateUI(); updateCollectionCount(); syncBladeToggle(); rebuildSaber(); animate();
+renderSteps(); renderOptions(); updateUI(); updateCollectionCount(); syncBladeToggle(); rebuildSaber();
+
+// ===========================================================================
+// ACTIVITIES — disassembly bay, scrap run, and the future duel ring.
+// ===========================================================================
+function openOverlayElement(element) {
+  element.classList.add('open');
+  element.setAttribute('aria-hidden', 'false');
+}
+function closeOverlayElement(element) {
+  element.classList.remove('open');
+  element.setAttribute('aria-hidden', 'true');
+}
+function activityBodyLock() {
+  const anyOpen = ['activitiesOverlay', 'disassemblyOverlay', 'slicerOverlay'].some(id => $(id).classList.contains('open'));
+  document.body.classList.toggle('dialog-active', anyOpen);
+}
+function openActivities() {
+  openOverlayElement($('activitiesOverlay'));
+  activityBodyLock();
+  const now = new Date();
+  $('activitiesClock').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  playTone(700, .08);
+}
+function closeActivities() {
+  closeOverlayElement($('activitiesOverlay'));
+  activityBodyLock();
+}
+$('activitiesClose').addEventListener('click', closeActivities);
+$('activitiesOverlay').addEventListener('click', event => { if (event.target === $('activitiesOverlay')) closeActivities(); });
+$('activityDisassemble').addEventListener('click', () => openDisassembly());
+$('activitySlicer').addEventListener('click', () => openSlicer());
+$('activityDuel').addEventListener('click', () => showToast('Training Duel is still being forged. Coming soon.'));
+
+// ---------------------------------------------------------------------------
+// Activity 01 — Disassembly Bay
+// ---------------------------------------------------------------------------
+const disassemblyCanvas = $('disassemblyCanvas');
+const disassemblyScene = new THREE.Scene();
+const disassemblyCamera = new THREE.PerspectiveCamera(34, 1, .1, 70);
+const disassemblyRenderer = new THREE.WebGLRenderer({ canvas: disassemblyCanvas, antialias: true, alpha: true });
+disassemblyRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+disassemblyRenderer.outputColorSpace = THREE.SRGBColorSpace;
+disassemblyRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+disassemblyRenderer.toneMappingExposure = 1.12;
+disassemblyScene.add(new THREE.HemisphereLight(0xc9d9cf, 0x1a211d, 2.5));
+const disassemblyKey = new THREE.DirectionalLight(0xffe6c6, 3.3);
+disassemblyKey.position.set(4, 7, 6);
+disassemblyScene.add(disassemblyKey);
+const disassemblyRim = new THREE.PointLight(0x6fe8ff, 24, 15, 2);
+disassemblyRim.position.set(-3.2, 2.2, -3);
+disassemblyScene.add(disassemblyRim);
+const disassemblyFill = new THREE.PointLight(0xd8f36a, 9, 9, 2);
+disassemblyFill.position.set(3, -.6, 3);
+disassemblyScene.add(disassemblyFill);
+const disassemblyRoot = new THREE.Group();
+disassemblyScene.add(disassemblyRoot);
+const disassemblyPad = new THREE.Mesh(new THREE.CylinderGeometry(1.72, 1.9, .08, 64), new THREE.MeshStandardMaterial({ color: 0x232c26, metalness: .74, roughness: .34 }));
+disassemblyPad.position.y = -2.22;
+disassemblyScene.add(disassemblyPad);
+const disassemblyPadRing = new THREE.Mesh(new THREE.TorusGeometry(1.78, .018, 8, 64), new THREE.MeshStandardMaterial({ color: 0xc3d48c, emissive: 0x33421e, metalness: .55, roughness: .3 }));
+disassemblyPadRing.rotation.x = Math.PI / 2;
+disassemblyPadRing.position.y = -2.16;
+disassemblyScene.add(disassemblyPadRing);
+const disassemblyGlow = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshBasicMaterial({ map: makeGlowTexture('#d8f36a'), transparent: true, opacity: .24, blending: THREE.AdditiveBlending, depthWrite: false }));
+disassemblyGlow.rotation.x = -Math.PI / 2;
+disassemblyGlow.position.y = -2.17;
+disassemblyScene.add(disassemblyGlow);
+const disassemblyDustGeometry = new THREE.BufferGeometry();
+const disassemblyDustPositions = new Float32Array(90 * 3);
+for (let i = 0; i < 90; i++) {
+  const angle = Math.random() * Math.PI * 2, radius = Math.random() * 3.4;
+  disassemblyDustPositions[i * 3] = Math.cos(angle) * radius;
+  disassemblyDustPositions[i * 3 + 1] = -1.8 + Math.random() * 4.4;
+  disassemblyDustPositions[i * 3 + 2] = Math.sin(angle) * radius;
+}
+disassemblyDustGeometry.setAttribute('position', new THREE.BufferAttribute(disassemblyDustPositions, 3));
+const disassemblyDust = new THREE.Points(disassemblyDustGeometry, new THREE.PointsMaterial({ color: 0xd8f36a, size: .022, transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false }));
+disassemblyScene.add(disassemblyDust);
+
+let disassemblyOpen = false;
+let disassemblyProgress = 0;
+let disassemblyTarget = 0;
+let disassemblyPhase = 'assembled';
+let disassemblyPieces = [];
+let disassemblyClone = null;
+let disassemblySpin = -.35;
+let disassemblyTilt = 0;
+let disassemblyDragging = false;
+let disassemblyPointerX = 0;
+let disassemblyPointerY = 0;
+let disassemblyLastUpdate = 0;
+
+function buildDisassemblySaber() {
+  disassemblyRoot.clear();
+  disassemblyPieces = [];
+  disassemblyClone = model.clone(true);
+  disassemblyClone.traverse(child => {
+    if (child.isLight) child.visible = false;
+    if (child.isMesh && child.material && child.material.isMeshBasicMaterial && child.position.y > 1.02) child.visible = false;
+  });
+  disassemblyRoot.add(disassemblyClone);
+  const meshes = [];
+  disassemblyClone.traverse(child => { if (child.isMesh && child.visible) meshes.push(child); });
+  const groupTargets = [
+    new THREE.Vector3(0, -1.5, -.65),
+    new THREE.Vector3(-1.5, -.3, .15),
+    new THREE.Vector3(1.5, .92, .15),
+    new THREE.Vector3(0, 1.95, .55)
+  ];
+  const groupCentroids = Array.from({ length: 4 }, () => new THREE.Vector3());
+  const groupCounts = [0, 0, 0, 0];
+  const groups = meshes.map(mesh => {
+    const y = mesh.position.y;
+    const group = y < -.44 ? 0 : y < .12 ? 1 : y < .72 ? 2 : 3;
+    groupCentroids[group].add(mesh.position);
+    groupCounts[group]++;
+    return group;
+  });
+  groupCentroids.forEach((centroid, index) => { if (groupCounts[index]) centroid.divideScalar(groupCounts[index]); });
+  const groupQuats = groupTargets.map(() => new THREE.Quaternion().setFromEuler(new THREE.Euler(
+    (Math.random() - .5) * .35,
+    (Math.random() - .5) * .55,
+    (Math.random() - .5) * .35
+  )));
+  meshes.forEach((mesh, index) => {
+    const group = groups[index];
+    const offset = mesh.position.clone().sub(groupCentroids[group]).multiplyScalar(1.3);
+    offset.applyQuaternion(groupQuats[group]);
+    const target = groupTargets[group].clone().add(offset).add(new THREE.Vector3(
+      (Math.random() - .5) * .09,
+      (Math.random() - .5) * .09,
+      (Math.random() - .5) * .09
+    ));
+    const targetQuat = groupQuats[group].clone().multiply(mesh.quaternion);
+    disassemblyPieces.push({
+      mesh,
+      home: mesh.position.clone(),
+      homeQuat: mesh.quaternion.clone(),
+      target,
+      targetQuat,
+      delay: Math.min(.34, group * .085 + Math.random() * .045),
+      phase: Math.random() * Math.PI * 2
+    });
+  });
+  $('disassemblyPieceCount').textContent = `${String(disassemblyPieces.length).padStart(2, '0')} PIECES · 04 ASSEMBLIES`;
+}
+
+function updateDisassemblyUI() {
+  const button = $('disassembleToggle');
+  const status = $('disassemblyStatus');
+  const statusWrap = status.parentElement;
+  const phase = $('disassemblyPhase');
+  const caption = $('disassemblyCaption');
+  statusWrap.classList.toggle('is-busy', disassemblyPhase === 'disassembling' || disassemblyPhase === 'assembling');
+  statusWrap.classList.toggle('is-open', disassemblyPhase === 'disassembled');
+  if (disassemblyPhase === 'disassembling' || disassemblyPhase === 'assembling') {
+    button.disabled = true;
+    button.innerHTML = `${disassemblyPhase === 'disassembling' ? 'DISASSEMBLING' : 'ASSEMBLING'} <span>…</span>`;
+    status.textContent = disassemblyPhase === 'disassembling' ? 'RELEASING CLAMPS' : 'RECALLING PARTS';
+    phase.textContent = disassemblyPhase === 'disassembling' ? 'TEARDOWN IN PROGRESS' : 'REASSEMBLY IN PROGRESS';
+    caption.textContent = disassemblyPhase === 'disassembling' ? 'Component locks released. Every piece is finding its own orbit.' : 'Magnets engaged. The pieces are coming home.';
+  } else if (disassemblyPhase === 'disassembled') {
+    button.disabled = false;
+    button.innerHTML = 'ASSEMBLE <span>✳</span>';
+    status.textContent = 'DISASSEMBLED';
+    phase.textContent = 'TEARDOWN COMPLETE';
+    caption.textContent = 'Every component is floating free. Bring it home when you are ready.';
+  } else {
+    button.disabled = false;
+    button.innerHTML = 'DISASSEMBLE <span>✳</span>';
+    status.textContent = 'ASSEMBLED';
+    phase.textContent = 'SYSTEMS LOCKED';
+    caption.textContent = 'All components seated. Ready for teardown.';
+  }
+}
+
+function resizeDisassemblyScene() {
+  const width = Math.max(1, disassemblyCanvas.clientWidth);
+  const height = Math.max(1, disassemblyCanvas.clientHeight);
+  disassemblyRenderer.setSize(width, height, false);
+  const aspect = width / height;
+  disassemblyCamera.aspect = aspect;
+  const halfFov = THREE.MathUtils.degToRad(34) / 2;
+  const distance = Math.max(2.45 / Math.tan(halfFov), 2.2 / (Math.tan(halfFov) * aspect)) + 1.15;
+  disassemblyCamera.position.set(0, .5, distance);
+  disassemblyCamera.lookAt(0, .38, 0);
+  disassemblyCamera.updateProjectionMatrix();
+}
+
+function openDisassembly() {
+  openOverlayElement($('disassemblyOverlay'));
+  disassemblyOpen = true;
+  activityBodyLock();
+  disassemblyProgress = 0;
+  disassemblyTarget = 0;
+  disassemblyPhase = 'assembled';
+  disassemblySpin = -.35;
+  disassemblyTilt = 0;
+  disassemblyLastUpdate = 0;
+  $('disassemblyPartName').textContent = buildName().toUpperCase();
+  buildDisassemblySaber();
+  updateDisassemblyUI();
+  resizeDisassemblyScene();
+  requestAnimationFrame(resizeDisassemblyScene);
+  playTone(620, .12);
+}
+function closeDisassembly() {
+  if (!disassemblyOpen) return;
+  disassemblyOpen = false;
+  closeOverlayElement($('disassemblyOverlay'));
+  activityBodyLock();
+}
+$('disassemblyClose').addEventListener('click', closeDisassembly);
+$('disassemblyBack').addEventListener('click', closeDisassembly);
+$('disassemblyOverlay').addEventListener('click', event => { if (event.target === $('disassemblyOverlay')) closeDisassembly(); });
+$('disassembleToggle').addEventListener('click', () => {
+  if (disassemblyPhase === 'assembled') {
+    disassemblyTarget = 1;
+    disassemblyPhase = 'disassembling';
+    const flash = $('disassemblyFlash');
+    flash.classList.add('pop');
+    setTimeout(() => flash.classList.remove('pop'), 60);
+    playTone(300, .22);
+  } else if (disassemblyPhase === 'disassembled') {
+    disassemblyTarget = 0;
+    disassemblyPhase = 'assembling';
+    playTone(520, .2);
+  }
+  updateDisassemblyUI();
+});
+disassemblyCanvas.addEventListener('pointerdown', event => {
+  disassemblyDragging = true;
+  disassemblyPointerX = event.clientX;
+  disassemblyPointerY = event.clientY;
+  try { disassemblyCanvas.setPointerCapture?.(event.pointerId); } catch (_) { /* synthetic pointer */ }
+});
+disassemblyCanvas.addEventListener('pointermove', event => {
+  if (!disassemblyDragging) return;
+  disassemblySpin += (event.clientX - disassemblyPointerX) * .009;
+  disassemblyTilt = Math.max(-.32, Math.min(.32, disassemblyTilt + (event.clientY - disassemblyPointerY) * .005));
+  disassemblyPointerX = event.clientX;
+  disassemblyPointerY = event.clientY;
+});
+disassemblyCanvas.addEventListener('pointerup', () => { disassemblyDragging = false; });
+disassemblyCanvas.addEventListener('pointercancel', () => { disassemblyDragging = false; });
+new ResizeObserver(resizeDisassemblyScene).observe(disassemblyCanvas);
+
+function updateDisassembly(delta, elapsed) {
+  if (!disassemblyOpen) return;
+  const now = performance.now();
+  const realDelta = disassemblyLastUpdate ? Math.min(.32, (now - disassemblyLastUpdate) / 1000) : Math.min(.32, delta);
+  disassemblyLastUpdate = now;
+  if (Math.abs(disassemblyProgress - disassemblyTarget) > .0005) {
+    const step = realDelta / 1.45;
+    if (disassemblyProgress < disassemblyTarget) disassemblyProgress = Math.min(disassemblyTarget, disassemblyProgress + step);
+    else disassemblyProgress = Math.max(disassemblyTarget, disassemblyProgress - step);
+    if (disassemblyProgress === disassemblyTarget) {
+      disassemblyPhase = disassemblyTarget ? 'disassembled' : 'assembled';
+      updateDisassemblyUI();
+    }
+  }
+  disassemblyPieces.forEach(piece => {
+    const raw = Math.max(0, Math.min(1, (disassemblyProgress - piece.delay) / (1 - piece.delay)));
+    const t = raw * raw * (3 - 2 * raw);
+    piece.mesh.position.lerpVectors(piece.home, piece.target, t);
+    piece.mesh.quaternion.slerpQuaternions(piece.homeQuat, piece.targetQuat, t);
+    if (t > 0) piece.mesh.position.y += Math.sin(elapsed * 1.55 + piece.phase) * .032 * t;
+  });
+  if (!disassemblyDragging) disassemblySpin += realDelta * .2;
+  disassemblyRoot.rotation.y = disassemblySpin;
+  disassemblyRoot.rotation.x = disassemblyTilt;
+  disassemblyRoot.rotation.z = Math.sin(elapsed * .7) * .008;
+  disassemblyRoot.position.y = .18 + Math.sin(elapsed * 1.35) * .045;
+  disassemblyDust.rotation.y = elapsed * .035;
+  disassemblyGlow.material.opacity = .2 + (Math.sin(elapsed * 1.8) + 1) * .035;
+  disassemblyPadRing.material.emissiveIntensity = .24 + (Math.sin(elapsed * 2.1) + 1) * .12;
+}
+
+// ---------------------------------------------------------------------------
+// Activity 02 — Scrap Run (fruit-ninja style salvage slicer)
+// ---------------------------------------------------------------------------
+const slicerCanvas = $('slicerCanvas');
+const slicerCtx = slicerCanvas.getContext('2d');
+const SLICER_BEST_KEY = 'sabersmith.scrapRun.best.v1';
+const SLICER_GRAVITY = 1180;
+const slicer = {
+  open: false,
+  running: false,
+  w: 1,
+  h: 1,
+  dpr: 1,
+  score: 0,
+  best: 0,
+  lives: 3,
+  elapsed: 0,
+  timeLeft: 60,
+  objects: [],
+  pieces: [],
+  sparks: [],
+  floats: [],
+  trail: [],
+  stars: [],
+  spawnTimer: 0,
+  combo: 0,
+  comboTimer: 0,
+  drawing: false,
+  shake: 0,
+  flash: 0,
+  flashColor: '255, 80, 70',
+  bannerUntil: 0,
+  raf: 0,
+  lastFrame: 0,
+  bladeRgb: '74,141,255',
+  lastScoreShown: -1,
+  lastTimeShown: -1,
+  lastLivesShown: -1
+};
+try { slicer.best = Math.max(0, Number(localStorage.getItem(SLICER_BEST_KEY)) || 0); } catch (_) { slicer.best = 0; }
+
+const slicerTypeMeta = {
+  crate: { points: 10, size: 80, w: 1, h: 1, colors: ['#d8f36a', '#c9a36b', '#fff5d6'] },
+  droid: { points: 15, size: 84, w: .62, h: 1.15, colors: ['#d8f36a', '#c8ad7c', '#fff5d6'] },
+  helmet: { points: 20, size: 78, w: .95, h: .82, colors: ['#d8f36a', '#d9ddd4', '#fff'] },
+  barrel: { points: 10, size: 78, w: .62, h: 1.05, colors: ['#d8f36a', '#8a9690', '#fff'] },
+  probe: { points: 25, size: 70, w: .95, h: .95, colors: ['#d8f36a', '#6fe8ff', '#fff'] },
+  bomb: { points: 0, size: 62, w: .7, h: .7, colors: ['#ff5b4d', '#ffb15c', '#fff'] }
+};
+
+function hexToRgb(hex) {
+  const value = parseInt(hex.replace('#', ''), 16);
+  return `${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}`;
+}
+function roundRectPath(context, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.lineTo(x + width - r, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + r);
+  context.lineTo(x + width, y + height - r);
+  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  context.lineTo(x + r, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - r);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
+  context.closePath();
+}
+function segmentDistance(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function resizeSlicer() {
+  const width = Math.max(1, slicerCanvas.clientWidth);
+  const height = Math.max(1, slicerCanvas.clientHeight);
+  slicer.w = width;
+  slicer.h = height;
+  slicer.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  slicerCanvas.width = Math.round(width * slicer.dpr);
+  slicerCanvas.height = Math.round(height * slicer.dpr);
+  slicerCtx.setTransform(slicer.dpr, 0, 0, slicer.dpr, 0, 0);
+  if (!slicer.stars.length) {
+    for (let i = 0; i < 76; i++) {
+      slicer.stars.push({ x: Math.random(), y: Math.random() * .88, speed: .6 + Math.random() * 1.8, phase: Math.random() * Math.PI * 2, size: .6 + Math.random() * 1.7 });
+    }
+  }
+}
+new ResizeObserver(resizeSlicer).observe(slicerCanvas);
+
+function comboMultiplier() {
+  return Math.min(5, 1 + Math.floor(Math.max(0, slicer.combo) / 2));
+}
+function updateSlicerHud(force = false) {
+  if (force || slicer.score !== slicer.lastScoreShown) {
+    $('slicerScore').textContent = slicer.score.toLocaleString('en-US');
+    slicer.lastScoreShown = slicer.score;
+  }
+  $('slicerBest').textContent = slicer.best.toLocaleString('en-US');
+  const seconds = Math.max(0, Math.ceil(slicer.timeLeft));
+  if (force || seconds !== slicer.lastTimeShown) {
+    $('slicerTimer').textContent = String(seconds).padStart(2, '0');
+    slicer.lastTimeShown = seconds;
+  }
+  if (force || slicer.lives !== slicer.lastLivesShown) {
+    const marks = [];
+    for (let i = 0; i < 3; i++) marks.push(i < slicer.lives ? '◆' : '◇');
+    $('slicerLives').textContent = marks.join(' ');
+    slicer.lastLivesShown = slicer.lives;
+  }
+}
+function setSlicerBanner(message, seconds) {
+  const banner = $('slicerBanner');
+  banner.textContent = message;
+  banner.classList.add('show');
+  slicer.bannerUntil = performance.now() / 1000 + seconds;
+}
+function updateComboDisplay() {
+  const element = $('slicerCombo');
+  const multiplier = comboMultiplier();
+  if (slicer.combo > 1 && slicer.comboTimer > 0) {
+    element.textContent = `x${multiplier}`;
+    element.classList.add('show');
+  } else {
+    element.classList.remove('show');
+  }
+}
+function resetSlicerGame() {
+  slicer.running = false;
+  slicer.score = 0;
+  slicer.lives = 3;
+  slicer.elapsed = 0;
+  slicer.timeLeft = 60;
+  slicer.objects.length = 0;
+  slicer.pieces.length = 0;
+  slicer.sparks.length = 0;
+  slicer.floats.length = 0;
+  slicer.trail.length = 0;
+  slicer.spawnTimer = 0;
+  slicer.combo = 0;
+  slicer.comboTimer = 0;
+  slicer.shake = 0;
+  slicer.flash = 0;
+  slicer.drawing = false;
+  $('slicerStart').hidden = false;
+  $('slicerOver').hidden = true;
+  $('slicerOver').setAttribute('aria-hidden', 'true');
+  $('slicerBanner').classList.remove('show');
+  $('slicerCombo').classList.remove('show');
+  $('slicerFooterStatus').textContent = 'AWAITING RUN';
+  updateSlicerHud(true);
+}
+function startSlicerRun() {
+  slicer.running = true;
+  slicer.score = 0;
+  slicer.lives = 3;
+  slicer.elapsed = 0;
+  slicer.timeLeft = 60;
+  slicer.objects.length = 0;
+  slicer.pieces.length = 0;
+  slicer.sparks.length = 0;
+  slicer.floats.length = 0;
+  slicer.trail.length = 0;
+  slicer.spawnTimer = .55;
+  slicer.combo = 0;
+  slicer.comboTimer = 0;
+  slicer.shake = 0;
+  slicer.flash = 0;
+  slicer.drawing = false;
+  $('slicerStart').hidden = true;
+  $('slicerOver').hidden = true;
+  $('slicerOver').setAttribute('aria-hidden', 'true');
+  $('slicerFooterStatus').textContent = 'RUN ACTIVE · 60 SECONDS';
+  updateSlicerHud(true);
+  updateComboDisplay();
+  setSlicerBanner('SLICE THE SALVAGE', 1.5);
+  playTone(760, .12);
+}
+function endSlicerRun(reason) {
+  if (!slicer.running) return;
+  slicer.running = false;
+  slicer.drawing = false;
+  const isBest = slicer.score > slicer.best;
+  if (isBest) {
+    slicer.best = slicer.score;
+    try { localStorage.setItem(SLICER_BEST_KEY, String(slicer.best)); } catch (_) { /* optional */ }
+  }
+  $('slicerFinalScore').textContent = slicer.score.toLocaleString('en-US');
+  $('slicerBest').textContent = slicer.best.toLocaleString('en-US');
+  $('slicerNewBest').textContent = isBest && slicer.score > 0 ? 'NEW PERSONAL BEST' : 'PERSONAL BEST';
+  $('slicerNewBest').classList.toggle('is-best', isBest && slicer.score > 0);
+  if (reason === 'detonator') {
+    $('slicerOverTitle').textContent = 'That was a detonator.';
+    $('slicerOverCopy').textContent = 'The last thing through your blade was a thermal detonator. The salvage floor takes this round.';
+  } else if (reason === 'lives') {
+    $('slicerOverTitle').textContent = 'The salvage won.';
+    $('slicerOverCopy').textContent = 'Too much hardware hit the floor. Keep the blade moving and try another run.';
+  } else if (slicer.score >= 600) {
+    $('slicerOverTitle').textContent = 'Masterful cutting.';
+    $('slicerOverCopy').textContent = 'The chute is closing and the floor is clean. The salvage guild will hear about this run.';
+  } else {
+    $('slicerOverTitle').textContent = 'Time called.';
+    $('slicerOverCopy').textContent = 'The chute is closing. A respectable pile of salvage — but the guild always wants more.';
+  }
+  $('slicerOverEyebrow').textContent = 'RUN COMPLETE';
+  $('slicerOver').hidden = false;
+  $('slicerOver').setAttribute('aria-hidden', 'false');
+  $('slicerFooterStatus').textContent = 'RUN COMPLETE · CHUTE CLOSED';
+  $('slicerCombo').classList.remove('show');
+  $('slicerBanner').classList.remove('show');
+  playTone(220, .35);
+}
+
+function pickSlicerType() {
+  const activeBombs = slicer.objects.filter(object => object.type === 'bomb').length;
+  const bombChance = slicer.elapsed > 4 && activeBombs < 2 ? .09 + Math.min(.06, slicer.elapsed * .0012) : 0;
+  const roll = Math.random();
+  if (roll < bombChance) return 'bomb';
+  if (roll < .33) return 'crate';
+  if (roll < .57) return 'droid';
+  if (roll < .73) return 'helmet';
+  if (roll < .87) return 'barrel';
+  return 'probe';
+}
+function spawnSlicerObject(offset = 0) {
+  const type = pickSlicerType();
+  const meta = slicerTypeMeta[type];
+  const size = meta.size * (.85 + Math.random() * .3);
+  const x = Math.min(slicer.w * .88, Math.max(slicer.w * .12, slicer.w * (.16 + Math.random() * .68) + offset));
+  const peak = slicer.h * (.6 + Math.random() * .22);
+  const vy = -Math.sqrt(2 * SLICER_GRAVITY * peak);
+  const timeUp = -vy / SLICER_GRAVITY;
+  const targetX = Math.min(slicer.w * .9, Math.max(slicer.w * .1, x + (slicer.w * .5 - x) * (.2 + Math.random() * .55)));
+  const vx = (targetX - x) / (timeUp * 2);
+  const radius = Math.max(size * meta.w, size * meta.h) * .5;
+  slicer.objects.push({
+    type,
+    x,
+    y: slicer.h + size,
+    vx,
+    vy,
+    angle: (Math.random() - .5) * .5,
+    va: (Math.random() - .5) * 2.4,
+    size,
+    radius,
+    points: meta.points,
+    seen: false,
+    seed: Math.random() * Math.PI * 2
+  });
+}
+function spawnSlicerWave() {
+  const waveSize = 1 + (Math.random() < .45 ? 1 : 0) + (slicer.elapsed > 15 && Math.random() < .18 ? 1 : 0);
+  for (let i = 0; i < waveSize; i++) spawnSlicerObject((i - (waveSize - 1) / 2) * 90);
+}
+function spawnSlicerSparks(x, y, colors, count, power = 260) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = power * (.25 + Math.random() * .75);
+    slicer.sparks.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 50,
+      life: .4 + Math.random() * .5,
+      maxLife: .9,
+      size: 1 + Math.random() * 2.6,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    });
+  }
+}
+function addSlicerFloat(x, y, text, color = '#d8f36a') {
+  slicer.floats.push({ x, y, text, color, life: .9, maxLife: .9 });
+}
+function loseSlicerLife(kind) {
+  if (!slicer.running) return;
+  slicer.lives = Math.max(0, slicer.lives - 1);
+  slicer.combo = 0;
+  slicer.comboTimer = 0;
+  slicer.flash = 1;
+  slicer.flashColor = kind === 'detonator' ? '255, 70, 58' : '242, 164, 113';
+  slicer.shake = kind === 'detonator' ? 18 : 9;
+  updateComboDisplay();
+  updateSlicerHud(true);
+  setSlicerBanner(kind === 'detonator' ? 'DETONATOR!' : 'SALVAGE LOST', 1.15);
+  playTone(kind === 'detonator' ? 78 : 150, .3);
+  if (slicer.lives <= 0) endSlicerRun(kind === 'detonator' ? 'detonator' : 'lives');
+}
+function sliceSlicerObject(object, cutAngle) {
+  const index = slicer.objects.indexOf(object);
+  if (index === -1) return;
+  slicer.objects.splice(index, 1);
+  const meta = slicerTypeMeta[object.type];
+  if (object.type === 'bomb') {
+    spawnSlicerSparks(object.x, object.y, meta.colors, 26, 430);
+    slicer.shake = 20;
+    slicer.flash = 1;
+    slicer.flashColor = '255, 70, 58';
+    addSlicerFloat(object.x, object.y - 30, 'DETONATOR', '#ff6b5c');
+    loseSlicerLife('detonator');
+    return;
+  }
+  slicer.combo += 1;
+  slicer.comboTimer = 1.05;
+  const multiplier = comboMultiplier();
+  const gained = object.points * multiplier;
+  slicer.score += gained;
+  spawnSlicerSparks(object.x, object.y, meta.colors, 12 + Math.min(10, multiplier * 2), 240);
+  addSlicerFloat(object.x, object.y - object.radius - 8, `+${gained}`, multiplier > 1 ? '#d8f36a' : '#f5f7e9');
+  const separation = cutAngle + Math.PI / 2;
+  const push = 150 + Math.random() * 90;
+  for (const side of [-1, 1]) {
+    slicer.pieces.push({
+      type: object.type,
+      x: object.x,
+      y: object.y,
+      vx: object.vx + Math.cos(separation) * push * side,
+      vy: object.vy + Math.sin(separation) * push * side - 45,
+      angle: object.angle,
+      va: object.va + side * (1.2 + Math.random()),
+      size: object.size,
+      side,
+      alpha: 1
+    });
+  }
+  updateSlicerHud();
+  updateComboDisplay();
+  playTone(560 + Math.min(7, slicer.combo) * 55, .07);
+}
+function checkSlicerSwipe(from, to) {
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  for (let i = slicer.objects.length - 1; i >= 0; i--) {
+    const object = slicer.objects[i];
+    if (segmentDistance(object.x, object.y, from.x, from.y, to.x, to.y) <= object.radius + 11) {
+      sliceSlicerObject(object, angle);
+    }
+  }
+}
+function slicerLocalPoint(event) {
+  const rect = slicerCanvas.getBoundingClientRect();
+  return { x: event.clientX - rect.left, y: event.clientY - rect.top, t: performance.now() / 1000 };
+}
+slicerCanvas.addEventListener('pointerdown', event => {
+  if (!slicer.open || !slicer.running) return;
+  event.preventDefault();
+  slicer.drawing = true;
+  try { slicerCanvas.setPointerCapture?.(event.pointerId); } catch (_) { /* synthetic pointer */ }
+  slicer.trail.push(slicerLocalPoint(event));
+});
+slicerCanvas.addEventListener('pointermove', event => {
+  if (!slicer.open || !slicer.running || !slicer.drawing) return;
+  event.preventDefault();
+  const point = slicerLocalPoint(event);
+  const previous = slicer.trail[slicer.trail.length - 1];
+  if (previous) checkSlicerSwipe(previous, point);
+  slicer.trail.push(point);
+  if (slicer.trail.length > 30) slicer.trail.shift();
+});
+const stopSlicerSwipe = () => { slicer.drawing = false; };
+slicerCanvas.addEventListener('pointerup', stopSlicerSwipe);
+slicerCanvas.addEventListener('pointercancel', stopSlicerSwipe);
+slicerCanvas.addEventListener('pointerleave', stopSlicerSwipe);
+slicerCanvas.addEventListener('contextmenu', event => event.preventDefault());
+
+function openSlicer() {
+  openOverlayElement($('slicerOverlay'));
+  slicer.open = true;
+  activityBodyLock();
+  slicer.bladeRgb = hexToRgb(selectedOption('crystal').color);
+  resetSlicerGame();
+  resizeSlicer();
+  requestAnimationFrame(resizeSlicer);
+  startSlicerLoop();
+  playTone(680, .1);
+}
+function closeSlicer() {
+  if (!slicer.open) return;
+  slicer.open = false;
+  slicer.running = false;
+  slicer.drawing = false;
+  stopSlicerLoop();
+  closeOverlayElement($('slicerOverlay'));
+  activityBodyLock();
+}
+function startSlicerLoop() {
+  if (slicer.raf) return;
+  slicer.lastFrame = 0;
+  slicer.raf = requestAnimationFrame(slicerLoop);
+}
+function stopSlicerLoop() {
+  if (slicer.raf) cancelAnimationFrame(slicer.raf);
+  slicer.raf = 0;
+}
+$('slicerClose').addEventListener('click', closeSlicer);
+$('slicerBack').addEventListener('click', closeSlicer);
+$('slicerOverlay').addEventListener('click', event => { if (event.target === $('slicerOverlay')) closeSlicer(); });
+$('slicerStartButton').addEventListener('click', startSlicerRun);
+$('slicerRestart').addEventListener('click', startSlicerRun);
+
+function updateSlicer(delta, now) {
+  if (slicer.running) {
+    slicer.elapsed += delta;
+    slicer.timeLeft = Math.max(0, 60 - slicer.elapsed);
+    if (slicer.timeLeft <= 0) {
+      endSlicerRun('time');
+    } else {
+      slicer.spawnTimer -= delta;
+      if (slicer.spawnTimer <= 0) {
+        spawnSlicerWave();
+        slicer.spawnTimer = Math.max(.5, .9 - slicer.elapsed * .005) + Math.random() * .22;
+      }
+    }
+  }
+  for (let i = slicer.objects.length - 1; i >= 0; i--) {
+    const object = slicer.objects[i];
+    object.vy += SLICER_GRAVITY * delta;
+    object.x += object.vx * delta;
+    object.y += object.vy * delta;
+    object.angle += object.va * delta;
+    if (object.y < slicer.h * .55) object.seen = true;
+    if (object.seen && object.vy > 0 && object.y - object.radius > slicer.h + 60) {
+      slicer.objects.splice(i, 1);
+      if (slicer.running && object.type !== 'bomb' && slicer.elapsed > 4) loseSlicerLife('miss');
+      continue;
+    }
+    if (object.x < -260 || object.x > slicer.w + 260) slicer.objects.splice(i, 1);
+  }
+  for (let i = slicer.pieces.length - 1; i >= 0; i--) {
+    const piece = slicer.pieces[i];
+    piece.vy += SLICER_GRAVITY * delta;
+    piece.x += piece.vx * delta;
+    piece.y += piece.vy * delta;
+    piece.angle += piece.va * delta;
+    piece.alpha -= delta * .38;
+    if (piece.alpha <= 0 || piece.y > slicer.h + 260) slicer.pieces.splice(i, 1);
+  }
+  for (let i = slicer.sparks.length - 1; i >= 0; i--) {
+    const spark = slicer.sparks[i];
+    spark.vy += 900 * delta;
+    spark.x += spark.vx * delta;
+    spark.y += spark.vy * delta;
+    spark.life -= delta;
+    if (spark.life <= 0) slicer.sparks.splice(i, 1);
+  }
+  for (let i = slicer.floats.length - 1; i >= 0; i--) {
+    const float = slicer.floats[i];
+    float.y -= 38 * delta;
+    float.life -= delta;
+    if (float.life <= 0) slicer.floats.splice(i, 1);
+  }
+  const cutoff = now - .2;
+  while (slicer.trail.length && slicer.trail[0].t < cutoff) slicer.trail.shift();
+  if (slicer.comboTimer > 0) {
+    slicer.comboTimer -= delta;
+    if (slicer.comboTimer <= 0) {
+      slicer.combo = 0;
+      updateComboDisplay();
+    }
+  }
+  if (slicer.bannerUntil && now > slicer.bannerUntil) {
+    $('slicerBanner').classList.remove('show');
+    slicer.bannerUntil = 0;
+  }
+  slicer.shake = Math.max(0, slicer.shake - delta * 44);
+  slicer.flash = Math.max(0, slicer.flash - delta * 2.6);
+  updateSlicerHud();
+}
+
+function drawCrateArt(context) {
+  context.fillStyle = '#6b4528';
+  roundRectPath(context, -30, -28, 60, 56, 5); context.fill();
+  context.fillStyle = '#8a5a34';
+  roundRectPath(context, -27, -25, 54, 50, 3); context.fill();
+  context.strokeStyle = '#b98745'; context.lineWidth = 3.2;
+  context.strokeRect(-22, -20, 44, 40);
+  context.strokeStyle = '#4d3320'; context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(-22, -20); context.lineTo(22, 20);
+  context.moveTo(22, -20); context.lineTo(-22, 20);
+  context.stroke();
+  context.fillStyle = '#d6b37a';
+  for (const [x, y] of [[-24, -22], [24, -22], [-24, 22], [24, 22]]) {
+    context.beginPath(); context.arc(x, y, 1.9, 0, Math.PI * 2); context.fill();
+  }
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-8, 21, 16, 3);
+  context.fillStyle = '#20251f';
+  context.fillRect(-6, 22, 3, 1.4);
+}
+function drawDroidArt(context) {
+  context.fillStyle = '#a8916a';
+  context.strokeStyle = '#a8916a';
+  context.lineWidth = 4.5;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(-6, -4); context.lineTo(-21, 13);
+  context.moveTo(6, -4); context.lineTo(21, 13);
+  context.moveTo(-4, 17); context.lineTo(-12, 31);
+  context.moveTo(4, 17); context.lineTo(12, 31);
+  context.stroke();
+  context.fillStyle = '#c8ad7c';
+  roundRectPath(context, -8, -10, 16, 30, 4); context.fill();
+  context.fillStyle = '#8f7b58';
+  context.fillRect(-8, 2, 16, 3);
+  context.fillRect(-8, 11, 16, 2);
+  context.fillStyle = '#c8ad7c';
+  roundRectPath(context, -9, -30, 18, 17, 5); context.fill();
+  context.fillStyle = '#2a2f2c';
+  roundRectPath(context, -5.5, -25, 11, 4, 2); context.fill();
+  context.fillStyle = '#6f5c3e';
+  context.fillRect(-2, -34, 4, 5);
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-6, 21, 12, 2);
+}
+function drawHelmetArt(context) {
+  context.fillStyle = '#d9ddd4';
+  context.beginPath(); context.ellipse(0, -3, 25, 22, 0, 0, Math.PI * 2); context.fill();
+  roundRectPath(context, -22, 10, 44, 11, 4); context.fill();
+  context.fillStyle = '#c3c9c0';
+  context.beginPath(); context.ellipse(-7, -7, 9, 13, -.25, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#1b201d';
+  roundRectPath(context, -18, -8, 36, 10, 5); context.fill();
+  context.fillStyle = '#2f3833';
+  roundRectPath(context, -10, 12, 20, 6, 2); context.fill();
+  context.fillStyle = '#8f978e';
+  for (let i = 0; i < 4; i++) context.fillRect(-16 + i * 9, 20, 5, 2.5);
+  context.strokeStyle = '#8f978e'; context.lineWidth = 1.5;
+  context.beginPath(); context.moveTo(-19, 4); context.lineTo(-23, 12); context.moveTo(19, 4); context.lineTo(23, 12); context.stroke();
+}
+function drawBarrelArt(context) {
+  const gradient = context.createLinearGradient(-18, 0, 18, 0);
+  gradient.addColorStop(0, '#4a5350');
+  gradient.addColorStop(.35, '#939e98');
+  gradient.addColorStop(1, '#4a5350');
+  context.fillStyle = gradient;
+  roundRectPath(context, -17, -29, 34, 58, 6); context.fill();
+  context.fillStyle = '#2c3431';
+  for (const y of [-19, -1, 17]) context.fillRect(-18, y, 36, 4);
+  context.save();
+  roundRectPath(context, -17, -29, 34, 58, 6); context.clip();
+  context.fillStyle = '#d8f36a';
+  context.save(); context.rotate(-.6); context.fillRect(-30, 9, 60, 7); context.restore();
+  context.restore();
+  context.fillStyle = '#20251f';
+  context.beginPath(); context.arc(0, -25, 5, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#6fe8ff';
+  context.beginPath(); context.arc(0, -25, 2.2, 0, Math.PI * 2); context.fill();
+}
+function drawProbeArt(context, time) {
+  context.strokeStyle = '#59645f'; context.lineWidth = 2.4; context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(-13, -5); context.lineTo(-26, 14);
+  context.moveTo(13, -5); context.lineTo(26, 14);
+  context.moveTo(-4, 16); context.lineTo(-13, 29);
+  context.moveTo(4, 16); context.lineTo(13, 29);
+  context.moveTo(-7, -18); context.lineTo(-14, -30);
+  context.moveTo(7, -18); context.lineTo(14, -30);
+  context.stroke();
+  context.fillStyle = '#2b322e';
+  context.beginPath(); context.arc(0, 0, 17, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#59645f'; context.lineWidth = 2;
+  context.beginPath(); context.arc(0, 0, 17, 0, Math.PI * 2); context.stroke();
+  const glow = .55 + .45 * Math.sin(time * 5);
+  context.fillStyle = `rgba(255, 76, 68, ${glow})`;
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 13;
+  context.beginPath(); context.arc(0, -1, 5.4, 0, Math.PI * 2); context.fill();
+  context.shadowBlur = 0;
+  context.fillStyle = '#111614';
+  context.beginPath(); context.arc(0, -1, 2.1, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-8, 8, 16, 2);
+}
+function drawBombArt(context, time) {
+  const pulse = .5 + .5 * Math.sin(time * 11);
+  context.save();
+  context.shadowColor = '#ff4d4d';
+  context.shadowBlur = 14 + pulse * 16;
+  context.fillStyle = '#202622';
+  context.beginPath(); context.arc(0, 0, 20, 0, Math.PI * 2); context.fill();
+  context.restore();
+  context.strokeStyle = '#5b6660'; context.lineWidth = 3;
+  context.beginPath(); context.arc(0, 0, 20, 0, Math.PI * 2); context.stroke();
+  context.strokeStyle = '#9aa69e'; context.lineWidth = 2;
+  context.beginPath(); context.arc(0, 0, 13, .3, Math.PI * 1.55); context.stroke();
+  context.fillStyle = `rgba(255, 74, 62, ${.55 + pulse * .45})`;
+  context.shadowColor = '#ff4d4d'; context.shadowBlur = 18;
+  context.beginPath(); context.arc(0, 0, 6.5 + pulse * 1.4, 0, Math.PI * 2); context.fill();
+  context.shadowBlur = 0;
+  context.fillStyle = '#fff';
+  context.beginPath(); context.arc(-2, -2.5, 1.6, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-9, -23, 18, 2);
+}
+function drawSlicerArt(context, type, time) {
+  if (type === 'crate') drawCrateArt(context);
+  else if (type === 'droid') drawDroidArt(context);
+  else if (type === 'helmet') drawHelmetArt(context);
+  else if (type === 'barrel') drawBarrelArt(context);
+  else if (type === 'probe') drawProbeArt(context, time);
+  else drawBombArt(context, time);
+}
+function drawSlicerBackground(time) {
+  const context = slicerCtx;
+  const width = slicer.w, height = slicer.h;
+  const gradient = context.createRadialGradient(width * .5, height * .42, 12, width * .5, height * .5, Math.max(width, height) * .76);
+  gradient.addColorStop(0, '#1c2b25');
+  gradient.addColorStop(.52, '#111915');
+  gradient.addColorStop(1, '#080c0a');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+  for (const star of slicer.stars) {
+    const alpha = .18 + .5 * (.5 + .5 * Math.sin(time * star.speed + star.phase));
+    context.fillStyle = `rgba(216, 243, 106, ${alpha})`;
+    context.fillRect(star.x * width, star.y * height, star.size, star.size);
+  }
+  context.strokeStyle = 'rgba(216, 243, 106, .045)';
+  context.lineWidth = 1;
+  for (const radius of [width * .16, width * .3, width * .44]) {
+    context.beginPath(); context.arc(width * .5, height * .46, radius, 0, Math.PI * 2); context.stroke();
+  }
+  context.strokeStyle = 'rgba(216, 243, 106, .06)';
+  context.beginPath(); context.moveTo(0, height * .92); context.lineTo(width, height * .92); context.stroke();
+  context.fillStyle = 'rgba(216, 243, 106, .035)';
+  for (let i = 0; i < 9; i++) context.fillRect(width * (.08 + i * .105), height * .92, 1, height * .08);
+}
+function drawSlicerTrail(now) {
+  const context = slicerCtx;
+  if (slicer.trail.length < 2) return;
+  context.save();
+  context.globalCompositeOperation = 'lighter';
+  context.lineCap = 'round';
+  for (let i = 1; i < slicer.trail.length; i++) {
+    const from = slicer.trail[i - 1];
+    const to = slicer.trail[i];
+    const life = Math.max(0, 1 - (now - to.t) / .22);
+    if (life <= 0) continue;
+    context.strokeStyle = `rgba(${slicer.bladeRgb}, ${.12 * life})`;
+    context.lineWidth = 18 * life + 2;
+    context.beginPath(); context.moveTo(from.x, from.y); context.lineTo(to.x, to.y); context.stroke();
+    context.strokeStyle = `rgba(255, 255, 255, ${.72 * life})`;
+    context.lineWidth = 3.2 * life + .4;
+    context.beginPath(); context.moveTo(from.x, from.y); context.lineTo(to.x, to.y); context.stroke();
+  }
+  const head = slicer.trail[slicer.trail.length - 1];
+  const headLife = Math.max(0, 1 - (now - head.t) / .22);
+  if (headLife > 0) {
+    const glow = context.createRadialGradient(head.x, head.y, 0, head.x, head.y, 22);
+    glow.addColorStop(0, `rgba(255,255,255,${.65 * headLife})`);
+    glow.addColorStop(.4, `rgba(${slicer.bladeRgb},${.28 * headLife})`);
+    glow.addColorStop(1, `rgba(${slicer.bladeRgb},0)`);
+    context.fillStyle = glow;
+    context.beginPath(); context.arc(head.x, head.y, 22, 0, Math.PI * 2); context.fill();
+  }
+  context.restore();
+}
+function drawSlicer(now) {
+  const context = slicerCtx;
+  context.setTransform(slicer.dpr, 0, 0, slicer.dpr, 0, 0);
+  context.clearRect(0, 0, slicer.w, slicer.h);
+  drawSlicerBackground(now);
+  context.save();
+  if (slicer.shake > .1) context.translate((Math.random() - .5) * slicer.shake, (Math.random() - .5) * slicer.shake);
+  for (const piece of slicer.pieces) {
+    context.save();
+    context.translate(piece.x, piece.y);
+    context.rotate(piece.angle);
+    context.scale(piece.size / 60, piece.size / 60);
+    context.globalAlpha = Math.max(0, piece.alpha);
+    context.beginPath();
+    if (piece.side < 0) context.rect(-46, -46, 92, 46);
+    else context.rect(-46, 0, 92, 46);
+    context.clip();
+    drawSlicerArt(context, piece.type, now);
+    context.strokeStyle = 'rgba(216, 243, 106, .85)';
+    context.lineWidth = 1.8;
+    context.shadowColor = '#d8f36a';
+    context.shadowBlur = 10;
+    context.beginPath(); context.moveTo(-34, 0); context.lineTo(34, 0); context.stroke();
+    context.shadowBlur = 0;
+    context.restore();
+  }
+  for (const object of slicer.objects) {
+    context.save();
+    context.translate(object.x, object.y);
+    context.rotate(object.angle);
+    context.scale(object.size / 60, object.size / 60);
+    drawSlicerArt(context, object.type, now);
+    context.restore();
+  }
+  context.save();
+  context.globalCompositeOperation = 'lighter';
+  for (const spark of slicer.sparks) {
+    const alpha = Math.max(0, spark.life / spark.maxLife);
+    context.globalAlpha = alpha;
+    context.fillStyle = spark.color;
+    context.fillRect(spark.x - spark.size / 2, spark.y - spark.size / 2, spark.size, spark.size);
+  }
+  context.restore();
+  for (const float of slicer.floats) {
+    const alpha = Math.max(0, float.life / float.maxLife);
+    context.globalAlpha = alpha;
+    context.fillStyle = float.color;
+    context.font = '600 13px Manrope, sans-serif';
+    context.textAlign = 'center';
+    context.fillText(float.text, float.x, float.y);
+  }
+  context.globalAlpha = 1;
+  drawSlicerTrail(now);
+  context.restore();
+  if (slicer.flash > 0) {
+    context.fillStyle = `rgba(${slicer.flashColor}, ${slicer.flash * .18})`;
+    context.fillRect(0, 0, slicer.w, slicer.h);
+  }
+}
+function slicerLoop(timestamp) {
+  if (!slicer.open) { slicer.raf = 0; return; }
+  const now = timestamp / 1000;
+  if (!slicer.lastFrame) slicer.lastFrame = now;
+  const frameDelta = Math.min(.35, Math.max(0, now - slicer.lastFrame));
+  slicer.lastFrame = now;
+  // Sub-step physics so the run keeps real time even on slow software renderers.
+  let remaining = frameDelta;
+  let steps = 0;
+  while (remaining > .0001 && steps < 12) {
+    const step = Math.min(1 / 60, remaining);
+    updateSlicer(step, now);
+    remaining -= step;
+    steps++;
+  }
+  drawSlicer(now);
+  slicer.raf = requestAnimationFrame(slicerLoop);
+}
+
+animate();
