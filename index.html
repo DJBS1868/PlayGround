@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="auction.css" />
   <link rel="stylesheet" href="collection.css" />
+  <link rel="stylesheet" href="activities.css" />
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
   <script type="module" src="game.js"></script>
 </head>
@@ -28,7 +29,7 @@
         <div class="rail-heading"><div><span class="eyebrow">YOUR WORKBENCH</span><h1>Build a<br><em>legacy.</em></h1></div><div class="build-number">01<br><span>/ 09</span></div></div>
         <nav class="atelier-nav" aria-label="Your atelier">
           <button type="button" class="atelier-nav-button" id="collectionButton"><span>✧</span> COLLECTION <b id="collectionCount">00</b></button>
-          <button type="button" class="atelier-nav-button" id="activitiesButton"><span>↗</span> ACTIVITIES <small>SOON</small></button>
+          <button type="button" class="atelier-nav-button" id="activitiesButton" aria-haspopup="dialog"><span>↗</span> ACTIVITIES <small>03</small></button>
         </nav>
         <p class="intro-copy">Every saber tells a story. Choose your components, find your crystal, and make yours worth remembering.</p>
         <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
@@ -38,7 +39,23 @@
 
       <section class="preview-panel" aria-label="3D saber preview">
         <div class="preview-top"><div><span class="preview-caption">DRAG TO ROTATE <span>↗</span></span></div><div class="preview-actions"><button class="blade-toggle" id="bladeToggle" type="button" role="switch" aria-checked="false" aria-label="Turn preview blade on"><span class="blade-toggle-label">BLADE POWER</span><span class="blade-power-state">OFF</span><span class="blade-switch-track" aria-hidden="true"><i></i></span></button><button class="icon-button" id="resetView" title="Reset view" aria-label="Reset saber view">⟳</button></div></div>
-        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div></div>
+        <div class="scene-wrap" id="sceneWrap"><div class="scene-loading" id="sceneLoading"><span></span> PREPARING YOUR WORKBENCH</div><div class="scene-vignette"></div><div class="part-callouts" id="partCallouts" aria-hidden="true"></div></div>
+        <div class="activity-hud" id="activityHud" aria-hidden="true">
+          <div class="activity-hud-head">
+            <div><span class="eyebrow">ACTIVITY 01 · FIELD MAINTENANCE</span><h2>SABER <em>TEARDOWN</em></h2><p>Every component, suspended in the workbench field.</p></div>
+            <button class="activity-exit" id="activityExit" type="button"><span>×</span> EXIT WORKBENCH</button>
+          </div>
+          <div class="activity-state" id="activityState">
+            <span class="activity-state-light" id="activityStateLight"></span>
+            <span class="activity-state-copy"><small>BUILD STATE</small><strong id="activityStateLabel" aria-live="polite">FULLY ASSEMBLED</strong></span>
+            <span class="activity-part-total"><b id="activityPartsCount">06</b><small>PARTS</small></span>
+          </div>
+          <div class="activity-progress"><i id="activityProgressFill"></i></div>
+          <div class="activity-hud-foot">
+            <span class="activity-hint">↻ DRAG TO INSPECT THE FIELD</span>
+            <div class="activity-actions"><button class="activity-btn primary-button" id="teardownButton" type="button">DISASSEMBLE <span>⤢</span></button><button class="activity-btn" id="assembleButton" type="button" disabled>ASSEMBLE <span>⤡</span></button></div>
+          </div>
+        </div>
         <div class="preview-bottom"><div><span class="eyebrow">CURRENT BUILD</span><strong id="previewName">The Wayfinder</strong></div><div class="crystal-readout"><span class="crystal-dot" id="crystalDot"></span><span><small>CRYSTAL</small><b id="crystalReadout">KYBER · AZURE</b></span></div><div class="price-readout"><small>EST. VALUE</small><strong id="previewPrice">¤ 2,640</strong></div></div>
         <div class="step-controls"><button class="text-button" id="prevStep" disabled>← <span>BACK</span></button><span class="step-summary" id="stepSummary">01 / 09 &nbsp; HILT</span><button class="primary-button" id="nextStep">NEXT PART <span>→</span></button></div>
       </section>
@@ -76,6 +93,63 @@
       <button class="collection-arrow collection-next" id="collectionNext" aria-label="Next saber">→</button>
       <div class="collection-details"><span class="eyebrow" id="collectionOrdinal">ARTIFACT 01 / 01</span><h2 id="collectionSaberName">—</h2><p id="collectionSaberMeta">HAND-FORGED · KYBER-BOUND</p><details class="parts-disclosure"><summary>PARTS <span id="collectionPartsCount">09 COMPONENTS</span></summary><div id="collectionParts" class="collection-parts"></div></details><div class="collection-actions"><button class="primary-button" id="auctionCollected">SELL AT AUCTION <span>↗</span></button><button class="text-button" id="backToWorkbench">BACK TO WORKBENCH</button></div></div>
       <div class="collection-empty" id="collectionEmpty"><span>✧</span><h2>Your story starts here.</h2><p>Finish a saber and keep it to add your first artifact to the vault.</p><button class="primary-button" id="emptyBack">RETURN TO WORKBENCH <span>↗</span></button></div>
+    </section>
+  </div>
+
+  <div class="activities-overlay" id="activitiesOverlay" aria-hidden="true">
+    <section class="activities-room" role="dialog" aria-modal="true" aria-labelledby="activitiesTitle">
+      <header class="activities-header">
+        <div class="activities-brand"><span class="live-dot"></span><div><span class="eyebrow">THE SABERSMITH · TRAINING ANNEX</span><strong id="activitiesTitle">ACTIVITIES</strong></div></div>
+        <div class="activities-meta"><span>03 MODULES</span><span class="meta-acid">01 AVAILABLE</span></div>
+        <button class="sale-close activities-close" id="activitiesClose" type="button" aria-label="Close activities">×</button>
+      </header>
+      <div class="activities-body">
+        <div class="activities-intro"><div><span class="eyebrow">CHOOSE YOUR NEXT LESSON</span><h2>More than a <em>workbench.</em></h2></div><p>Step away from the build and into the atelier's training rooms. New lessons are forged here every cycle.</p></div>
+        <div class="activity-grid">
+          <button class="activity-card activity-ready" type="button" data-activity="teardown" aria-label="Enter Saber Teardown">
+            <span class="activity-card-index">01</span><span class="activity-badge">READY</span>
+            <span class="activity-art">
+              <svg viewBox="0 0 120 190" aria-hidden="true">
+                <path d="M60 16v18M60 54v14M60 92v14M60 130v12M60 164v10" stroke="#d8f36a" stroke-opacity=".28" stroke-dasharray="2 5"/>
+                <path d="M60 20l7 10-7 10-7-10z" fill="#4deaff" opacity=".8"/><path d="M60 22v16M55 30h10" stroke="#d8faff" stroke-opacity=".6" stroke-width=".7"/>
+                <rect x="47" y="42" width="26" height="12" rx="2" fill="#37433c" stroke="#d8f36a" stroke-opacity=".55"/><path d="M51 42l-4-5h26l-4 5M52 54h16" stroke="#d8f36a" stroke-opacity=".4" stroke-width="1.2"/>
+                <rect x="50" y="68" width="20" height="24" rx="2" fill="#8d978e"/><path d="M50 73h20M50 86h20" stroke="#202722" stroke-opacity=".65"/><rect x="52" y="74" width="3" height="10" fill="#d8f36a" opacity=".55"/>
+                <rect x="49" y="96" width="22" height="36" rx="2" fill="#3a443e" stroke="#d8f36a" stroke-opacity=".35"/><path d="M52 101l16 26M68 101l-16 26" stroke="#d8f36a" stroke-opacity=".35" stroke-width="1.1"/>
+                <rect x="51" y="136" width="18" height="7" fill="#8d978e"/><path d="M54 143h12l-3 18h-6z" fill="#3a443e" stroke="#d8f36a" stroke-opacity=".55"/><path d="M56 149h8M57 155h6" stroke="#d8f36a" stroke-opacity=".38"/>
+                <path d="M47 92h-5M73 92h5M45 116h-5M75 116h5" stroke="#d8f36a" stroke-opacity=".25"/>
+              </svg>
+            </span>
+            <span class="activity-card-copy"><small>FIELD MAINTENANCE</small><strong>Saber Teardown</strong><span>Pull your build apart, piece by piece, then bring every component home again.</span></span>
+            <span class="activity-card-foot"><span>ENTER ACTIVITY</span><b>↗</b></span>
+          </button>
+          <button class="activity-card activity-locked" type="button" data-activity="attunement" aria-label="Crystal Attunement — coming soon">
+            <span class="activity-card-index">02</span><span class="activity-badge">COMING SOON</span>
+            <span class="activity-art">
+              <svg viewBox="0 0 120 190" aria-hidden="true">
+                <circle cx="60" cy="94" r="47" fill="none" stroke="#d8f36a" stroke-opacity=".14" stroke-dasharray="3 7"/><circle cx="60" cy="94" r="34" fill="none" stroke="#d8f36a" stroke-opacity=".2"/>
+                <path d="M60 50l21 34-21 49-21-49z" fill="#48e184" opacity=".38" stroke="#b8ff55" stroke-opacity=".8"/><path d="M60 50v83M39 84h42M60 50l-13 34 13 49 13-49z" fill="none" stroke="#d8ffe2" stroke-opacity=".36"/>
+                <circle cx="60" cy="94" r="51" fill="none" stroke="#48e184" stroke-opacity=".1" stroke-width="7"/><path d="M18 120l8-4M94 74l8-4M38 36l4 8M84 144l-4-8" stroke="#d8f36a" stroke-opacity=".45"/>
+              </svg>
+            </span>
+            <span class="activity-card-copy"><small>FORCE STUDY</small><strong>Crystal Attunement</strong><span>Learn to listen for the kyber's frequency before you ever cut power.</span></span>
+            <span class="activity-card-foot"><span>COMING SOON</span><b>✳</b></span>
+          </button>
+          <button class="activity-card activity-locked" type="button" data-activity="duel" aria-label="Duel Chamber — coming soon">
+            <span class="activity-card-index">03</span><span class="activity-badge">COMING SOON</span>
+            <span class="activity-art">
+              <svg viewBox="0 0 120 190" aria-hidden="true">
+                <circle cx="60" cy="94" r="43" fill="none" stroke="#d8f36a" stroke-opacity=".28"/><circle cx="60" cy="94" r="26" fill="none" stroke="#d8f36a" stroke-opacity=".24"/><circle cx="60" cy="94" r="6" fill="#d8f36a" opacity=".4"/>
+                <path d="M26 153L84 39" stroke="#d8f36a" stroke-width="4" stroke-opacity=".55"/><path d="M26 153L84 39" stroke="#f6ffcf" stroke-width="1" stroke-opacity=".8"/>
+                <path d="M94 153L34 39" stroke="#4deaff" stroke-width="4" stroke-opacity=".45"/><path d="M94 153L34 39" stroke="#bff8ff" stroke-width="1" stroke-opacity=".7"/>
+                <path d="M22 145l10 12M90 145l-10 12M61 84l7 8M54 84l-7 8" stroke="#d8f36a" stroke-opacity=".7"/>
+              </svg>
+            </span>
+            <span class="activity-card-copy"><small>COMBAT TRIALS</small><strong>Duel Chamber</strong><span>Test your balance, timing, and nerve against a live training remote.</span></span>
+            <span class="activity-card-foot"><span>COMING SOON</span><b>✳</b></span>
+          </button>
+        </div>
+      </div>
+      <footer class="activities-footer"><span><i class="status-dot"></i> TRAINING ANNEX ONLINE</span><span>MORE LESSONS ARE BEING FORGED IN THE ATELIER.</span><span>BUILT BY YOU, FOR THE GALAXY.</span></footer>
     </section>
   </div>
 

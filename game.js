@@ -112,6 +112,15 @@ const selected = Object.fromEntries(Object.keys(options).map(key => [key, 0]));
 let activeStep = 0;
 let bladeIgnited = false;
 let bladeUserChoice = null;
+let activityActive = false;
+let teardownPhase = 'assembled';
+let teardownStart = 0;
+let teardownLift = 0;
+let saberParts = [];
+let previousBlade = false;
+let previousBladeChoice = null;
+const TEARDOWN_DURATION = 820;
+const TEARDOWN_STAGGER = 58;
 const $ = (id) => document.getElementById(id);
 function syncBladeToggle() {
   const toggle = $('bladeToggle');
@@ -517,7 +526,7 @@ $('keepClose').addEventListener('click', closeKeepPrompt);
 $('keepOverlay').addEventListener('click', event => { if (event.target === $('keepOverlay')) closeKeepPrompt(); });
 $('saberNameInput').addEventListener('keydown', event => { if (event.key === 'Enter') keepCurrentSaber(); });
 $('collectionButton').addEventListener('click', () => openCollection());
-$('activitiesButton').addEventListener('click', () => showToast('Activities are coming soon.'));
+$('activitiesButton').addEventListener('click', openActivities);
 $('collectionClose').addEventListener('click', closeCollection);
 $('backToWorkbench').addEventListener('click', closeCollection);
 $('emptyBack').addEventListener('click', closeCollection);
@@ -530,6 +539,159 @@ $('auctionCollected').addEventListener('click', () => {
   closeCollection();
   openSale(artifact.name);
 });
+
+/* Activities annex: choose a lesson, then run the interactive teardown. */
+function openActivities() {
+  if (activityActive) return;
+  $('activitiesOverlay').classList.add('open');
+  $('activitiesOverlay').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('activities-active');
+  setTimeout(() => $('activitiesClose').focus({ preventScroll: true }), 60);
+}
+function closeActivities() {
+  $('activitiesOverlay').classList.remove('open');
+  $('activitiesOverlay').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('activities-active');
+}
+function buildPartCallouts() {
+  const container = $('partCallouts');
+  container.replaceChildren();
+  saberParts.forEach(part => {
+    const callout = document.createElement('span');
+    callout.className = 'part-callout';
+    callout.textContent = part.userData.label;
+    container.append(callout);
+    part.userData.callout = callout;
+  });
+}
+function clearPartCallouts() {
+  $('partCallouts').replaceChildren();
+  saberParts.forEach(part => { part.userData.callout = null; });
+}
+function updateTeardownUI() {
+  const labels = { assembled: 'FULLY ASSEMBLED', disassembling: 'FIELD-STRIPPING', disassembled: 'OPEN FRAME', assembling: 'REASSEMBLING' };
+  $('activityStateLabel').textContent = labels[teardownPhase];
+  $('activityPartsCount').textContent = String(saberParts.length).padStart(2, '0');
+  const busy = teardownPhase === 'disassembling' || teardownPhase === 'assembling';
+  $('activityStateLight').classList.toggle('busy', busy);
+  $('activityStateLight').classList.toggle('open', teardownPhase === 'disassembled');
+  $('teardownButton').disabled = teardownPhase !== 'assembled';
+  $('assembleButton').disabled = teardownPhase !== 'disassembled';
+}
+function enterTeardown() {
+  if (activityActive) return;
+  closeActivities();
+  activityActive = true;
+  previousBlade = bladeIgnited;
+  previousBladeChoice = bladeUserChoice;
+  bladeIgnited = false;
+  bladeUserChoice = false;
+  teardownPhase = 'assembled';
+  teardownStart = 0;
+  teardownLift = 0;
+  syncBladeToggle();
+  rebuildSaber();
+  buildPartCallouts();
+  updateTeardownUI();
+  document.body.classList.add('activity-mode');
+  $('activityHud').setAttribute('aria-hidden', 'false');
+  $('activityProgressFill').style.width = '0%';
+  rotationY = -.24; rotationX = 0; autoRotate = true;
+  playTone(500, .16);
+}
+function exitTeardown() {
+  if (!activityActive) return;
+  activityActive = false;
+  clearPartCallouts();
+  document.body.classList.remove('activity-mode');
+  $('activityHud').setAttribute('aria-hidden', 'true');
+  bladeIgnited = previousBlade;
+  bladeUserChoice = previousBladeChoice;
+  syncBladeToggle();
+  teardownPhase = 'assembled';
+  teardownStart = 0;
+  teardownLift = 0;
+  rebuildSaber();
+  updateTeardownUI();
+  playTone(400, .1);
+}
+function disassembleSaber() {
+  if (!activityActive || teardownPhase !== 'assembled') return;
+  teardownPhase = 'disassembling';
+  teardownStart = performance.now();
+  updateTeardownUI();
+  playTone(360, .15);
+}
+function assembleSaber() {
+  if (!activityActive || teardownPhase !== 'disassembled') return;
+  teardownPhase = 'assembling';
+  teardownStart = performance.now();
+  updateTeardownUI();
+  playTone(540, .15);
+}
+function updateTeardownAnimation(now, elapsed) {
+  if (!activityActive) return;
+  const count = saberParts.length;
+  if (!count) return;
+  const frozen = teardownPhase === 'assembled' || teardownPhase === 'disassembled';
+  const assembling = teardownPhase === 'assembling';
+  let allDone = true;
+  let totalProgress = 0;
+  saberRoot.updateMatrixWorld(true);
+  saberParts.forEach((part, index) => {
+    let t;
+    if (frozen) t = teardownPhase === 'disassembled' ? 1 : 0;
+    else {
+      const delay = assembling ? (count - 1 - index) * TEARDOWN_STAGGER : index * TEARDOWN_STAGGER;
+      t = Math.max(0, Math.min(1, (now - teardownStart - delay) / TEARDOWN_DURATION));
+      if (t < 1) allDone = false;
+    }
+    const eased = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const progress = assembling ? 1 - eased : eased;
+    totalProgress += progress;
+    const offset = part.userData.explode;
+    const restRotation = part.userData.restRotation;
+    const spread = mount.clientWidth < 620 ? .72 : 1;
+    const bob = progress;
+    part.position.set(
+      offset.x * progress * spread + Math.cos(elapsed * 1.1 + index * 1.7) * .022 * bob,
+      offset.y * progress * spread + Math.sin(elapsed * 1.6 + index * 1.3) * .045 * bob,
+      offset.z * progress * spread + Math.sin(elapsed * .9 + index * 2.1) * .02 * bob
+    );
+    part.rotation.set(restRotation.x * progress, restRotation.y * progress + Math.sin(elapsed * .35 + index) * .025 * bob, restRotation.z * progress);
+    const callout = part.userData.callout;
+    if (callout) {
+      const projected = part.userData.labelAnchor.clone().add(part.position);
+      model.localToWorld(projected);
+      projected.project(camera);
+      const visible = progress > .08 && projected.z < 1;
+      if (visible) {
+        const nudge = part.userData.labelNudge;
+        const x = (projected.x * .5 + .5) * mount.clientWidth + nudge.x;
+        const y = (-projected.y * .5 + .5) * mount.clientHeight + nudge.y;
+        callout.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+        callout.style.opacity = String(Math.min(1, (progress - .08) * 4));
+      } else callout.style.opacity = '0';
+    }
+  });
+  $('activityProgressFill').style.width = `${(totalProgress / count) * 100}%`;
+  teardownLift = totalProgress / count;
+  if (!frozen && allDone) {
+    teardownPhase = assembling ? 'assembled' : 'disassembled';
+    updateTeardownUI();
+    playTone(assembling ? 760 : 640, .2);
+  }
+}
+$('activitiesClose').addEventListener('click', closeActivities);
+$('activitiesOverlay').addEventListener('click', event => { if (event.target === $('activitiesOverlay')) closeActivities(); });
+$('activityExit').addEventListener('click', exitTeardown);
+$('teardownButton').addEventListener('click', disassembleSaber);
+$('assembleButton').addEventListener('click', assembleSaber);
+document.querySelectorAll('[data-activity]').forEach(button => button.addEventListener('click', () => {
+  if (button.dataset.activity === 'teardown') { enterTeardown(); return; }
+  const activityName = button.querySelector('.activity-card-copy strong')?.textContent || 'This activity';
+  showToast(`${activityName} is coming soon.`);
+}));
 
 let audioContext = null;
 let soundOn = false;
@@ -652,8 +814,11 @@ $('buildAnother').addEventListener('click', () => {
   $('toast').textContent = 'A fresh workbench. A new story.'; $('toast').classList.add('show'); setTimeout(() => $('toast').classList.remove('show'), 2200);
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { closeSale(); closeCollection(); closeKeepPrompt(); }
-  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open');
+  if (event.key === 'Escape') {
+    if (activityActive) { exitTeardown(); return; }
+    closeSale(); closeCollection(); closeKeepPrompt(); closeActivities();
+  }
+  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open') || $('activitiesOverlay').classList.contains('open') || activityActive;
   if (overlayOpen) return;
   if (event.key === 'ArrowRight') nextStep();
   if (event.key === 'ArrowLeft') setStep(activeStep - 1);
@@ -709,6 +874,14 @@ const collectionRim = new THREE.PointLight(0x9bd5ff, 18, 12); collectionRim.posi
 const collectionSaberRoot = new THREE.Group(); collectionScene.add(collectionSaberRoot);
 let pointerDown = false, pointerX = 0, pointerY = 0, rotationX = 0, rotationY = -.24, autoRotate = true;
 const clock = new THREE.Clock();
+const cameraHome = new THREE.Vector3(5.6, 3.35, 9.6);
+const cameraHomeLook = new THREE.Vector3(0, 1.95, 0);
+const cameraFocus = new THREE.Vector3(3.7, 2.45, 7.5);
+const cameraFocusLook = new THREE.Vector3(0, .55, 0);
+const cameraFocusMobile = new THREE.Vector3(3.4, 2.2, 7);
+const cameraFocusLookMobile = new THREE.Vector3(0, .3, 0);
+const cameraLook = new THREE.Vector3(0, 1.95, 0);
+const cameraLookTarget = new THREE.Vector3();
 
 function metal(color, roughness = .33, metalness = .82) { return new THREE.MeshStandardMaterial({ color, roughness, metalness }); }
 function addMesh(parent, geometry, material, position, rotation) {
@@ -981,8 +1154,58 @@ function resizeAuctionScene() {
   auctionCamera.top = viewHeight / 2; auctionCamera.bottom = -viewHeight / 2;
   auctionCamera.updateProjectionMatrix();
 }
+const EXPLODE_OFFSETS = {
+  HILT: { x: 0, y: .16, z: .1 },
+  GRIP: { x: .05, y: -.98, z: .06 },
+  EMITTER: { x: -.04, y: .58, z: -.08 },
+  CRYSTAL: { x: 0, y: 1.35, z: .14 },
+  SWITCH: { x: .78, y: .34, z: .3 },
+  ENGRAVING: { x: -.78, y: .26, z: .3 },
+  POMMEL: { x: .06, y: -1.05, z: -.06 },
+  BLADE: { x: 0, y: 1.1, z: 0 }
+};
+const EXPLODE_ROTATIONS = {
+  HILT: { x: 0, y: 0, z: 0 },
+  GRIP: { x: 0, y: .32, z: .04 },
+  EMITTER: { x: 0, y: -.24, z: -.05 },
+  CRYSTAL: { x: .18, y: .7, z: 0 },
+  SWITCH: { x: 0, y: .35, z: .18 },
+  ENGRAVING: { x: 0, y: -.28, z: -.18 },
+  POMMEL: { x: 0, y: .45, z: .08 },
+  BLADE: { x: 0, y: 0, z: 0 }
+};
+const PART_LABELS = { HILT: 'HILT CORE', GRIP: 'GRIP ASSEMBLY', EMITTER: 'EMITTER', CRYSTAL: 'KYBER CRYSTAL', SWITCH: 'ACTIVATION', ENGRAVING: 'ETCHING', POMMEL: 'POMMEL', BLADE: 'BLADE' };
+const PART_LABEL_NUDGE = { HILT: { x: 66, y: 0 }, GRIP: { x: 66, y: 0 }, EMITTER: { x: 66, y: 0 }, CRYSTAL: { x: 66, y: 0 }, SWITCH: { x: 26, y: -10 }, ENGRAVING: { x: 20, y: 12 }, POMMEL: { x: 66, y: 0 }, BLADE: { x: 66, y: -10 } };
+function captureSaberPart(name, start) {
+  const meshes = model.children.slice(start);
+  if (!meshes.length) return;
+  const part = new THREE.Group();
+  part.name = name;
+  meshes.forEach(mesh => part.add(mesh));
+  const box = new THREE.Box3();
+  part.children.forEach(mesh => {
+    if (!mesh.geometry) return;
+    mesh.updateMatrix();
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    box.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrix));
+  });
+  const anchor = new THREE.Vector3();
+  box.getCenter(anchor);
+  part.userData = {
+    partName: name,
+    label: PART_LABELS[name] || name,
+    explode: EXPLODE_OFFSETS[name] || { x: 0, y: 0, z: 0 },
+    restRotation: EXPLODE_ROTATIONS[name] || { x: 0, y: 0, z: 0 },
+    labelAnchor: anchor,
+    labelNudge: PART_LABEL_NUDGE[name] || { x: 0, y: 0 },
+    callout: null
+  };
+  model.add(part);
+  saberParts.push(part);
+}
 function rebuildSaber() {
   scene.remove(saberRoot); model = new THREE.Group(); saberRoot.clear(); saberRoot.add(model); scene.add(saberRoot);
+  saberParts = [];
   const hilt = selectedOption('hilt');
   const emitter = selectedOption('emitter');
   const grip = selectedOption('grip');
@@ -994,6 +1217,7 @@ function rebuildSaber() {
   const accentHex = new THREE.Color(accent.color).getHex();
   const dark = metal(0x252b28, .38, .7), bright = metal(accentHex, .2, .92);
   const barrelRadius = hilt.profile === 'slim' ? .235 : .285;
+  let partStart = model.children.length;
   if (hilt.profile === 'taper') cylinder(model, .23, .31, 1.06, body, -.03);
   else if (hilt.profile === 'bulbous') {
     cylinder(model, .245, .245, 1.04, body, -.03);
@@ -1010,6 +1234,7 @@ function rebuildSaber() {
   } else if (hilt.profile === 'stacked') {
     for (let i = 0; i < 5; i++) cylinder(model, .32 - i * .012, .32 - i * .012, .075, i % 2 ? bright : body, -.40 + i * .20);
   }
+  captureSaberPart('HILT', partStart); partStart = model.children.length;
   const gripColor = grip.style === 'wrap' ? 0x80634c : grip.style === 'carbon' ? 0x202c2b : hilt.finish === 'copper' ? 0x655044 : 0x303734;
   const gripMat = new THREE.MeshStandardMaterial({ color: gripColor, roughness: grip.style === 'wrap' ? .9 : .53, metalness: .4 });
   const gripRadius = hilt.profile === 'slim' ? .248 : .302;
@@ -1033,6 +1258,7 @@ function rebuildSaber() {
   } else {
     for (let i = 0; i < 8; i++) { const a = i * Math.PI * 2 / 8; addMesh(model, new THREE.TorusGeometry(gripRadius + .015, .009, 6, 48), metal(0xb59676, .9, .15), [0, -.31 + i * .065, 0], [Math.PI / 2, a, .32]); }
   }
+  captureSaberPart('GRIP', partStart); partStart = model.children.length;
   // Emitter neck and chosen silhouette.
   cylinder(model, .20, .255, .18, dark, .64);
   cylinder(model, .24, .24, .055, bright, .76);
@@ -1088,10 +1314,12 @@ function rebuildSaber() {
     plate.castShadow = true;
   }
   if (style !== 'halo') torus(model, style === 'needle' ? .16 : .24, .018, bright, style === 'long' ? 1.23 : 1.08);
+  captureSaberPart('EMITTER', partStart); partStart = model.children.length;
   // A glowing, faceted kyber sliver is visible just inside the emitter throat.
   const crystalMat = new THREE.MeshPhysicalMaterial({ color: crystal.hex, emissive: crystal.hex, emissiveIntensity: 1.3, roughness: .12, metalness: .12, transparent: true, opacity: .9, transmission: .1 });
   const crystalMesh = addMesh(model, new THREE.OctahedronGeometry(.125, 0), crystalMat, [0, .89, 0]);
   crystalMesh.scale.set(.72, 1.75, .72);
+  captureSaberPart('CRYSTAL', partStart); partStart = model.children.length;
   // Distinct activation hardware and its illuminated status jewel.
   const switchStyle = selectedOption('switch').style;
   const button = new THREE.MeshStandardMaterial({ color: crystal.hex, emissive: crystal.hex, emissiveIntensity: .8, metalness: .4, roughness: .25 });
@@ -1125,6 +1353,7 @@ function rebuildSaber() {
     switchBase(0, .22, .11); jewel(0, .22, .067);
     torus(model, .135, .012, bright, .22);
   }
+  captureSaberPart('SWITCH', partStart); partStart = model.children.length;
   // Individual maker's marks sit on the exposed upper barrel, above the grip.
   const engraving = selectedOption('engraving').style;
   if (engraving !== 'none') {
@@ -1178,6 +1407,7 @@ function rebuildSaber() {
       stamp(new THREE.BoxGeometry(.30, .012, .012), [0, .44, .294]);
     }
   }
+  captureSaberPart('ENGRAVING', partStart); partStart = model.children.length;
   // Each pommel has its own recognizable silhouette and construction.
   cylinder(model, .24, .30, .15, dark, -.64);
   if (pommel.style === 'vented') {
@@ -1221,6 +1451,7 @@ function rebuildSaber() {
     addMesh(model, new THREE.SphereGeometry(.10, 12, 8), dark, [0, -.84, 0]);
   }
   torus(model, .29, .014, bright, -.69);
+  captureSaberPart('POMMEL', partStart); partStart = model.children.length;
   // Build the energy blade and its light only while the ignition control is on.
   if (bladeIgnited) {
   const bladeProfile = selectedOption('blade');
@@ -1263,6 +1494,7 @@ function rebuildSaber() {
   }
   const aura = new THREE.PointLight(crystal.hex, 13, 5.5); aura.position.set(0, bladeCenter - .4, 0); model.add(aura);
   }
+  captureSaberPart('BLADE', partStart);
   model.rotation.z = -.055;
   syncAuctionSaber(); resizeAuctionScene();
   $('sceneLoading').style.opacity = '0'; setTimeout(() => { $('sceneLoading').style.display = 'none'; }, 520);
@@ -1298,8 +1530,17 @@ function animate() {
   if (autoRotate && !pointerDown) rotationY += .002;
   saberRoot.rotation.y += (rotationY - saberRoot.rotation.y) * .08;
   saberRoot.rotation.x += (rotationX - saberRoot.rotation.x) * .08;
-  saberRoot.position.y = .25 + Math.sin(elapsed * 1.45) * .045;
+  saberRoot.position.y = .25 + Math.sin(elapsed * 1.45) * .045 + (activityActive ? teardownLift : 0);
   saberRoot.rotation.z = Math.sin(elapsed * .8) * .008;
+  if (activityActive) updateTeardownAnimation(performance.now(), elapsed);
+  const narrowView = mount.clientWidth < 620;
+  camera.position.lerp(activityActive ? (narrowView ? cameraFocusMobile : cameraFocus) : cameraHome, .045);
+  if (activityActive) {
+    cameraLookTarget.copy(narrowView ? cameraFocusLookMobile : cameraFocusLook);
+    cameraLookTarget.y += teardownLift;
+  } else cameraLookTarget.copy(cameraHomeLook);
+  cameraLook.lerp(cameraLookTarget, .045);
+  camera.lookAt(cameraLook);
   if (workshopDust) { workshopDust.rotation.y = elapsed * .018; workshopDust.position.y = Math.sin(elapsed * .3) * .06; }
   if (workshopRingGroup) workshopRingGroup.rotation.y = elapsed * .45;
   if (levitationGlow) levitationGlow.material.opacity = .36 + (Math.sin(elapsed * 1.7) + 1) * .045;
@@ -1307,7 +1548,7 @@ function animate() {
   const pulse = 1 + Math.sin(elapsed * 4.2) * .018;
   if (model.children.length) {
     // Profile-specific blade meshes breathe together; pulse rings ripple independently.
-    model.children.forEach(child => {
+    model.traverse(child => {
       if (child.userData.bladeGlow && child.material) child.material.opacity = .14 + (Math.sin(elapsed * 3.2) + 1) * .025;
       if (child.userData.pulseRing) child.material.opacity = .42 + (Math.sin(elapsed * 5 - child.userData.pulseRing * .8) + 1) * .22;
     });
