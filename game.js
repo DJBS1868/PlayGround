@@ -410,7 +410,7 @@ function renderSteps() {
   $('prevStep').disabled = activeStep === 0;
   const isLast = activeStep === steps.length - 1;
   $('nextStep').innerHTML = isLast ? 'SELL SABER <span>↗</span>' : 'NEXT PART <span>→</span>';
-  $('finishButton').innerHTML = isLast ? 'FINISH & SELL <span>↗</span>' : 'NEXT PART <span>→</span>';
+  $('finishButton').innerHTML = isLast ? 'FINISH SABER <span>✧</span>' : 'NEXT PART <span>→</span>';
 }
 function renderOptions() {
   const step = steps[activeStep];
@@ -457,11 +457,79 @@ function updateUI() {
 }
 function nextStep() {
   if (activeStep < steps.length - 1) { setStep(activeStep + 1); playTone(370, .09); }
-  else openSale();
+  else openKeepPrompt();
 }
 $('prevStep').addEventListener('click', () => setStep(activeStep - 1));
 $('nextStep').addEventListener('click', nextStep);
 $('finishButton').addEventListener('click', nextStep);
+
+const COLLECTION_KEY = 'sabersmith.collection.v1';
+let collection = [];
+let collectionSelection = 0;
+try {
+  const storedCollection = JSON.parse(localStorage.getItem(COLLECTION_KEY) || '[]');
+  if (Array.isArray(storedCollection)) collection = storedCollection.filter(item => item && item.parts && typeof item.name === 'string');
+} catch (_) { /* A blocked or malformed local store should not stop the workbench. */ }
+function saveCollection() {
+  try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); }
+  catch (_) { showToast('Collection could not be saved in this browser.'); }
+  updateCollectionCount();
+}
+function showToast(message) {
+  $('toast').textContent = message;
+  $('toast').classList.add('show');
+  setTimeout(() => $('toast').classList.remove('show'), 2200);
+}
+function updateCollectionCount() {
+  $('collectionCount').textContent = String(collection.length).padStart(2, '0');
+}
+const nameFirst = ['Silent', 'Wandering', 'Starlit', 'Ancient', 'Distant', 'Radiant', 'Hidden', 'Last', 'Fallen', 'Celestial'];
+const nameLast = ['Resolve', 'Dawn', 'Sentinel', 'Promise', 'Tempest', 'Pilgrim', 'Eclipse', 'Guardian', 'Echo', 'Horizon'];
+function generateSaberName() {
+  return `${nameFirst[Math.floor(Math.random() * nameFirst.length)]} ${nameLast[Math.floor(Math.random() * nameLast.length)]}`;
+}
+function openKeepPrompt() {
+  $('saberNameInput').value = buildName();
+  $('keepOverlay').classList.add('open');
+  $('keepOverlay').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('dialog-active');
+  $('saberNameInput').focus();
+  $('saberNameInput').select();
+}
+function closeKeepPrompt() {
+  $('keepOverlay').classList.remove('open');
+  $('keepOverlay').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('dialog-active');
+}
+function keepCurrentSaber() {
+  const name = $('saberNameInput').value.trim().slice(0, 32) || generateSaberName();
+  const artifact = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, parts: { ...selected }, blade: bladeIgnited, value: totalValue(), createdAt: new Date().toISOString() };
+  collection.push(artifact);
+  saveCollection();
+  closeKeepPrompt();
+  collectionSelection = collection.length - 1;
+  openCollection();
+}
+$('randomName').addEventListener('click', () => { $('saberNameInput').value = generateSaberName(); $('saberNameInput').focus(); });
+$('keepSaber').addEventListener('click', keepCurrentSaber);
+$('skipKeep').addEventListener('click', () => { closeKeepPrompt(); openSale(); });
+$('keepClose').addEventListener('click', closeKeepPrompt);
+$('keepOverlay').addEventListener('click', event => { if (event.target === $('keepOverlay')) closeKeepPrompt(); });
+$('saberNameInput').addEventListener('keydown', event => { if (event.key === 'Enter') keepCurrentSaber(); });
+$('collectionButton').addEventListener('click', () => openCollection());
+$('activitiesButton').addEventListener('click', () => showToast('Activities are coming soon.'));
+$('collectionClose').addEventListener('click', closeCollection);
+$('backToWorkbench').addEventListener('click', closeCollection);
+$('emptyBack').addEventListener('click', closeCollection);
+$('collectionPrev').addEventListener('click', () => changeCollectionSelection(-1));
+$('collectionNext').addEventListener('click', () => changeCollectionSelection(1));
+$('auctionCollected').addEventListener('click', () => {
+  const artifact = collection[collectionSelection];
+  if (!artifact) return;
+  loadArtifact(artifact);
+  closeCollection();
+  openSale(artifact.name);
+});
 
 let audioContext = null;
 let soundOn = false;
@@ -503,7 +571,7 @@ function finishAuction() {
   $('auctionRoom').classList.add('finished');
   $('auctionResult').classList.add('visible'); $('auctionResult').setAttribute('aria-hidden', 'false');
   $('salePrice').textContent = money(auctionBid);
-  $('resultCopy').textContent = `${$('auctionBidder').textContent} takes home your ${buildName()} saber. The room made ${auctionCount} bids before the hammer fell.`;
+  $('resultCopy').textContent = `${$('auctionBidder').textContent} takes home your ${$('auctionBuildName').textContent} saber. The room made ${auctionCount} bids before the hammer fell.`;
   const base = Object.values(options).reduce((sum, list, index) => sum + selectedOption(Object.keys(options)[index]).price, 0);
   const bonus = totalValue() - base;
   const breakdown = Object.entries(options).map(([key]) => `<div><span>${steps.find(step => step.id === key).title}</span><b>${money(selectedOption(key).price)}</b></div>`);
@@ -536,7 +604,7 @@ function placeBid() {
     else placeBid();
   }, 1450 + Math.random() * 700);
 }
-function openSale() {
+function openSale(lotName = buildName()) {
   const total = totalValue();
   auctionBid = Math.ceil((total * .72) / 10) * 10;
   auctionCount = 0; lastBidder = -1;
@@ -546,8 +614,8 @@ function openSale() {
   });
   $('auctionRoom').classList.remove('finished');
   $('auctionResult').classList.remove('visible'); $('auctionResult').setAttribute('aria-hidden', 'true');
-  $('auctionBuildName').textContent = buildName().toUpperCase();
-  $('stageBuildName').textContent = buildName().toUpperCase();
+  $('auctionBuildName').textContent = lotName.toUpperCase();
+  $('stageBuildName').textContent = lotName.toUpperCase();
   $('auctionPrice').textContent = money(auctionBid);
   $('auctionBidder').textContent = 'OPENING OFFER';
   $('bidCount').textContent = '0';
@@ -584,9 +652,11 @@ $('buildAnother').addEventListener('click', () => {
   $('toast').textContent = 'A fresh workbench. A new story.'; $('toast').classList.add('show'); setTimeout(() => $('toast').classList.remove('show'), 2200);
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') closeSale();
-  if (event.key === 'ArrowRight' && !$('saleOverlay').classList.contains('open')) nextStep();
-  if (event.key === 'ArrowLeft' && !$('saleOverlay').classList.contains('open')) setStep(activeStep - 1);
+  if (event.key === 'Escape') { closeSale(); closeCollection(); closeKeepPrompt(); }
+  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open');
+  if (overlayOpen) return;
+  if (event.key === 'ArrowRight') nextStep();
+  if (event.key === 'ArrowLeft') setStep(activeStep - 1);
 });
 
 // A compact, fully interactive Three.js workbench: every option is assembled from real 3D geometry.
@@ -625,6 +695,18 @@ auctionScene.add(new THREE.HemisphereLight(0xe4f0e2, 0x18211b, 2.2));
 const auctionKey = new THREE.DirectionalLight(0xffe6c6, 3.2); auctionKey.position.set(4, 7, 5); auctionScene.add(auctionKey);
 const auctionRim = new THREE.PointLight(0x9bd5ff, 16, 10); auctionRim.position.set(-2, 3, -2); auctionScene.add(auctionRim);
 const auctionSaberRoot = new THREE.Group(); auctionScene.add(auctionSaberRoot);
+const collectionCanvas = $('collectionSaber');
+const collectionScene = new THREE.Scene();
+const collectionCamera = new THREE.OrthographicCamera(-3.2, 3.2, 3.2, -3.2, .1, 40);
+collectionCamera.position.set(4.5, 3.2, 8); collectionCamera.lookAt(0, 1.8, 0);
+const collectionRenderer = new THREE.WebGLRenderer({ canvas: collectionCanvas, antialias: true, alpha: true });
+collectionRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+collectionRenderer.outputColorSpace = THREE.SRGBColorSpace;
+collectionRenderer.toneMapping = THREE.ACESFilmicToneMapping; collectionRenderer.toneMappingExposure = 1.12;
+collectionScene.add(new THREE.HemisphereLight(0xe4f0e2, 0x18211b, 2.2));
+const collectionKey = new THREE.DirectionalLight(0xffe6c6, 3.2); collectionKey.position.set(4, 7, 5); collectionScene.add(collectionKey);
+const collectionRim = new THREE.PointLight(0x9bd5ff, 18, 12); collectionRim.position.set(-2, 3, -2); collectionScene.add(collectionRim);
+const collectionSaberRoot = new THREE.Group(); collectionScene.add(collectionSaberRoot);
 let pointerDown = false, pointerX = 0, pointerY = 0, rotationX = 0, rotationY = -.24, autoRotate = true;
 const clock = new THREE.Clock();
 
@@ -819,6 +901,77 @@ function syncAuctionSaber() {
   auctionModel.scale.setScalar(.8);
   auctionSaberRoot.add(auctionModel);
   auctionRim.color.set(selectedOption('crystal').hex);
+}
+function resizeCollectionScene() {
+  const width = Math.max(1, collectionCanvas.clientWidth), height = Math.max(1, collectionCanvas.clientHeight);
+  collectionRenderer.setSize(width, height, false);
+  const viewHeight = 6.4, halfWidth = viewHeight * width / height / 2;
+  collectionCamera.left = -halfWidth; collectionCamera.right = halfWidth;
+  collectionCamera.top = viewHeight / 2; collectionCamera.bottom = -viewHeight / 2;
+  collectionCamera.updateProjectionMatrix();
+}
+function openCollection() {
+  collectionSelection = collection.length ? Math.max(0, Math.min(collectionSelection, collection.length - 1)) : 0;
+  $('collectionOverlay').classList.add('open');
+  $('collectionOverlay').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('collection-active');
+  renderCollection();
+  requestAnimationFrame(resizeCollectionScene);
+}
+function closeCollection() {
+  $('collectionOverlay').classList.remove('open');
+  $('collectionOverlay').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('collection-active');
+}
+function changeCollectionSelection(delta) {
+  if (collection.length < 2) return;
+  collectionSelection = (collectionSelection + delta + collection.length) % collection.length;
+  renderCollection();
+}
+function renderCollection() {
+  updateCollectionCount();
+  const hasItems = collection.length > 0;
+  $('collectionEmpty').hidden = hasItems;
+  document.querySelector('.collection-display').hidden = !hasItems;
+  document.querySelector('.collection-details').hidden = !hasItems;
+  $('collectionPrev').hidden = !hasItems || collection.length < 2;
+  $('collectionNext').hidden = !hasItems || collection.length < 2;
+  if (!hasItems) { collectionSaberRoot.clear(); return; }
+  const artifact = collection[collectionSelection];
+  $('collectionIndex').textContent = String(collectionSelection + 1).padStart(2, '0');
+  $('collectionOrdinal').textContent = `ARTIFACT ${String(collectionSelection + 1).padStart(2, '0')} / ${String(collection.length).padStart(2, '0')}`;
+  $('collectionSaberName').textContent = artifact.name;
+  $('collectionSaberMeta').textContent = `HAND-FORGED · ${money(artifact.value || 0)} CREDITS EST. VALUE`;
+  const partRows = Object.keys(options).map(key => {
+    const index = Number(artifact.parts[key]) || 0;
+    const part = options[key][Math.max(0, Math.min(index, options[key].length - 1))];
+    const step = steps.find(item => item.id === key);
+    return [step ? step.title : key, key === 'crystal' ? `Kyber · ${part.name}` : part.name];
+  });
+  $('collectionPartsCount').textContent = `${String(partRows.length).padStart(2, '0')} COMPONENTS`;
+  const partsNode = $('collectionParts'); partsNode.replaceChildren();
+  partRows.forEach(([label, part]) => {
+    const row = document.createElement('div'); row.className = 'collection-part-row';
+    const kind = document.createElement('span'); kind.textContent = label;
+    const name = document.createElement('strong'); name.textContent = part;
+    row.append(kind, name); partsNode.append(row);
+  });
+  const original = { ...selected };
+  const originalBlade = bladeIgnited, originalChoice = bladeUserChoice;
+  Object.keys(selected).forEach(key => { selected[key] = Math.max(0, Math.min(Number(artifact.parts[key]) || 0, options[key].length - 1)); });
+  bladeIgnited = Boolean(artifact.blade); bladeUserChoice = bladeIgnited;
+  rebuildSaber();
+  collectionSaberRoot.clear();
+  const displayModel = model.clone(true); displayModel.scale.setScalar(.9); collectionSaberRoot.add(displayModel);
+  Object.assign(selected, original); bladeIgnited = originalBlade; bladeUserChoice = originalChoice;
+  rebuildSaber();
+  collectionRim.color.set(selectedOption('crystal').hex);
+  resizeCollectionScene();
+}
+function loadArtifact(artifact) {
+  Object.keys(selected).forEach(key => { selected[key] = Math.max(0, Math.min(Number(artifact.parts[key]) || 0, options[key].length - 1)); });
+  bladeIgnited = Boolean(artifact.blade); bladeUserChoice = bladeIgnited;
+  renderSteps(); renderOptions(); updateUI(); rebuildSaber(); syncAuctionSaber();
 }
 function resizeAuctionScene() {
   const width = Math.max(1, auctionCanvas.clientWidth), height = Math.max(1, auctionCanvas.clientHeight);
@@ -1162,7 +1315,10 @@ function animate() {
   turntableEdge.material.emissiveIntensity = .22 + (pulse - 1) * 3;
   auctionSaberRoot.rotation.y += (rotationY - auctionSaberRoot.rotation.y) * .035;
   auctionSaberRoot.rotation.x += (rotationX - auctionSaberRoot.rotation.x) * .035;
+  collectionSaberRoot.rotation.y += (rotationY - collectionSaberRoot.rotation.y) * .025;
+  collectionSaberRoot.position.y = .12 + Math.sin(elapsed * 1.35) * .08;
   renderer.render(scene, camera);
   if ($('saleOverlay').classList.contains('open')) auctionRenderer.render(auctionScene, auctionCamera);
+  if ($('collectionOverlay').classList.contains('open') && collection.length) collectionRenderer.render(collectionScene, collectionCamera);
 }
-renderSteps(); renderOptions(); updateUI(); syncBladeToggle(); rebuildSaber(); animate();
+renderSteps(); renderOptions(); updateUI(); updateCollectionCount(); syncBladeToggle(); rebuildSaber(); animate();

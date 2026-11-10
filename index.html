@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="auction.css" />
+  <link rel="stylesheet" href="collection.css" />
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
   <script type="module" src="game.js"></script>
 </head>
@@ -25,6 +26,10 @@
     <main class="workspace">
       <aside class="left-rail">
         <div class="rail-heading"><div><span class="eyebrow">YOUR WORKBENCH</span><h1>Build a<br><em>legacy.</em></h1></div><div class="build-number">01<br><span>/ 09</span></div></div>
+        <nav class="atelier-nav" aria-label="Your atelier">
+          <button type="button" class="atelier-nav-button" id="collectionButton"><span>✧</span> COLLECTION <b id="collectionCount">00</b></button>
+          <button type="button" class="atelier-nav-button" id="activitiesButton"><span>↗</span> ACTIVITIES <small>SOON</small></button>
+        </nav>
         <p class="intro-copy">Every saber tells a story. Choose your components, find your crystal, and make yours worth remembering.</p>
         <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
         <nav class="step-list" id="stepList" aria-label="Build steps"></nav>
@@ -48,6 +53,30 @@
     </main>
 
     <footer class="statusbar"><span><i class="status-dot"></i> WORKBENCH ONLINE</span><span class="status-center">A GALAXY OF POSSIBILITIES, ONE PART AT A TIME.</span><span>DESIGNED TO BE YOURS <b>✳</b></span></footer>
+  </div>
+
+  <div class="keep-overlay" id="keepOverlay" aria-hidden="true">
+    <section class="keep-card" role="dialog" aria-modal="true" aria-labelledby="keepTitle">
+      <button class="sale-close" id="keepClose" aria-label="Close">×</button>
+      <span class="eyebrow">A SABER OF YOUR OWN</span>
+      <h2 id="keepTitle">Keep your <em>legacy.</em></h2>
+      <p>Name this one-of-a-kind build and place it in your collection, or send it straight to auction.</p>
+      <label class="name-field">SABER NAME<input id="saberNameInput" maxlength="32" autocomplete="off" /></label>
+      <button type="button" class="name-random" id="randomName">✧ GENERATE A NAME</button>
+      <div class="keep-actions"><button class="primary-button wide" id="keepSaber">KEEP IN COLLECTION <span>✧</span></button><button class="text-button" id="skipKeep">SKIP TO AUCTION ↗</button></div>
+    </section>
+  </div>
+
+  <div class="collection-overlay" id="collectionOverlay" aria-hidden="true">
+    <section class="collection-room" aria-label="Lightsaber collection room">
+      <header class="collection-header"><div><span class="eyebrow">YOUR PRIVATE VAULT</span><strong>THE COLLECTION</strong></div><button class="sale-close" id="collectionClose" aria-label="Return to workbench">×</button></header>
+      <div class="collection-atmosphere"><div class="vault-light"></div><span class="vault-label">SABERSMITH · ARCHIVE No. <b id="collectionIndex">01</b></span></div>
+      <button class="collection-arrow collection-prev" id="collectionPrev" aria-label="Previous saber">←</button>
+      <div class="collection-display"><canvas id="collectionSaber" aria-label="Selected lightsaber displayed in the collection"></canvas><div class="collection-podium"><span>✧</span><b>THE SABERSMITH</b><i></i></div></div>
+      <button class="collection-arrow collection-next" id="collectionNext" aria-label="Next saber">→</button>
+      <div class="collection-details"><span class="eyebrow" id="collectionOrdinal">ARTIFACT 01 / 01</span><h2 id="collectionSaberName">—</h2><p id="collectionSaberMeta">HAND-FORGED · KYBER-BOUND</p><details class="parts-disclosure"><summary>PARTS <span id="collectionPartsCount">09 COMPONENTS</span></summary><div id="collectionParts" class="collection-parts"></div></details><div class="collection-actions"><button class="primary-button" id="auctionCollected">SELL AT AUCTION <span>↗</span></button><button class="text-button" id="backToWorkbench">BACK TO WORKBENCH</button></div></div>
+      <div class="collection-empty" id="collectionEmpty"><span>✧</span><h2>Your story starts here.</h2><p>Finish a saber and keep it to add your first artifact to the vault.</p><button class="primary-button" id="emptyBack">RETURN TO WORKBENCH <span>↗</span></button></div>
+    </section>
   </div>
 
   <div class="sale-overlay" id="saleOverlay" aria-hidden="true">
