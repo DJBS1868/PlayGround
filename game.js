@@ -1442,14 +1442,21 @@ let disassemblySelector = null;
 let disassemblyCrystalGlow = null;
 let disassemblyCrystalPiece = null;
 
+// The teardown is a clean vertical split: the upper half lifts away from the
+// lower half instead of exploding in every direction.
 const DISASSEMBLY_PARTS = [
-  { id: 'emitter', slot: 2.42, ring: .42, edge: 34 },
-  { id: 'crystal', slot: 1.72, ring: .22, edge: 14 },
-  { id: 'switch', slot: 1.28, ring: .20, edge: 14 },
-  { id: 'hilt', slot: .34, ring: .44, edge: 36 },
-  { id: 'grip', slot: -.68, ring: .38, edge: 32 },
-  { id: 'pommel', slot: -1.55, ring: .34, edge: 28 }
+  { id: 'emitter', category: 'EMITTER', slot: 3.04, ring: .42, edge: 34, side: 'right' },
+  { id: 'crystal', category: 'KYBER CRYSTAL', slot: 2.10, ring: .22, edge: 14, side: 'right' },
+  { id: 'switch', category: 'ACTIVATION SWITCH', slot: 1.32, ring: .20, edge: 14, side: 'right' },
+  { id: 'hilt', category: 'HILT BODY', slot: -.52, ring: .44, edge: 36, side: 'left' },
+  { id: 'grip', category: 'GRIP', slot: -1.58, ring: .38, edge: 32, side: 'left' },
+  { id: 'pommel', category: 'POMMEL', slot: -2.62, ring: .34, edge: 28, side: 'left' }
 ];
+function crystalTone(detail) {
+  const last = String(detail || '').split('·').pop().trim();
+  const tone = last.split(/\s+/).pop();
+  return tone || 'blue';
+}
 
 function buildDisassemblySaber() {
   disassemblyRoot.clear();
@@ -1506,13 +1513,16 @@ function buildDisassemblySaber() {
   });
 
   const crystal = selectedOption('crystal');
+  const partDetail = (id, option) => id === 'crystal'
+    ? `${option.name} — the ${crystalTone(option.detail)} one`
+    : `${option.name} · ${option.detail}`;
   disassemblyPartInfo = {
-    emitter: { kicker: '01 / EMITTER', option: selectedOption('emitter') },
-    crystal: { kicker: '02 / KYBER CRYSTAL', option: crystal },
-    switch: { kicker: '03 / ACTIVATION', option: selectedOption('switch') },
-    hilt: { kicker: '04 / HILT BODY', option: selectedOption('hilt') },
-    grip: { kicker: '05 / GRIP', option: selectedOption('grip') },
-    pommel: { kicker: '06 / POMMEL', option: selectedOption('pommel') }
+    emitter: { category: 'EMITTER', option: selectedOption('emitter'), identify: partDetail('emitter', selectedOption('emitter')) },
+    crystal: { category: 'KYBER CRYSTAL', option: crystal, identify: partDetail('crystal', crystal) },
+    switch: { category: 'ACTIVATION SWITCH', option: selectedOption('switch'), identify: partDetail('switch', selectedOption('switch')) },
+    hilt: { category: 'HILT BODY', option: selectedOption('hilt'), identify: partDetail('hilt', selectedOption('hilt')) },
+    grip: { category: 'GRIP', option: selectedOption('grip'), identify: partDetail('grip', selectedOption('grip')) },
+    pommel: { category: 'POMMEL', option: selectedOption('pommel'), identify: partDetail('pommel', selectedOption('pommel')) }
   };
   buildDisassemblyLabels();
 
@@ -1529,16 +1539,28 @@ function buildDisassemblySaber() {
   $('disassemblyPieceCount').textContent = `${String(DISASSEMBLY_PARTS.length).padStart(2, '0')} COMPONENTS · 06 ASSEMBLIES`;
 }
 
+function paintDisassemblyLabel(label, id, active) {
+  if (!label) return;
+  const part = DISASSEMBLY_PARTS.find(item => item.id === id);
+  const info = disassemblyPartInfo[id];
+  if (!part || !info) return;
+  const index = DISASSEMBLY_PARTS.indexOf(part) + 1;
+  label.querySelector('.part-label-kicker').textContent = active ? `PART ${String(index).padStart(2, '0')} · ${part.category}` : `PART ${String(index).padStart(2, '0')} · ASSEMBLY`;
+  label.querySelector('strong').textContent = active ? info.option.name : part.category;
+  label.querySelector('.part-label-spec').textContent = active ? info.option.detail : 'TAP TO IDENTIFY';
+  label.classList.toggle('is-active', active);
+}
+
 function buildDisassemblyLabels() {
   const container = $('disassemblyLabels');
-  container.innerHTML = DISASSEMBLY_PARTS.map(part => {
+  container.innerHTML = DISASSEMBLY_PARTS.map((part, index) => {
     const info = disassemblyPartInfo[part.id];
     const option = info.option;
     const color = option.color || finishHex[option.finish] || '#d8f36a';
-    return `<button type="button" class="part-label" data-part="${part.id}" style="--part-color:${color}">
-      <span class="part-label-kicker">${info.kicker}</span>
-      <strong>${option.name}</strong>
-      <span class="part-label-type">${option.detail}</span>
+    return `<button type="button" class="part-label" data-part="${part.id}" style="--part-color:${color}" aria-label="${part.category}: tap to identify this part" aria-pressed="false">
+      <span class="part-label-kicker">PART ${String(index + 1).padStart(2, '0')} · ASSEMBLY</span>
+      <strong>${part.category}</strong>
+      <span class="part-label-spec">TAP TO IDENTIFY</span>
       <i class="part-label-dot" aria-hidden="true"></i>
     </button>`;
   }).join('');
@@ -1561,9 +1583,9 @@ function updateDisassemblyDetail() {
   const info = disassemblyActivePart ? disassemblyPartInfo[disassemblyActivePart] : null;
   if (info) {
     const option = info.option;
-    kicker.textContent = info.kicker;
+    kicker.textContent = `PART ${String(DISASSEMBLY_PARTS.findIndex(item => item.id === disassemblyActivePart) + 1).padStart(2, '0')} · ${info.category}`;
     name.textContent = option.name;
-    type.textContent = option.detail.toUpperCase();
+    type.textContent = info.identify.toUpperCase();
     note.textContent = option.note;
     note.hidden = false;
     const color = option.color || finishHex[option.finish] || null;
@@ -1578,7 +1600,7 @@ function updateDisassemblyDetail() {
   } else {
     kicker.textContent = 'ON THE PAD';
     name.textContent = buildName().toUpperCase();
-    type.textContent = disassemblyPhase === 'disassembled' ? '06 COMPONENTS · TAP A PART LABEL' : '06 COMPONENTS · SYSTEMS NOMINAL';
+    type.textContent = disassemblyPhase === 'disassembled' ? '06 COMPONENTS · TAP A LABEL TO IDENTIFY' : '06 COMPONENTS · SYSTEMS NOMINAL';
     note.hidden = true;
     swatch.hidden = true;
     readout.classList.remove('is-active');
@@ -1588,7 +1610,10 @@ function updateDisassemblyDetail() {
 function selectDisassemblyPart(id) {
   if (disassemblyPhase !== 'disassembled' && disassemblyPhase !== 'disassembling') return;
   disassemblyActivePart = disassemblyActivePart === id ? null : id;
-  disassemblyLabelEls.forEach(label => label.classList.toggle('is-active', label.dataset.part === disassemblyActivePart));
+  disassemblyLabelEls.forEach(label => {
+    paintDisassemblyLabel(label, label.dataset.part, label.dataset.part === disassemblyActivePart);
+    label.setAttribute('aria-pressed', String(label.dataset.part === disassemblyActivePart));
+  });
   updateDisassemblyDetail();
   if (disassemblySelector) {
     const part = DISASSEMBLY_PARTS.find(item => item.id === disassemblyActivePart);
@@ -1621,11 +1646,11 @@ function updateDisassemblyLabels() {
   const width = stage.clientWidth;
   const height = stage.clientHeight;
   leaders.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  const narrow = width < 720;
-  const minLeft = width * (narrow ? .46 : .38);
+  const narrow = width < 760;
+  const centerX = width / 2;
   const projected = new THREE.Vector3();
   const anchors = [];
-  let previousBottom = -Infinity;
+  const lastBottom = { left: -Infinity, right: -Infinity };
   disassemblyCamera.updateMatrixWorld();
   disassemblyRoot.updateMatrixWorld(true);
   DISASSEMBLY_PARTS.forEach((part, index) => {
@@ -1634,21 +1659,32 @@ function updateDisassemblyLabels() {
     projected.set(0, part.slot, 0).applyMatrix4(disassemblyRoot.matrixWorld).project(disassemblyCamera);
     const sx = (projected.x * .5 + .5) * width;
     const sy = (-projected.y * .5 + .5) * height;
-    const labelWidth = label.offsetWidth || 180;
-    const labelHeight = label.offsetHeight || 44;
+    const labelWidth = label.offsetWidth || 190;
+    const labelHeight = label.offsetHeight || 50;
+    const side = narrow ? 'right' : part.side;
     let top = sy - labelHeight / 2;
-    top = Math.max(12, Math.min(height - labelHeight - 12, Math.max(top, previousBottom + 7)));
-    previousBottom = top + labelHeight;
-    const left = Math.max(minLeft, Math.min(width - labelWidth - 12, sx + (narrow ? 22 : 38)));
+    top = Math.max(12, Math.min(height - labelHeight - 12, top));
+    if (top < lastBottom[side] + 8) top = lastBottom[side] + 8;
+    top = Math.min(height - labelHeight - 12, top);
+    lastBottom[side] = top + labelHeight;
+    let left;
+    if (side === 'right') {
+      left = Math.max(sx + 74, centerX + 108);
+      left = Math.min(width - labelWidth - 18, left);
+    } else {
+      left = Math.min(sx - 74 - labelWidth, centerX - 108 - labelWidth);
+      left = Math.max(18, left);
+    }
     label.style.transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0)`;
-    anchors.push({ sx: sx + part.edge, sy, left, ly: top + labelHeight / 2 });
+    const lineX = side === 'right' ? left : left + labelWidth;
+    anchors.push({ sx: sx + (side === 'right' ? part.edge : -part.edge), sy, lineX, ly: top + labelHeight / 2 });
   });
   anchors.forEach((anchor, index) => {
     const leader = disassemblyLeaderEls[index];
     if (!leader) return;
     leader.line.setAttribute('x1', anchor.sx.toFixed(1));
     leader.line.setAttribute('y1', anchor.sy.toFixed(1));
-    leader.line.setAttribute('x2', anchor.left.toFixed(1));
+    leader.line.setAttribute('x2', anchor.lineX.toFixed(1));
     leader.line.setAttribute('y2', anchor.ly.toFixed(1));
     leader.dot.setAttribute('cx', anchor.sx.toFixed(1));
     leader.dot.setAttribute('cy', anchor.sy.toFixed(1));
@@ -1672,15 +1708,15 @@ function updateDisassemblyUI() {
     button.innerHTML = `${disassemblyPhase === 'disassembling' ? 'DISASSEMBLING' : 'ASSEMBLING'} <span>…</span>`;
     status.textContent = disassemblyPhase === 'disassembling' ? 'RELEASING CLAMPS' : 'RECALLING PARTS';
     phase.textContent = disassemblyPhase === 'disassembling' ? 'TEARDOWN IN PROGRESS' : 'REASSEMBLY IN PROGRESS';
-    caption.textContent = disassemblyPhase === 'disassembling' ? 'Component locks released. Every piece is finding its own level.' : 'Magnets engaged. The pieces are coming home.';
-    hint.textContent = disassemblyPhase === 'disassembling' ? 'DRAG TO ROTATE · COMPONENT LOCKS RELEASED' : 'DRAG TO ROTATE · RECALLING COMPONENTS';
+    caption.textContent = disassemblyPhase === 'disassembling' ? 'Upper assemblies rise. Lower assemblies drop. Every piece keeps its own vertical lane.' : 'Magnets engaged. The upper and lower halves are coming home.';
+    hint.textContent = disassemblyPhase === 'disassembling' ? 'DRAG TO ROTATE · VERTICAL TEARDOWN' : 'DRAG TO ROTATE · RECALLING COMPONENTS';
   } else if (disassemblyPhase === 'disassembled') {
     button.disabled = false;
     button.innerHTML = 'ASSEMBLE <span>✳</span>';
     status.textContent = 'DISASSEMBLED';
-    phase.textContent = 'TEARDOWN COMPLETE';
-    caption.textContent = 'Every component is floating free. Tap a label to inspect it, then bring it home.';
-    hint.textContent = 'DRAG TO ROTATE · TAP A LABEL TO INSPECT';
+    phase.textContent = 'VERTICAL SPLIT COMPLETE';
+    caption.textContent = 'Top half up, bottom half down. Tap any label to identify the exact part fitted to this build.';
+    hint.textContent = 'DRAG TO ROTATE · TAP A LABEL TO IDENTIFY';
   } else {
     button.disabled = false;
     button.innerHTML = 'DISASSEMBLE <span>✳</span>';
@@ -1698,12 +1734,13 @@ function layoutDisassemblyCamera() {
   const aspect = width / height;
   disassemblyCamera.aspect = aspect;
   const halfFov = THREE.MathUtils.degToRad(34) / 2;
-  const fitHeight = 2.45 + 2.7 * disassemblyProgress;
-  const fitWidth = 2.2 + 1.15 * disassemblyProgress;
+  const fitHeight = 2.45 + 1.16 * disassemblyProgress;
+  const fitWidth = 2.2 + .72 * disassemblyProgress;
   const distance = Math.max(fitHeight / Math.tan(halfFov), fitWidth / (Math.tan(halfFov) * aspect)) + 1.15;
-  const shift = disassemblyProgress * (aspect < .9 ? .7 : .58);
-  disassemblyCamera.position.set(shift, .5, distance);
-  disassemblyCamera.lookAt(shift, .38, 0);
+  // Keep the split dead center so the label leaders can fan out left and right.
+  const centerY = .08;
+  disassemblyCamera.position.set(0, centerY + .04, distance);
+  disassemblyCamera.lookAt(0, centerY, 0);
   disassemblyCamera.updateProjectionMatrix();
   disassemblyCamera.updateMatrixWorld();
   disassemblyCameraProgress = disassemblyProgress;
@@ -1803,11 +1840,24 @@ function updateDisassembly(delta, elapsed) {
     if (t > 0) piece.mesh.position.y += Math.sin(elapsed * 1.35 + piece.phase) * .012 * t;
     if (piece.part === 'crystal' && t > .2) piece.mesh.rotateY(realDelta * .45 * t);
   });
-  if (!disassemblyDragging) disassemblySpin += realDelta * .2 * (1 - disassemblyProgress * .94);
+  if (!disassemblyDragging) {
+    // Let the hilt settle to a straight vertical readout once it splits.
+    const settle = Math.max(0, 1 - disassemblyProgress * 2.6);
+    disassemblySpin += realDelta * .2 * settle;
+    if (disassemblyProgress > .18) {
+      disassemblySpin *= Math.max(0, 1 - realDelta * 2.8);
+      disassemblyTilt *= Math.max(0, 1 - realDelta * 2.2);
+    }
+  }
   disassemblyRoot.rotation.y = disassemblySpin;
   disassemblyRoot.rotation.x = disassemblyTilt;
-  disassemblyRoot.rotation.z = Math.sin(elapsed * .7) * .008;
-  disassemblyRoot.position.y = .18 * (1 - disassemblyProgress) + Math.sin(elapsed * 1.35) * .045;
+  disassemblyRoot.rotation.z = Math.sin(elapsed * .7) * .008 * (1 - disassemblyProgress);
+  disassemblyRoot.position.y = .16 * (1 - disassemblyProgress) + Math.sin(elapsed * 1.35) * .04 * (1 - disassemblyProgress * .8);
+  // Drop the pad as the lower half descends so no component sinks into it.
+  const padDrop = disassemblyProgress * 1.1;
+  disassemblyPad.position.y = -2.22 - padDrop;
+  disassemblyPadRing.position.y = -2.16 - padDrop;
+  disassemblyGlow.position.y = -2.17 - padDrop;
   disassemblyDust.rotation.y = elapsed * .035;
   disassemblyGlow.material.opacity = .2 + (Math.sin(elapsed * 1.8) + 1) * .035;
   disassemblyPadRing.material.emissiveIntensity = .24 + (Math.sin(elapsed * 2.1) + 1) * .12;
@@ -1847,10 +1897,12 @@ const slicer = {
   pieces: [],
   sparks: [],
   floats: [],
+  rings: [],
   trail: [],
   stars: [],
+  backdrop: null,
   spawnTimer: 0,
-  bombTimer: 5,
+  bombTimer: 3.6,
   combo: 0,
   comboTimer: 0,
   drawing: false,
@@ -1868,27 +1920,40 @@ const slicer = {
 try { slicer.best = Math.max(0, Number(localStorage.getItem(SLICER_BEST_KEY)) || 0); } catch (_) { slicer.best = 0; }
 
 const slicerTypeMeta = {
-  crate: { points: 10, size: 80, w: .98, h: .98, colors: ['#d8f36a', '#c9a36b', '#fff5d6'] },
-  droid: { points: 15, size: 84, w: .62, h: 1.15, colors: ['#d8f36a', '#c8ad7c', '#fff5d6'] },
-  helmet: { points: 20, size: 78, w: .95, h: .82, colors: ['#d8f36a', '#d9ddd4', '#fff'] },
-  barrel: { points: 10, size: 78, w: .62, h: 1.05, colors: ['#d8f36a', '#8a9690', '#fff'] },
-  probe: { points: 25, size: 70, w: .95, h: .95, colors: ['#d8f36a', '#6fe8ff', '#fff'] },
-  holocron: { points: 30, size: 72, w: .9, h: .9, colors: ['#d8f36a', '#ffd76f', '#8ff5ff'] },
-  astromech: { points: 20, size: 78, w: .95, h: .9, colors: ['#d8f36a', '#9fc9e8', '#fff'] },
-  blaster: { points: 25, size: 88, w: 1.1, h: .7, colors: ['#d8f36a', '#9aa69e', '#fff'] },
-  saber: { points: 35, size: 82, w: .55, h: 1.1, colors: ['#d8f36a', '#c8ad7c', '#fff'] },
-  mando: { points: 30, size: 78, w: .95, h: .86, colors: ['#d8f36a', '#8fa8b5', '#fff'] },
-  remote: { points: 20, size: 66, w: .9, h: .9, colors: ['#d8f36a', '#9aa69e', '#fff'] },
-  bomb: { points: 0, size: 64, w: .72, h: .72, colors: ['#ff5b4d', '#ffb15c', '#fff'] },
-  charge: { points: 0, size: 68, w: .72, h: .95, colors: ['#ff5b4d', '#ffb15c', '#fff'] }
+  crate: { points: 10, size: 86, w: .98, h: .98, colors: ['#d8f36a', '#c9a36b', '#fff5d6'] },
+  droid: { points: 15, size: 92, w: .62, h: 1.15, colors: ['#d8f36a', '#c8ad7c', '#fff5d6'] },
+  helmet: { points: 20, size: 86, w: .95, h: .82, colors: ['#d8f36a', '#d9ddd4', '#fff'] },
+  barrel: { points: 10, size: 86, w: .62, h: 1.05, colors: ['#d8f36a', '#8a9690', '#fff'] },
+  probe: { points: 25, size: 78, w: .95, h: .95, colors: ['#d8f36a', '#6fe8ff', '#fff'] },
+  holocron: { points: 30, size: 80, w: .9, h: .9, colors: ['#d8f36a', '#ffd76f', '#8ff5ff'], rare: true },
+  astromech: { points: 20, size: 86, w: .95, h: .9, colors: ['#d8f36a', '#9fc9e8', '#fff'] },
+  blaster: { points: 25, size: 96, w: 1.1, h: .7, colors: ['#d8f36a', '#9aa69e', '#fff'] },
+  saber: { points: 35, size: 90, w: .55, h: 1.1, colors: ['#d8f36a', '#c8ad7c', '#fff'], rare: true },
+  mando: { points: 30, size: 86, w: .95, h: .86, colors: ['#d8f36a', '#8fa8b5', '#fff'] },
+  remote: { points: 20, size: 74, w: .9, h: .9, colors: ['#d8f36a', '#9aa69e', '#fff'] },
+  xwing: { points: 35, size: 104, w: 1.2, h: .88, colors: ['#d8f36a', '#d9ddd4', '#ff6b5c'], rare: true },
+  tie: { points: 30, size: 98, w: .98, h: .98, colors: ['#d8f36a', '#8fa8b5', '#fff'] },
+  vader: { points: 35, size: 92, w: .92, h: .9, colors: ['#d8f36a', '#9aa69e', '#ff4d4d'], rare: true },
+  protocol: { points: 25, size: 92, w: .62, h: 1.1, colors: ['#d8f36a', '#e5bd69', '#fff'] },
+  destroyer: { points: 50, size: 116, w: 1.35, h: .72, colors: ['#d8f36a', '#9aa69e', '#fff'], rare: true },
+  darksaber: { points: 55, size: 100, w: .55, h: 1.15, colors: ['#d8f36a', '#8ff5ff', '#fff'], rare: true },
+  bomb: { points: 0, size: 70, w: .72, h: .72, colors: ['#ff5b4d', '#ffb15c', '#fff'] },
+  charge: { points: 0, size: 74, w: .72, h: .95, colors: ['#ff5b4d', '#ffb15c', '#fff'] },
+  seismic: { points: 0, size: 78, w: .9, h: .9, colors: ['#4deaff', '#ff5b4d', '#fff'] }
 };
-const SLICER_BOMB_TYPES = new Set(['bomb', 'charge']);
+const SLICER_BOMB_TYPES = new Set(['bomb', 'charge', 'seismic']);
+const SLICER_BOMB_LABELS = { bomb: 'THERMAL DETONATOR', charge: 'PROTON CHARGE', seismic: 'SEISMIC CHARGE' };
 const SLICER_SALVAGE_TABLE = [
-  ['crate', 15], ['droid', 13], ['helmet', 11], ['barrel', 9], ['probe', 7],
-  ['holocron', 7], ['astromech', 9], ['blaster', 8], ['saber', 5], ['mando', 7], ['remote', 9]
+  ['crate', 15], ['droid', 13], ['helmet', 10], ['barrel', 9], ['probe', 7],
+  ['holocron', 6], ['astromech', 8], ['blaster', 7], ['saber', 4], ['mando', 6], ['remote', 8],
+  ['xwing', 5], ['tie', 6], ['vader', 4], ['protocol', 6], ['destroyer', 3], ['darksaber', 3]
 ];
 const SLICER_SALVAGE_TOTAL = SLICER_SALVAGE_TABLE.reduce((total, entry) => total + entry[1], 0);
 function isSlicerBomb(type) { return SLICER_BOMB_TYPES.has(type); }
+function pickSlicerBombType() {
+  const roll = Math.random();
+  return roll < .40 ? 'bomb' : roll < .72 ? 'charge' : 'seismic';
+}
 function pickSlicerSalvage() {
   let roll = Math.random() * SLICER_SALVAGE_TOTAL;
   for (const [type, weight] of SLICER_SALVAGE_TABLE) {
@@ -1934,12 +1999,168 @@ function resizeSlicer() {
   slicerCanvas.height = Math.round(height * slicer.dpr);
   slicerCtx.setTransform(slicer.dpr, 0, 0, slicer.dpr, 0, 0);
   if (!slicer.stars.length) {
-    for (let i = 0; i < 76; i++) {
+    for (let i = 0; i < 86; i++) {
       slicer.stars.push({ x: Math.random(), y: Math.random() * .88, speed: .6 + Math.random() * 1.8, phase: Math.random() * Math.PI * 2, size: .6 + Math.random() * 1.7 });
     }
   }
+  buildSlicerBackdrop();
 }
 new ResizeObserver(resizeSlicer).observe(slicerCanvas);
+
+function buildSlicerBackdrop() {
+  if (!slicer.w || !slicer.h) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(slicer.w * slicer.dpr);
+  canvas.height = Math.round(slicer.h * slicer.dpr);
+  const context = canvas.getContext('2d');
+  context.setTransform(slicer.dpr, 0, 0, slicer.dpr, 0, 0);
+  const width = slicer.w, height = slicer.h;
+  const horizon = height * .69;
+
+  const base = context.createRadialGradient(width * .5, height * .4, 10, width * .5, height * .52, Math.max(width, height) * .78);
+  base.addColorStop(0, '#22332b');
+  base.addColorStop(.38, '#15211b');
+  base.addColorStop(.72, '#0d1411');
+  base.addColorStop(1, '#070b09');
+  context.fillStyle = base;
+  context.fillRect(0, 0, width, height);
+
+  const bloom = (x, y, radius, rgb, alpha) => {
+    const glow = context.createRadialGradient(x, y, 0, x, y, radius);
+    glow.addColorStop(0, `rgba(${rgb},${alpha})`);
+    glow.addColorStop(.55, `rgba(${rgb},${alpha * .35})`);
+    glow.addColorStop(1, `rgba(${rgb},0)`);
+    context.fillStyle = glow;
+    context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  };
+  bloom(width * .18, height * .24, width * .32, '70, 190, 170', .075);
+  bloom(width * .84, height * .3, width * .3, '216, 160, 80', .06);
+  bloom(width * .5, height * .12, width * .4, '150, 210, 140', .05);
+
+  for (let i = 0; i < 130; i++) {
+    const x = Math.random() * width, y = Math.random() * height * .8;
+    context.fillStyle = `rgba(220, 240, 220, ${.05 + Math.random() * .2})`;
+    context.fillRect(x, y, Math.random() < .88 ? .8 : 1.6, Math.random() < .88 ? .8 : 1.6);
+  }
+
+  // A distant Coruscant district beyond the salvage floor.
+  let x = -8;
+  while (x < width + 8) {
+    const towerWidth = 12 + Math.random() * 30;
+    const towerHeight = height * (.07 + Math.random() * .18);
+    const top = horizon - towerHeight;
+    context.fillStyle = `rgba(${9 + Math.random() * 8},${16 + Math.random() * 8},${14 + Math.random() * 6},.95)`;
+    context.fillRect(x, top, towerWidth, towerHeight + height * .01);
+    context.fillStyle = 'rgba(216,243,106,.16)';
+    for (let wy = top + 5; wy < horizon - 3; wy += 7) {
+      if (Math.random() < .55) context.fillRect(x + 3 + Math.random() * (towerWidth - 7), wy, 1.4, 1.4);
+    }
+    if (Math.random() < .3) {
+      context.fillStyle = 'rgba(111,232,255,.35)';
+      context.fillRect(x + towerWidth * .5, top - 6, 1.2, 6);
+    }
+    x += towerWidth + 3 + Math.random() * 9;
+  }
+  context.fillStyle = 'rgba(111,232,255,.07)';
+  for (let i = 0; i < 5; i++) {
+    const laneY = horizon - 4 - i * 7;
+    context.fillRect(width * (.05 + Math.random() * .2), laneY, width * .16, .9);
+    context.fillRect(width * (.55 + Math.random() * .25), laneY + 2, width * .2, .8);
+  }
+
+  // Perspective floor and a lit salvage pit at the bottom of the frame.
+  const floor = context.createLinearGradient(0, horizon, 0, height);
+  floor.addColorStop(0, 'rgba(12,20,16,.15)');
+  floor.addColorStop(.4, 'rgba(9,14,12,.82)');
+  floor.addColorStop(1, '#050806');
+  context.fillStyle = floor;
+  context.fillRect(0, horizon, width, height - horizon);
+  context.strokeStyle = 'rgba(216,243,106,.12)';
+  context.lineWidth = 1;
+  for (let i = -8; i <= 8; i++) {
+    context.beginPath();
+    context.moveTo(width * .5 + i * width * .015, horizon);
+    context.lineTo(width * .5 + i * width * .11, height);
+    context.stroke();
+  }
+  for (let i = 1; i <= 8; i++) {
+    const t = i / 8;
+    const y = horizon + (height - horizon) * t * t;
+    context.strokeStyle = `rgba(216,243,106,${.04 + t * .07})`;
+    context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke();
+  }
+  const pitGlow = context.createRadialGradient(width * .5, height * 1.02, 4, width * .5, height * 1.02, width * .34);
+  pitGlow.addColorStop(0, 'rgba(216,243,106,.17)');
+  pitGlow.addColorStop(.45, 'rgba(150,200,90,.06)');
+  pitGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  context.fillStyle = pitGlow;
+  context.fillRect(0, height * .7, width, height * .3);
+
+  // Hangar gantries and overhead lamps frame the play space.
+  const gantry = context.createLinearGradient(0, 0, width, 0);
+  gantry.addColorStop(0, 'rgba(4,7,6,.96)');
+  gantry.addColorStop(.045, 'rgba(9,14,12,.78)');
+  gantry.addColorStop(.5, 'rgba(9,14,12,0)');
+  gantry.addColorStop(.955, 'rgba(9,14,12,.78)');
+  gantry.addColorStop(1, 'rgba(4,7,6,.96)');
+  context.fillStyle = gantry;
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = 'rgba(216,243,106,.24)';
+  context.lineWidth = 1;
+  for (const [gx, dir] of [[width * .035, 1], [width * .965, -1]]) {
+    context.beginPath();
+    context.moveTo(gx, height * .13);
+    context.lineTo(gx, height * .88);
+    context.stroke();
+    for (let i = 0; i < 5; i++) {
+      context.strokeStyle = 'rgba(216,243,106,.11)';
+      context.beginPath();
+      context.moveTo(gx, height * (.17 + i * .14));
+      context.lineTo(gx + dir * width * .035, height * (.15 + i * .14));
+      context.stroke();
+    }
+    context.fillStyle = 'rgba(216,243,106,.6)';
+    for (let i = 0; i < 3; i++) context.fillRect(gx - (dir > 0 ? 0 : 3), height * (.18 + i * .18), 3, 3);
+    context.strokeStyle = 'rgba(216,243,106,.1)';
+    context.beginPath();
+    context.moveTo(gx, height * .1); context.lineTo(gx + dir * width * .14, height * .04);
+    context.stroke();
+  }
+
+  context.font = '500 7px "DM Mono", monospace';
+  context.fillStyle = 'rgba(216,243,106,.34)';
+  context.fillText('SALVAGE BAY 07', width * .065, height * .11);
+  context.fillStyle = 'rgba(190,205,190,.28)';
+  context.fillText('CORUSCANT · NIGHT SHIFT', width * .065, height * .132);
+  context.fillStyle = 'rgba(216,243,106,.2)';
+  context.fillText('CHUTE OPEN', width * .87, height * .11);
+
+  context.strokeStyle = 'rgba(216,243,106,.045)';
+  context.lineWidth = 1;
+  for (const radius of [width * .16, width * .3, width * .44]) {
+    context.beginPath(); context.arc(width * .5, height * .46, radius, 0, Math.PI * 2); context.stroke();
+  }
+
+  slicer.backdrop = canvas;
+}
+
+const slicerGlowCache = new Map();
+function getSlicerGlow(color) {
+  if (slicerGlowCache.has(color)) return slicerGlowCache.get(color);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 160;
+  const context = canvas.getContext('2d');
+  const rgb = hexToRgb(color);
+  const glow = context.createRadialGradient(80, 80, 0, 80, 80, 80);
+  glow.addColorStop(0, `rgba(${rgb},.58)`);
+  glow.addColorStop(.28, `rgba(${rgb},.25)`);
+  glow.addColorStop(.65, `rgba(${rgb},.06)`);
+  glow.addColorStop(1, `rgba(${rgb},0)`);
+  context.fillStyle = glow;
+  context.fillRect(0, 0, 160, 160);
+  slicerGlowCache.set(color, canvas);
+  return canvas;
+}
 
 function comboMultiplier() {
   return Math.min(5, 1 + Math.floor(Math.max(0, slicer.combo) / 2));
@@ -1988,9 +2209,10 @@ function resetSlicerGame() {
   slicer.pieces.length = 0;
   slicer.sparks.length = 0;
   slicer.floats.length = 0;
+  slicer.rings.length = 0;
   slicer.trail.length = 0;
   slicer.spawnTimer = 0;
-  slicer.bombTimer = 5;
+  slicer.bombTimer = 3.6;
   slicer.combo = 0;
   slicer.comboTimer = 0;
   slicer.shake = 0;
@@ -2014,9 +2236,10 @@ function startSlicerRun() {
   slicer.pieces.length = 0;
   slicer.sparks.length = 0;
   slicer.floats.length = 0;
+  slicer.rings.length = 0;
   slicer.trail.length = 0;
   slicer.spawnTimer = .55;
-  slicer.bombTimer = 5;
+  slicer.bombTimer = 3.6;
   slicer.combo = 0;
   slicer.comboTimer = 0;
   slicer.shake = 0;
@@ -2046,7 +2269,7 @@ function endSlicerRun(reason) {
   $('slicerNewBest').classList.toggle('is-best', isBest && slicer.score > 0);
   if (reason === 'detonator') {
     $('slicerOverTitle').textContent = 'That was a detonator.';
-    $('slicerOverCopy').textContent = 'The last thing through your blade was a thermal detonator. The salvage floor takes this round.';
+    $('slicerOverCopy').textContent = 'The last thing through your blade was a detonator. Thermal, proton or seismic — the salvage floor takes this round.';
   } else if (reason === 'lives') {
     $('slicerOverTitle').textContent = 'The salvage won.';
     $('slicerOverCopy').textContent = 'Too much hardware hit the floor. Keep the blade moving and try another run.';
@@ -2068,8 +2291,8 @@ function endSlicerRun(reason) {
 
 function pickSlicerType() {
   const activeBombs = slicer.objects.filter(object => isSlicerBomb(object.type)).length;
-  const bombChance = slicer.elapsed > 4 && activeBombs < 3 ? .07 + Math.min(.04, slicer.elapsed * .0008) : 0;
-  if (Math.random() < bombChance) return Math.random() < .55 ? 'bomb' : 'charge';
+  const bombChance = slicer.elapsed > 3 && activeBombs < 3 ? .035 + Math.min(.025, slicer.elapsed * .0004) : 0;
+  if (Math.random() < bombChance) return pickSlicerBombType();
   return pickSlicerSalvage();
 }
 function spawnSlicerObject(offset = 0, forcedType = null) {
@@ -2120,6 +2343,9 @@ function spawnSlicerSparks(x, y, colors, count, power = 260) {
 function addSlicerFloat(x, y, text, color = '#d8f36a') {
   slicer.floats.push({ x, y, text, color, life: .9, maxLife: .9 });
 }
+function addSlicerRing(x, y, color = '#d8f36a', radius = 80, duration = .5) {
+  slicer.rings.push({ x, y, color, radius, life: duration, maxLife: duration });
+}
 function loseSlicerLife(kind) {
   if (!slicer.running) return;
   slicer.lives = Math.max(0, slicer.lives - 1);
@@ -2140,11 +2366,12 @@ function sliceSlicerObject(object, cutAngle) {
   slicer.objects.splice(index, 1);
   const meta = slicerTypeMeta[object.type];
   if (isSlicerBomb(object.type)) {
-    spawnSlicerSparks(object.x, object.y, meta.colors, 26, 430);
+    spawnSlicerSparks(object.x, object.y, meta.colors, 30, 450);
+    addSlicerRing(object.x, object.y, meta.colors[0], 150, .55);
     slicer.shake = 20;
     slicer.flash = 1;
-    slicer.flashColor = '255, 70, 58';
-    addSlicerFloat(object.x, object.y - 30, object.type === 'charge' ? 'PROTON CHARGE' : 'DETONATOR', '#ff6b5c');
+    slicer.flashColor = object.type === 'seismic' ? '77, 220, 255' : '255, 70, 58';
+    addSlicerFloat(object.x, object.y - 30, SLICER_BOMB_LABELS[object.type], '#ff6b5c');
     loseSlicerLife('detonator');
     return;
   }
@@ -2154,7 +2381,8 @@ function sliceSlicerObject(object, cutAngle) {
   const gained = object.points * multiplier;
   slicer.score += gained;
   spawnSlicerSparks(object.x, object.y, meta.colors, 12 + Math.min(10, multiplier * 2), 240);
-  addSlicerFloat(object.x, object.y - object.radius - 8, `+${gained}`, multiplier > 1 ? '#d8f36a' : '#f5f7e9');
+  addSlicerRing(object.x, object.y, meta.colors[1] || '#d8f36a', 48 + multiplier * 10, .4);
+  addSlicerFloat(object.x, object.y - object.radius - 8, `${meta.rare ? '✦ ' : ''}+${gained}`, multiplier > 1 || meta.rare ? '#d8f36a' : '#f5f7e9');
   const separation = cutAngle + Math.PI / 2;
   const push = 150 + Math.random() * 90;
   for (const side of [-1, 1]) {
@@ -2258,9 +2486,9 @@ function updateSlicer(delta, now) {
         spawnSlicerWave();
         slicer.spawnTimer = Math.max(.42, .82 - slicer.elapsed * .006) + Math.random() * .2;
       }
-      if (slicer.bombTimer <= 0 && slicer.elapsed > 4) {
-        spawnSlicerObject(0, Math.random() < .55 ? 'bomb' : 'charge');
-        slicer.bombTimer = 10 + Math.random() * 4;
+      if (slicer.bombTimer <= 0 && slicer.elapsed > 3) {
+        spawnSlicerObject(0, pickSlicerBombType());
+        slicer.bombTimer = Math.max(5.6, 8.4 - slicer.elapsed * .035) + Math.random() * 1.4;
       }
     }
   }
@@ -2286,6 +2514,11 @@ function updateSlicer(delta, now) {
     piece.angle += piece.va * delta;
     piece.alpha -= delta * .38;
     if (piece.alpha <= 0 || piece.y > slicer.h + 260) slicer.pieces.splice(i, 1);
+  }
+  for (let i = slicer.rings.length - 1; i >= 0; i--) {
+    const ring = slicer.rings[i];
+    ring.life -= delta;
+    if (ring.life <= 0) slicer.rings.splice(i, 1);
   }
   for (let i = slicer.sparks.length - 1; i >= 0; i--) {
     const spark = slicer.sparks[i];
@@ -2908,6 +3141,338 @@ function drawRemoteArt(context) {
   context.fillStyle = '#6fe8ff';
   for (const [x, y] of [[-15, 4], [15, -3], [0, 18]]) { context.beginPath(); context.arc(x, y, 1.2, 0, Math.PI * 2); context.fill(); }
 }
+function drawXWingArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 27, 24, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+    context.fillStyle = sy < 0 ? '#d4dad2' : '#9ca8a3';
+    context.beginPath();
+    context.moveTo(sx * 3.5, sy * 1.8);
+    context.lineTo(sx * 25, sy * 15.5);
+    context.lineTo(sx * 28, sy * 21.5);
+    context.lineTo(sx * 8, sy * 6.5);
+    context.closePath(); context.fill();
+    context.strokeStyle = '#4e5a55'; context.lineWidth = 1.1; context.stroke();
+    context.strokeStyle = '#c94f42'; context.lineWidth = 2.4; context.lineCap = 'round';
+    context.beginPath(); context.moveTo(sx * 11, sy * 7.5); context.lineTo(sx * 22, sy * 15.5); context.stroke();
+    context.strokeStyle = 'rgba(255,255,255,.35)'; context.lineWidth = .8;
+    context.beginPath(); context.moveTo(sx * 7, sy * 4.6); context.lineTo(sx * 24, sy * 17.4); context.stroke();
+    context.fillStyle = '#3e4844';
+    context.beginPath(); context.arc(sx * 22.5, sy * 17.6, 3.3, 0, Math.PI * 2); context.fill();
+    context.fillStyle = '#e8ede6';
+    context.beginPath(); context.arc(sx * 22.5, sy * 17.6, 2.1, 0, Math.PI * 2); context.fill();
+    context.fillStyle = '#202723';
+    context.beginPath(); context.arc(sx * 22.5, sy * 17.6, 1.1, 0, Math.PI * 2); context.fill();
+    context.strokeStyle = '#b9c2ba'; context.lineWidth = 1.4;
+    context.beginPath(); context.moveTo(sx * 26, sy * 19); context.lineTo(sx * 29, sy * 23); context.stroke();
+    context.fillStyle = '#c94f42';
+    context.beginPath(); context.arc(sx * 29, sy * 23, 1.5, 0, Math.PI * 2); context.fill();
+  }
+
+  const body = context.createLinearGradient(-7, 0, 7, 0);
+  body.addColorStop(0, '#7d8983');
+  body.addColorStop(.4, '#eef2e9');
+  body.addColorStop(.66, '#b8c2bb');
+  body.addColorStop(1, '#59645f');
+  context.fillStyle = body;
+  context.beginPath();
+  context.moveTo(0, -27); context.lineTo(5.2, -15); context.lineTo(6.5, 16); context.lineTo(-6.5, 16); context.lineTo(-5.2, -15);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#39433f'; context.lineWidth = 1.2; context.stroke();
+
+  context.fillStyle = '#2e3a45';
+  roundRectPath(context, -3.6, -10, 7.2, 14, 3); context.fill();
+  context.fillStyle = 'rgba(120,205,255,.75)';
+  roundRectPath(context, -2.6, -8.5, 5.2, 9, 2); context.fill();
+  context.fillStyle = 'rgba(255,255,255,.65)';
+  context.fillRect(-1.7, -7.4, 1.1, 4.2);
+
+  context.fillStyle = '#c94f42';
+  context.fillRect(-2.2, 9, 4.4, 1.8);
+  context.fillRect(-2.2, 12, 4.4, 1.2);
+  context.strokeStyle = '#78847d'; context.lineWidth = 1;
+  context.beginPath(); context.moveTo(-4, -16); context.lineTo(-4, 14); context.moveTo(4, -16); context.lineTo(4, 14); context.stroke();
+  context.fillStyle = '#d8f36a';
+  context.beginPath(); context.arc(0, -24.5, 1.2, 0, Math.PI * 2); context.fill();
+}
+function drawTieArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.27)';
+  context.beginPath(); context.ellipse(1, 28, 25, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  for (const side of [-1, 1]) {
+    const wingGradient = context.createLinearGradient(side * 29, 0, side * 11, 0);
+    wingGradient.addColorStop(0, '#313b38');
+    wingGradient.addColorStop(.45, '#202824');
+    wingGradient.addColorStop(1, '#4c5752');
+    context.fillStyle = wingGradient;
+    context.beginPath();
+    context.moveTo(side * 11, -19);
+    context.lineTo(side * 27, -25);
+    context.lineTo(side * 29, -16);
+    context.lineTo(side * 29, 16);
+    context.lineTo(side * 27, 25);
+    context.lineTo(side * 11, 19);
+    context.closePath(); context.fill();
+    context.strokeStyle = '#77837c'; context.lineWidth = 1.2; context.stroke();
+    context.strokeStyle = 'rgba(160,175,165,.28)'; context.lineWidth = .9;
+    context.beginPath();
+    context.moveTo(side * 14, -17); context.lineTo(side * 25, -21);
+    context.moveTo(side * 14, 17); context.lineTo(side * 25, 21);
+    context.moveTo(side * 18, -19); context.lineTo(side * 18, 19);
+    context.moveTo(side * 23, -22); context.lineTo(side * 23, 22);
+    context.stroke();
+  }
+
+  context.fillStyle = '#59645f';
+  roundRectPath(context, -15, -3, 30, 6, 3); context.fill();
+  context.strokeStyle = '#242c29'; context.lineWidth = 1; context.stroke();
+
+  const ball = context.createRadialGradient(-4, -5, 2, 0, 0, 13);
+  ball.addColorStop(0, '#7b8881');
+  ball.addColorStop(.5, '#35403b');
+  ball.addColorStop(1, '#101512');
+  context.fillStyle = ball;
+  context.beginPath(); context.arc(0, 0, 11.5, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#9aa69e'; context.lineWidth = 1.4;
+  context.beginPath(); context.arc(0, 0, 11.5, 0, Math.PI * 2); context.stroke();
+
+  context.fillStyle = '#0d161b';
+  context.beginPath(); context.arc(0, -1, 7.4, 0, Math.PI * 2); context.fill();
+  context.fillStyle = 'rgba(93,180,230,.42)';
+  context.beginPath(); context.arc(0, -1, 5.2, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#9fd8ff'; context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(0, -6); context.lineTo(4.8, -3.4); context.lineTo(4.8, 1.4); context.lineTo(0, 4); context.lineTo(-4.8, 1.4); context.lineTo(-4.8, -3.4); context.closePath(); context.stroke();
+  context.fillStyle = 'rgba(255,255,255,.65)';
+  context.beginPath(); context.arc(-1.8, -2.6, 1.1, 0, Math.PI * 2); context.fill();
+
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-3, 10.5, 6, 1.2);
+  context.fillStyle = '#202824';
+  context.fillRect(-5.5, 13, 11, 2);
+}
+function drawVaderArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.3)';
+  context.beginPath(); context.ellipse(1, 25, 24, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const dome = context.createLinearGradient(-20, -27, 18, 15);
+  dome.addColorStop(0, '#5f6864');
+  dome.addColorStop(.32, '#222a27');
+  dome.addColorStop(.74, '#0e1311');
+  dome.addColorStop(1, '#030504');
+  context.fillStyle = dome;
+  context.beginPath();
+  context.moveTo(-24, 8);
+  context.bezierCurveTo(-24, -14, -13, -28, 0, -28);
+  context.bezierCurveTo(13, -28, 24, -14, 24, 8);
+  context.lineTo(19, 16); context.lineTo(13, 13); context.lineTo(8, 17);
+  context.lineTo(0, 14); context.lineTo(-8, 17); context.lineTo(-13, 13); context.lineTo(-19, 16);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#5e6964'; context.lineWidth = 1.4; context.stroke();
+
+  context.fillStyle = 'rgba(255,255,255,.15)';
+  context.beginPath(); context.ellipse(-7, -18, 8, 4.2, -.32, 0, Math.PI * 2); context.fill();
+
+  context.fillStyle = '#060807';
+  context.beginPath();
+  context.moveTo(-22, -6); context.lineTo(-12, -12); context.lineTo(0, -13); context.lineTo(12, -12); context.lineTo(22, -6);
+  context.lineTo(18, 1); context.lineTo(9, 4); context.lineTo(0, 2); context.lineTo(-9, 4); context.lineTo(-18, 1);
+  context.closePath(); context.fill();
+
+  context.save();
+  context.shadowColor = '#ff3a32'; context.shadowBlur = 9;
+  context.fillStyle = '#ff3a32';
+  context.beginPath(); context.moveTo(-19, -6); context.lineTo(-8, -10); context.lineTo(-6, -4); context.lineTo(-16, -1); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(19, -6); context.lineTo(8, -10); context.lineTo(6, -4); context.lineTo(16, -1); context.closePath(); context.fill();
+  context.restore();
+  context.fillStyle = 'rgba(255,225,220,.65)';
+  context.beginPath(); context.moveTo(-17, -5.6); context.lineTo(-11, -8); context.lineTo(-10, -5); context.lineTo(-15.4, -2.6); context.closePath(); context.fill();
+  context.beginPath(); context.moveTo(17, -5.6); context.lineTo(11, -8); context.lineTo(10, -5); context.lineTo(15.4, -2.6); context.closePath(); context.fill();
+
+  context.fillStyle = '#2a312e';
+  context.beginPath(); context.moveTo(-10, 6); context.lineTo(10, 6); context.lineTo(6, 14); context.lineTo(-6, 14); context.closePath(); context.fill();
+  context.fillStyle = '#0a0d0c';
+  for (let i = 0; i < 4; i++) context.fillRect(-7 + i * 3.6, 8, 2.1, 4.5);
+  context.fillStyle = '#59645f';
+  context.fillRect(-17, 16, 34, 2.4);
+  context.fillStyle = '#1b2320';
+  for (let i = 0; i < 5; i++) context.fillRect(-15 + i * 6.5, 16.7, 4, 1);
+}
+function drawProtocolArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.26)';
+  context.beginPath(); context.ellipse(1, 25, 19, 5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const gold = context.createLinearGradient(-10, 0, 10, 0);
+  gold.addColorStop(0, '#8f6d39');
+  gold.addColorStop(.35, '#f0d48e');
+  gold.addColorStop(.6, '#d8b56a');
+  gold.addColorStop(1, '#7b5a2d');
+
+  context.strokeStyle = '#a98c62'; context.lineWidth = 4.2; context.lineCap = 'round';
+  context.beginPath(); context.moveTo(-7, 2); context.lineTo(-15, 12); context.lineTo(-13, 21);
+  context.moveTo(7, 2); context.lineTo(15, 12); context.lineTo(13, 21); context.stroke();
+  context.strokeStyle = '#dfc38a'; context.lineWidth = 2.2;
+  context.beginPath(); context.moveTo(-7, 1); context.lineTo(-15, 10); context.moveTo(7, 1); context.lineTo(15, 10); context.stroke();
+
+  context.fillStyle = gold;
+  roundRectPath(context, -8, -4, 16, 22, 4); context.fill();
+  context.strokeStyle = '#6d5229'; context.lineWidth = 1.1; context.stroke();
+  context.fillStyle = '#b8c2bb';
+  roundRectPath(context, -8.4, 9, 16.8, 4, 1.5); context.fill();
+  context.fillStyle = '#8f9a93';
+  context.fillRect(-7.4, 10, 14.8, 1);
+  context.strokeStyle = '#b8c2bb'; context.lineWidth = 1;
+  context.beginPath(); context.moveTo(-4, -2); context.lineTo(-4, 8); context.moveTo(4, -2); context.lineTo(4, 8); context.stroke();
+  context.fillStyle = '#6d5229';
+  context.fillRect(-6, 4, 12, 2.2);
+  context.fillStyle = '#f0d48e';
+  context.beginPath(); context.arc(-9, 3, 2.4, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(9, 3, 2.4, 0, Math.PI * 2); context.fill();
+
+  context.strokeStyle = '#a98c62'; context.lineWidth = 3;
+  context.beginPath(); context.moveTo(-3, -4); context.lineTo(-3, -10); context.moveTo(3, -4); context.lineTo(3, -10); context.stroke();
+
+  const head = context.createLinearGradient(-10, -26, 10, -10);
+  head.addColorStop(0, '#f3dda4');
+  head.addColorStop(.55, '#d8b56a');
+  head.addColorStop(1, '#96723d');
+  context.fillStyle = head;
+  context.beginPath();
+  context.moveTo(-9, -12);
+  context.quadraticCurveTo(-9, -27, 0, -28);
+  context.quadraticCurveTo(9, -27, 9, -12);
+  context.lineTo(5, -9); context.lineTo(-5, -9);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#6d5229'; context.lineWidth = 1.2; context.stroke();
+
+  context.fillStyle = '#2a1e0d';
+  roundRectPath(context, -6.5, -21, 13, 5, 2); context.fill();
+  context.fillStyle = '#ff6b3d';
+  context.beginPath(); context.arc(-3, -18.5, 1.6, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(3, -18.5, 1.6, 0, Math.PI * 2); context.fill();
+  context.fillStyle = 'rgba(255,255,255,.75)';
+  context.beginPath(); context.arc(-3.6, -19.1, .55, 0, Math.PI * 2); context.fill();
+  context.beginPath(); context.arc(2.4, -19.1, .55, 0, Math.PI * 2); context.fill();
+  context.fillStyle = '#6d5229';
+  context.fillRect(-3, -14.4, 6, 1.2);
+  context.strokeStyle = '#a98c62'; context.lineWidth = 1.5;
+  context.beginPath(); context.moveTo(0, -28); context.lineTo(0, -31); context.stroke();
+  context.fillStyle = '#ff6b3d';
+  context.beginPath(); context.arc(0, -31.5, 1.1, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#75582b'; context.lineWidth = 1;
+  context.beginPath(); context.moveTo(-7, 17); context.lineTo(-5, 23); context.moveTo(7, 17); context.lineTo(5, 23); context.stroke();
+}
+function drawDestroyerArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.24)';
+  context.beginPath(); context.ellipse(1, 24, 28, 4.5, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const hull = context.createLinearGradient(-28, -24, 20, 24);
+  hull.addColorStop(0, '#c3ccc5');
+  hull.addColorStop(.42, '#8b9690');
+  hull.addColorStop(.72, '#59645f');
+  hull.addColorStop(1, '#2e3732');
+  context.fillStyle = hull;
+  context.beginPath();
+  context.moveTo(0, -27);
+  context.lineTo(28, 21);
+  context.lineTo(10, 17);
+  context.lineTo(5, 22);
+  context.lineTo(-5, 22);
+  context.lineTo(-10, 17);
+  context.lineTo(-28, 21);
+  context.closePath(); context.fill();
+  context.strokeStyle = '#202824'; context.lineWidth = 1.2; context.stroke();
+
+  context.strokeStyle = 'rgba(25,33,29,.45)'; context.lineWidth = .8;
+  context.beginPath();
+  context.moveTo(0, -22); context.lineTo(0, 12);
+  context.moveTo(-8, 4); context.lineTo(8, 4);
+  context.moveTo(-13, 10); context.lineTo(13, 10);
+  context.moveTo(-18, 15); context.lineTo(18, 15);
+  context.stroke();
+  context.strokeStyle = 'rgba(255,255,255,.28)';
+  context.beginPath(); context.moveTo(-3, -25); context.lineTo(-25, 19); context.stroke();
+
+  context.fillStyle = '#4f5b55';
+  roundRectPath(context, -6, 5, 12, 6, 1.5); context.fill();
+  context.fillStyle = '#242c29';
+  roundRectPath(context, -4, 3, 8, 4, 1); context.fill();
+  context.fillStyle = '#b9c3bc';
+  context.fillRect(-7, 4, 14, 1);
+  context.strokeStyle = '#68746e'; context.lineWidth = 1;
+  context.beginPath(); context.moveTo(0, 2); context.lineTo(0, -12); context.stroke();
+  context.fillStyle = '#8f9a93';
+  context.beginPath(); context.arc(0, -12, 1.8, 0, Math.PI * 2); context.fill();
+
+  context.save();
+  context.shadowColor = '#6fe8ff'; context.shadowBlur = 8;
+  context.fillStyle = 'rgba(111,232,255,.85)';
+  for (const x of [-7, -2.4, 2.4, 7]) context.fillRect(x - 1.2, 18.5, 2.4, 2.4);
+  context.restore();
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-11, 19.6, 22, 1.1);
+}
+function drawDarksaberArt(context) {
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,.28)';
+  context.beginPath(); context.ellipse(1, 29, 12, 4, 0, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.save();
+  context.translate(0, 1); context.rotate(.08);
+  context.save();
+  context.shadowColor = '#8ff5ff'; context.shadowBlur = 8;
+  context.fillStyle = 'rgba(143,245,255,.1)';
+  roundRectPath(context, -5.2, -27, 10.4, 42, 2); context.fill();
+  context.restore();
+
+  const blade = context.createLinearGradient(-4.8, 0, 4.8, 0);
+  blade.addColorStop(0, '#1b2320');
+  blade.addColorStop(.3, '#090d0b');
+  blade.addColorStop(.7, '#050706');
+  blade.addColorStop(1, '#161d1a');
+  context.fillStyle = blade;
+  context.beginPath();
+  context.moveTo(0, -29); context.lineTo(4.9, -23); context.lineTo(4.4, 16); context.lineTo(-4.4, 16); context.lineTo(-4.9, -23);
+  context.closePath(); context.fill();
+  context.strokeStyle = 'rgba(240,255,255,.95)'; context.lineWidth = 1.25;
+  context.beginPath();
+  context.moveTo(0, -28); context.lineTo(4.4, -22.6); context.lineTo(4, 15); context.moveTo(0, -28); context.lineTo(-4.4, -22.6); context.lineTo(-4, 15);
+  context.stroke();
+  context.strokeStyle = 'rgba(143,245,255,.52)'; context.lineWidth = .7;
+  context.beginPath(); context.moveTo(0, -24); context.lineTo(0, 13); context.stroke();
+  context.fillStyle = 'rgba(255,255,255,.13)';
+  context.fillRect(-2.8, -21, 1.2, 30);
+
+  const hilt = context.createLinearGradient(-6, 0, 6, 0);
+  hilt.addColorStop(0, '#4c5652');
+  hilt.addColorStop(.28, '#d4dcd5');
+  hilt.addColorStop(.55, '#8b9690');
+  hilt.addColorStop(1, '#2b332f');
+  context.fillStyle = hilt;
+  roundRectPath(context, -5.5, 15, 11, 14, 3); context.fill();
+  context.strokeStyle = '#1c2320'; context.lineWidth = 1; context.stroke();
+  context.fillStyle = '#202824';
+  roundRectPath(context, -6.5, 15, 13, 3, 1.5); context.fill();
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-4, 21, 8, 1.4);
+  context.fillStyle = '#141917';
+  context.fillRect(-4, 24, 8, 1);
+  context.fillStyle = '#8ff5ff';
+  context.beginPath(); context.arc(0, 27, 1.2, 0, Math.PI * 2); context.fill();
+  context.restore();
+}
 function drawBombArt(context, time) {
   const pulse = .5 + .5 * Math.sin(time * 11);
   context.save();
@@ -3014,6 +3579,78 @@ function drawChargeArt(context, time) {
   context.fillStyle = '#6fe8ff';
   context.beginPath(); context.arc(0, 22, 1.4, 0, Math.PI * 2); context.fill();
 }
+function drawSeismicArt(context, time) {
+  const pulse = .5 + .5 * Math.sin(time * 10 + 1.2);
+  context.save();
+  const aura = context.createRadialGradient(0, 0, 5, 0, 0, 33);
+  aura.addColorStop(0, `rgba(77,234,255,${.22 + pulse * .2})`);
+  aura.addColorStop(.55, `rgba(77,140,255,${.1 + pulse * .08})`);
+  aura.addColorStop(1, 'rgba(77,234,255,0)');
+  context.fillStyle = aura;
+  context.beginPath(); context.arc(0, 0, 33, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.save();
+  context.translate(0, 0);
+  context.rotate(time * .35);
+  context.strokeStyle = `rgba(120,240,255,${.28 + pulse * .42})`;
+  context.lineWidth = 1.6;
+  for (let i = 0; i < 3; i++) {
+    context.beginPath();
+    context.arc(0, 0, 22 + i * 4.4, i * 2.1, i * 2.1 + 2.3);
+    context.stroke();
+  }
+  context.restore();
+
+  context.save();
+  context.shadowColor = '#4deaff'; context.shadowBlur = 12 + pulse * 10;
+  context.fillStyle = '#1b2b33';
+  context.beginPath(); context.arc(0, 0, 20, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  const body = context.createRadialGradient(-6, -7, 2, 0, 0, 21);
+  body.addColorStop(0, '#5e7c84');
+  body.addColorStop(.38, '#2a3f47');
+  body.addColorStop(.74, '#132029');
+  body.addColorStop(1, '#070d12');
+  context.fillStyle = body;
+  context.beginPath(); context.arc(0, 0, 19, 0, Math.PI * 2); context.fill();
+  context.strokeStyle = '#76b9c9'; context.lineWidth = 1.4;
+  context.beginPath(); context.arc(0, 0, 19, 0, Math.PI * 2); context.stroke();
+
+  context.strokeStyle = 'rgba(185,240,250,.35)'; context.lineWidth = 1;
+  for (const r of [14.5, 9.5]) {
+    context.beginPath(); context.arc(0, 0, r, .3, Math.PI * 1.7); context.stroke();
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4 + .2;
+    context.fillStyle = '#101a20';
+    context.beginPath(); context.arc(Math.cos(a) * 15.6, Math.sin(a) * 15.6, 2.1, 0, Math.PI * 2); context.fill();
+    context.fillStyle = '#8be8f8';
+    context.beginPath(); context.arc(Math.cos(a) * 15.6, Math.sin(a) * 15.6, .8, 0, Math.PI * 2); context.fill();
+  }
+
+  context.save();
+  context.shadowColor = '#8bf6ff'; context.shadowBlur = 14 + pulse * 10;
+  const core = context.createRadialGradient(-2, -3, 0, 0, 0, 9);
+  core.addColorStop(0, '#ffffff');
+  core.addColorStop(.35, '#a9fbff');
+  core.addColorStop(.7, '#31cbe8');
+  core.addColorStop(1, 'rgba(24,122,160,0)');
+  context.fillStyle = core;
+  context.beginPath(); context.arc(0, 0, 9, 0, Math.PI * 2); context.fill();
+  context.restore();
+
+  context.strokeStyle = '#b9c3bc'; context.lineWidth = 1.2;
+  context.beginPath(); context.arc(0, 0, 18.5, -.55, .4); context.stroke();
+  context.beginPath(); context.arc(0, 0, 18.5, 2.6, 3.55); context.stroke();
+  context.fillStyle = '#ff5b4d';
+  context.save(); context.shadowColor = '#ff5b4d'; context.shadowBlur = 9;
+  context.beginPath(); context.arc(0, -22, 2.1, 0, Math.PI * 2); context.fill();
+  context.restore();
+  context.fillStyle = '#d8f36a';
+  context.fillRect(-6, 21, 12, 1.2);
+}
 function drawSlicerArt(context, type, time) {
   if (type === 'crate') drawCrateArt(context);
   else if (type === 'droid') drawDroidArt(context);
@@ -3026,7 +3663,14 @@ function drawSlicerArt(context, type, time) {
   else if (type === 'saber') drawSaberArt(context);
   else if (type === 'mando') drawMandoArt(context);
   else if (type === 'remote') drawRemoteArt(context);
+  else if (type === 'xwing') drawXWingArt(context);
+  else if (type === 'tie') drawTieArt(context);
+  else if (type === 'vader') drawVaderArt(context);
+  else if (type === 'protocol') drawProtocolArt(context);
+  else if (type === 'destroyer') drawDestroyerArt(context);
+  else if (type === 'darksaber') drawDarksaberArt(context);
   else if (type === 'charge') drawChargeArt(context, time);
+  else if (type === 'seismic') drawSeismicArt(context, time);
   else drawBombArt(context, time);
 }
 const slicerArtCache = new Map();
@@ -3045,26 +3689,30 @@ function getSlicerArt(type) {
 function drawSlicerBackground(time) {
   const context = slicerCtx;
   const width = slicer.w, height = slicer.h;
-  const gradient = context.createRadialGradient(width * .5, height * .42, 12, width * .5, height * .5, Math.max(width, height) * .76);
-  gradient.addColorStop(0, '#1c2b25');
-  gradient.addColorStop(.52, '#111915');
-  gradient.addColorStop(1, '#080c0a');
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, width, height);
+  if (slicer.backdrop) {
+    context.drawImage(slicer.backdrop, 0, 0, width, height);
+  } else {
+    const gradient = context.createRadialGradient(width * .5, height * .42, 12, width * .5, height * .5, Math.max(width, height) * .76);
+    gradient.addColorStop(0, '#22332b');
+    gradient.addColorStop(.52, '#111915');
+    gradient.addColorStop(1, '#080c0a');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+  }
   for (const star of slicer.stars) {
-    const alpha = .18 + .5 * (.5 + .5 * Math.sin(time * star.speed + star.phase));
+    const drift = (time * star.speed * 3) % (height * .8);
+    const alpha = .16 + .5 * (.5 + .5 * Math.sin(time * star.speed + star.phase));
+    const y = (star.y * height + drift) % (height * .84);
     context.fillStyle = `rgba(216, 243, 106, ${alpha})`;
-    context.fillRect(star.x * width, star.y * height, star.size, star.size);
+    context.fillRect(star.x * width, y, star.size, star.size);
   }
-  context.strokeStyle = 'rgba(216, 243, 106, .045)';
-  context.lineWidth = 1;
-  for (const radius of [width * .16, width * .3, width * .44]) {
-    context.beginPath(); context.arc(width * .5, height * .46, radius, 0, Math.PI * 2); context.stroke();
-  }
-  context.strokeStyle = 'rgba(216, 243, 106, .06)';
-  context.beginPath(); context.moveTo(0, height * .92); context.lineTo(width, height * .92); context.stroke();
-  context.fillStyle = 'rgba(216, 243, 106, .035)';
-  for (let i = 0; i < 9; i++) context.fillRect(width * (.08 + i * .105), height * .92, 1, height * .08);
+  const sweep = (time * 34) % height;
+  const sweepGradient = context.createLinearGradient(0, sweep - 26, 0, sweep + 26);
+  sweepGradient.addColorStop(0, 'rgba(216,243,106,0)');
+  sweepGradient.addColorStop(.5, 'rgba(216,243,106,.028)');
+  sweepGradient.addColorStop(1, 'rgba(216,243,106,0)');
+  context.fillStyle = sweepGradient;
+  context.fillRect(0, sweep - 26, width, 52);
 }
 function drawSlicerTrail(now) {
   const context = slicerCtx;
@@ -3123,20 +3771,72 @@ function drawSlicer(now) {
     context.restore();
   }
   for (const object of slicer.objects) {
+    const meta = slicerTypeMeta[object.type];
+    const bomb = isSlicerBomb(object.type);
+    const halo = bomb ? (object.type === 'seismic' ? meta.colors[0] : '#ff5b4d') : (meta.colors[1] || '#d8f36a');
+    const pulse = .5 + .5 * Math.sin(now * (bomb ? 7 : 3.2) + object.seed);
+    const haloSize = object.size * (bomb ? 1.6 : meta.rare ? 1.5 : 1.24);
+    context.save();
+    context.translate(object.x, object.y);
+    context.globalCompositeOperation = 'lighter';
+    context.globalAlpha = bomb ? .55 + pulse * .22 : meta.rare ? .38 + pulse * .12 : .22 + pulse * .06;
+    context.drawImage(getSlicerGlow(halo), -haloSize / 2, -haloSize / 2, haloSize, haloSize);
+    context.restore();
+
     context.save();
     context.translate(object.x, object.y);
     context.rotate(object.angle);
     context.scale(object.size / 60, object.size / 60);
-    if (isSlicerBomb(object.type)) {
+    if (bomb) {
       drawSlicerArt(context, object.type, now);
-      context.strokeStyle = `rgba(255, 90, 70, ${.2 + .16 * Math.sin(now * 6 + object.seed)})`;
-      context.lineWidth = 1.2;
-      context.setLineDash([3, 5]);
+      const warning = object.type === 'seismic' ? '77, 234, 255' : '255, 90, 70';
+      context.save();
+      context.rotate(now * .9 + object.seed);
+      context.strokeStyle = `rgba(${warning}, ${.32 + .22 * pulse})`;
+      context.lineWidth = 1.5;
+      context.setLineDash([3.5, 5.5]);
       context.beginPath(); context.arc(0, 0, 26, 0, Math.PI * 2); context.stroke();
+      context.restore();
       context.setLineDash([]);
+      context.save();
+      context.shadowColor = object.type === 'seismic' ? '#4deaff' : '#ff5b4d';
+      context.shadowBlur = 9;
+      context.fillStyle = object.type === 'seismic' ? '#9df6ff' : '#ff6b5c';
+      context.font = '800 10px Manrope, sans-serif';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText('!', 0, -30);
+      context.restore();
     } else {
       context.drawImage(getSlicerArt(object.type), -30, -30, 60, 60);
+      if (meta.rare) {
+        const twinkle = .5 + .5 * Math.sin(now * 4.6 + object.seed);
+        context.save();
+        context.strokeStyle = `rgba(255, 248, 196, ${.3 + twinkle * .55})`;
+        context.lineWidth = .9;
+        for (const [x, y] of [[-24, -17], [23, 15], [5, -28]]) {
+          context.beginPath();
+          context.moveTo(x - 2.2, y); context.lineTo(x + 2.2, y);
+          context.moveTo(x, y - 2.2); context.lineTo(x, y + 2.2);
+          context.stroke();
+        }
+        context.restore();
+      }
     }
+    context.restore();
+  }
+  for (const ring of slicer.rings) {
+    const t = 1 - ring.life / ring.maxLife;
+    const radius = 6 + (ring.radius - 6) * (1 - Math.pow(1 - t, 2));
+    const alpha = Math.max(0, ring.life / ring.maxLife);
+    context.save();
+    context.globalCompositeOperation = 'lighter';
+    context.strokeStyle = `rgba(${hexToRgb(ring.color)}, ${alpha * .8})`;
+    context.lineWidth = 2.6 * (1 - t) + .5;
+    context.beginPath(); context.arc(ring.x, ring.y, radius, 0, Math.PI * 2); context.stroke();
+    context.strokeStyle = `rgba(255,255,255,${alpha * .35})`;
+    context.lineWidth = .8;
+    context.beginPath(); context.arc(ring.x, ring.y, radius * .82, 0, Math.PI * 2); context.stroke();
     context.restore();
   }
   context.save();
