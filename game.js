@@ -652,8 +652,8 @@ $('buildAnother').addEventListener('click', () => {
   $('toast').textContent = 'A fresh workbench. A new story.'; $('toast').classList.add('show'); setTimeout(() => $('toast').classList.remove('show'), 2200);
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { closeSale(); closeCollection(); closeKeepPrompt(); closeSlicer(); closeDisassembly(); closeActivities(); }
-  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open') || $('activitiesOverlay').classList.contains('open') || $('disassemblyOverlay').classList.contains('open') || $('slicerOverlay').classList.contains('open');
+  if (event.key === 'Escape') { closeSale(); closeCollection(); closeKeepPrompt(); closeSlicer(); closeDisassembly(); closeDuel(); closeActivities(); }
+  const overlayOpen = $('saleOverlay').classList.contains('open') || $('collectionOverlay').classList.contains('open') || $('keepOverlay').classList.contains('open') || $('activitiesOverlay').classList.contains('open') || $('disassemblyOverlay').classList.contains('open') || $('slicerOverlay').classList.contains('open') || $('duelOverlay').classList.contains('open');
   if (overlayOpen) return;
   if (event.key === 'ArrowRight') nextStep();
   if (event.key === 'ArrowLeft') setStep(activeStep - 1);
@@ -1332,7 +1332,7 @@ function animate() {
   auctionSaberRoot.rotation.x += (rotationX - auctionSaberRoot.rotation.x) * .035;
   collectionSaberRoot.rotation.y += (rotationY - collectionSaberRoot.rotation.y) * .025;
   collectionSaberRoot.position.y = .12 + Math.sin(elapsed * 1.35) * .08;
-  const activityCover = disassemblyOpen || slicer.open || $('activitiesOverlay').classList.contains('open');
+  const activityCover = disassemblyOpen || slicer.open || duel.open || $('activitiesOverlay').classList.contains('open');
   if (!activityCover) renderer.render(scene, camera);
   if ($('saleOverlay').classList.contains('open')) auctionRenderer.render(auctionScene, auctionCamera);
   if ($('collectionOverlay').classList.contains('open') && collection.length) collectionRenderer.render(collectionScene, collectionCamera);
@@ -1355,7 +1355,7 @@ function closeOverlayElement(element) {
   element.setAttribute('aria-hidden', 'true');
 }
 function activityBodyLock() {
-  const anyOpen = ['activitiesOverlay', 'disassemblyOverlay', 'slicerOverlay'].some(id => $(id).classList.contains('open'));
+  const anyOpen = ['activitiesOverlay', 'disassemblyOverlay', 'slicerOverlay', 'duelOverlay'].some(id => $(id).classList.contains('open'));
   document.body.classList.toggle('dialog-active', anyOpen);
 }
 function openActivities() {
@@ -1373,7 +1373,7 @@ $('activitiesClose').addEventListener('click', closeActivities);
 $('activitiesOverlay').addEventListener('click', event => { if (event.target === $('activitiesOverlay')) closeActivities(); });
 $('activityDisassemble').addEventListener('click', () => openDisassembly());
 $('activitySlicer').addEventListener('click', () => openSlicer());
-$('activityDuel').addEventListener('click', () => showToast('Training Duel is still being forged. Coming soon.'));
+$('activityDuel').addEventListener('click', () => openDuel());
 
 // ---------------------------------------------------------------------------
 // Activity 01 — Disassembly Bay
@@ -3882,5 +3882,1366 @@ function slicerLoop(timestamp) {
   drawSlicer(now);
   slicer.raf = requestAnimationFrame(slicerLoop);
 }
+
+// ===========================================================================
+// ACTIVITY 03 — TRAINING DUEL
+// ===========================================================================
+const DUEL_KEY = 'sabersmith.duel.v1';
+const DUEL_STANCES = {
+  shii: {
+    id: 'shii', name: 'Shii-Cho', form: 'FORM I', label: 'BALANCED',
+    desc: 'Even footwork and clean lines. A little of everything.',
+    damage: 1, guard: .62, force: 1, taken: 1, glyph: 'I'
+  },
+  soresu: {
+    id: 'soresu', name: 'Soresu', form: 'FORM III', label: 'DEFENSIVE',
+    desc: 'A patient shell. Blocks absorb more and restore extra Force.',
+    damage: .84, guard: .82, force: 1.32, taken: .86, glyph: 'III'
+  },
+  djem: {
+    id: 'djem', name: 'Djem So', form: 'FORM V', label: 'AGGRESSIVE',
+    desc: 'Forward pressure. More damage, less protection when caught.',
+    damage: 1.25, guard: .48, force: .9, taken: 1.16, glyph: 'V'
+  }
+};
+const DUEL_RANKS = [
+  [15, 'Grandmaster'], [11, 'Battlemaster'], [8, 'Duelist'], [5, 'Knight'], [3, 'Padawan'], [1, 'Initiate']
+];
+const DUEL_FOES = [
+  { name: 'Vex-9', title: 'SALVAGE ACOLYTE', form: 'FORM I · SHII-CHO', parts: { hilt: 6, emitter: 7, grip: 1, pommel: 3, crystal: 4, accent: 3, blade: 0, switch: 1, engraving: 0 } },
+  { name: 'Sera Tal', title: 'TEMPLE INITIATE', form: 'FORM III · SORESU', parts: { hilt: 0, emitter: 0, grip: 0, pommel: 1, crystal: 1, accent: 0, blade: 0, switch: 0, engraving: 1 } },
+  { name: 'Korr Vance', title: 'OUTER RIM DUELIST', form: 'FORM V · DJEM SO', parts: { hilt: 1, emitter: 4, grip: 2, pommel: 2, crystal: 10, accent: 1, blade: 2, switch: 2, engraving: 4 } },
+  { name: 'Master Sol', title: 'JEDI ARCHIVIST', form: 'FORM III · SORESU', parts: { hilt: 3, emitter: 5, grip: 4, pommel: 5, crystal: 5, accent: 2, blade: 3, switch: 3, engraving: 3 } },
+  { name: 'Nyx Korr', title: 'BOUNTY HUNTER', form: 'FORM V · DJEM SO', parts: { hilt: 2, emitter: 6, grip: 5, pommel: 4, crystal: 7, accent: 7, blade: 6, switch: 5, engraving: 7 } },
+  { name: 'The Curator', title: 'PRIVATE VAULT', form: 'FORM II · MAKASHI', parts: { hilt: 7, emitter: 3, grip: 7, pommel: 6, crystal: 3, accent: 5, blade: 3, switch: 6, engraving: 2 } },
+  { name: 'Darth Veyra', title: 'SITH APPRENTICE', form: 'FORM V · DJEM SO', parts: { hilt: 2, emitter: 2, grip: 6, pommel: 7, crystal: 4, accent: 3, blade: 1, switch: 7, engraving: 5 } },
+  { name: 'Mira Sunrider', title: 'BLADE MASTER', form: 'FORM IV · ATARU', parts: { hilt: 4, emitter: 2, grip: 3, pommel: 0, crystal: 8, accent: 6, blade: 4, switch: 4, engraving: 6 } }
+];
+const DUEL_FINISH_TONES = {
+  satin: ['#a6ada3', '#d2d9d0', '#6f7972'],
+  copper: ['#b7835d', '#d9ac81', '#7f5739'],
+  onyx: ['#444b48', '#6c7570', '#232927'],
+  ivory: ['#d0c8b1', '#f0ead6', '#99927e'],
+  teal: ['#397d78', '#60b7ae', '#204b48'],
+  brass: ['#b98a3b', '#dfb55c', '#7b571f'],
+  frost: ['#b8c9d0', '#e5f1f4', '#7d8d94'],
+  patina: ['#668d79', '#90b9a2', '#3d5b4c']
+};
+const duelRecordDefaults = { level: 1, xp: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, stance: 'shii', selectedSaberId: null };
+let duelRecord = { ...duelRecordDefaults };
+try {
+  const storedDuel = JSON.parse(localStorage.getItem(DUEL_KEY) || '{}');
+  if (storedDuel && typeof storedDuel === 'object') {
+    duelRecord = {
+      ...duelRecordDefaults,
+      ...storedDuel,
+      level: Math.max(1, Math.round(Number(storedDuel.level) || 1)),
+      xp: Math.max(0, Number(storedDuel.xp) || 0),
+      wins: Math.max(0, Math.round(Number(storedDuel.wins) || 0)),
+      losses: Math.max(0, Math.round(Number(storedDuel.losses) || 0)),
+      streak: Math.max(0, Math.round(Number(storedDuel.streak) || 0)),
+      bestStreak: Math.max(0, Math.round(Number(storedDuel.bestStreak) || 0))
+    };
+  }
+} catch (_) { /* A blocked local store should not stop the training ring. */ }
+if (!DUEL_STANCES[duelRecord.stance]) duelRecord.stance = 'shii';
+
+const duel = {
+  open: false, screen: 'lobby', token: 0, raf: 0, lastFrame: 0, w: 0, h: 0, dpr: 1,
+  record: duelRecord, stance: duelRecord.stance, selectedSaberId: duelRecord.selectedSaberId || null,
+  selectedArtifact: null, selectedSpec: null, loanerArtifact: null,
+  player: null, enemy: null, round: 1, busy: false, over: false, playerBlocked: false,
+  anim: {
+    player: { kind: '', start: -99, dur: .9 },
+    enemy: { kind: '', start: -99, dur: .9 }
+  },
+  fx: { hitPlayer: -99, hitEnemy: -99, clash: -99, clashX: 0, clashY: 0, shake: -99, waves: [], floaters: [], sparks: [] },
+  log: [], bg: null, resultKind: null
+};
+const duelCanvas = $('duelCanvas');
+const duelCtx = duelCanvas.getContext('2d');
+const duelPreviewCanvas = $('duelSaberPreview');
+const duelPreviewCtx = duelPreviewCanvas.getContext('2d');
+
+function saveDuelRecord() {
+  duel.record.stance = duel.stance;
+  duel.record.selectedSaberId = duel.selectedSaberId;
+  try { localStorage.setItem(DUEL_KEY, JSON.stringify(duel.record)); }
+  catch (_) { /* The duel record is a nice-to-have when storage is blocked. */ }
+}
+function duelRank(level) {
+  for (const [min, rank] of DUEL_RANKS) if (level >= min) return rank;
+  return 'Initiate';
+}
+function duelXpNeeded(level) { return 60 + (level - 1) * 45; }
+function duelRand(min, max) { return min + Math.random() * (max - min); }
+function duelEaseOut(t) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3); }
+function duelEaseInOut(t) { t = Math.max(0, Math.min(1, t)); return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+function duelSpecFromArtifact(artifact) {
+  const parts = {};
+  Object.keys(options).forEach(key => {
+    const index = Math.max(0, Math.min(Number(artifact?.parts?.[key]) || 0, options[key].length - 1));
+    parts[key] = options[key][index];
+  });
+  return {
+    artifact, parts,
+    hilt: parts.hilt, emitter: parts.emitter, grip: parts.grip, pommel: parts.pommel,
+    crystal: parts.crystal, accent: parts.accent, blade: parts.blade, switch: parts.switch, engraving: parts.engraving,
+    tones: DUEL_FINISH_TONES[parts.hilt.finish] || DUEL_FINISH_TONES.satin
+  };
+}
+function makeDuelLoaner() {
+  return {
+    id: 'loaner', name: 'Atelier Training Blade', blade: true, value: 0,
+    parts: { hilt: 0, emitter: 0, grip: 0, pommel: 0, crystal: 0, accent: 0, blade: 0, switch: 0, engraving: 0 }
+  };
+}
+function duelEnsureSelection() {
+  if (collection.length) {
+    const artifact = collection.find(item => item.id === duel.selectedSaberId) || collection[0];
+    duel.selectedSaberId = artifact.id;
+    duel.selectedArtifact = artifact;
+  } else {
+    duel.loanerArtifact ||= makeDuelLoaner();
+    duel.selectedSaberId = 'loaner';
+    duel.selectedArtifact = duel.loanerArtifact;
+  }
+  duel.selectedSpec = duelSpecFromArtifact(duel.selectedArtifact);
+}
+function updateDuelProfileUI() {
+  const record = duel.record;
+  const need = duelXpNeeded(record.level);
+  const rank = duelRank(record.level);
+  $('duelHeaderLevel').textContent = String(record.level).padStart(2, '0');
+  $('duelHeaderWins').textContent = String(record.wins).padStart(2, '0');
+  $('duelHeaderStreak').textContent = String(record.streak).padStart(2, '0');
+  $('duelProfileLevel').textContent = String(record.level).padStart(2, '0');
+  $('duelProfileRank').textContent = rank;
+  $('duelProfileNote').textContent = record.wins
+    ? `${record.wins} ring wins. ${record.streak ? `${record.streak} in a row — the crowd is watching.` : 'Every loss is another lesson in footwork.'}`
+    : 'Every duel sharpens the bond between you and your blade.';
+  $('duelXpNow').textContent = Math.round(record.xp);
+  $('duelXpNext').textContent = need;
+  $('duelXpFill').style.width = `${Math.min(100, Math.max(0, record.xp / need * 100))}%`;
+  $('duelWins').textContent = String(record.wins).padStart(2, '0');
+  $('duelLosses').textContent = String(record.losses).padStart(2, '0');
+  $('duelStreak').textContent = String(record.streak).padStart(2, '0');
+  $('duelBest').textContent = String(record.bestStreak).padStart(2, '0');
+}
+function renderDuelSaberList() {
+  const hasItems = collection.length > 0;
+  $('duelSaberList').hidden = !hasItems;
+  $('duelEmpty').hidden = hasItems;
+  $('duelSaberList').replaceChildren();
+  $('duelSaberCount').textContent = hasItems ? `${String(collection.length).padStart(2, '0')} SABERS` : 'TRAINING ISSUE';
+  if (!hasItems) return;
+  collection.forEach(artifact => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'duel-saber-card' + (artifact.id === duel.selectedSaberId ? ' is-selected' : '');
+    card.setAttribute('aria-pressed', String(artifact.id === duel.selectedSaberId));
+    const thumb = document.createElement('canvas');
+    thumb.className = 'duel-saber-thumb';
+    thumb.width = 60; thumb.height = 96;
+    const index = collection.indexOf(artifact) + 1;
+    const copy = document.createElement('span'); copy.className = 'duel-saber-card-copy';
+    const name = document.createElement('strong'); name.textContent = artifact.name;
+    const spec = duelSpecFromArtifact(artifact);
+    const meta = document.createElement('small');
+    meta.textContent = `KYBER ${spec.crystal.name.toUpperCase()} · ${spec.blade.name.toUpperCase()} BLADE`;
+    copy.append(name, meta);
+    const state = document.createElement('span'); state.className = 'duel-saber-card-state';
+    state.textContent = artifact.id === duel.selectedSaberId ? 'EQUIPPED' : `No. ${String(index).padStart(2, '0')}`;
+    card.append(thumb, copy, state);
+    card.addEventListener('click', () => selectDuelSaber(artifact));
+    $('duelSaberList').append(card);
+    drawDuelThumb(thumb, artifact);
+  });
+}
+function renderDuelStances() {
+  const list = $('duelStanceList');
+  list.replaceChildren();
+  Object.values(DUEL_STANCES).forEach(stance => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'duel-stance-card' + (duel.stance === stance.id ? ' is-selected' : '');
+    button.setAttribute('aria-pressed', String(duel.stance === stance.id));
+    const glyph = document.createElement('span'); glyph.className = 'duel-stance-glyph'; glyph.textContent = stance.glyph;
+    const copy = document.createElement('span'); copy.className = 'duel-stance-copy';
+    const title = document.createElement('strong'); title.textContent = `${stance.name} · ${stance.label}`;
+    const form = document.createElement('small'); form.textContent = stance.form;
+    const description = document.createElement('span'); description.textContent = stance.desc;
+    copy.append(title, form, description);
+    button.append(glyph, copy);
+    button.addEventListener('click', () => selectDuelStance(stance.id));
+    list.append(button);
+  });
+}
+function selectDuelSaber(artifact) {
+  duel.selectedSaberId = artifact.id;
+  duel.selectedArtifact = artifact;
+  duel.selectedSpec = duelSpecFromArtifact(artifact);
+  saveDuelRecord();
+  renderDuelSaberList();
+  renderDuelLoadoutPreview();
+  playTone(540, .06);
+}
+function selectDuelStance(id) {
+  if (!DUEL_STANCES[id]) return;
+  duel.stance = id;
+  duel.record.stance = id;
+  saveDuelRecord();
+  renderDuelStances();
+  updateDuelProfileUI();
+  $('duelFooterCopy').textContent = `${DUEL_STANCES[id].name} selected — ${DUEL_STANCES[id].desc}`;
+  playTone(480, .06);
+}
+function renderDuelLoadoutPreview() {
+  const artifact = duel.selectedArtifact;
+  const spec = duel.selectedSpec;
+  if (!artifact || !spec) return;
+  $('duelPreviewName').textContent = artifact.name;
+  $('duelPreviewParts').textContent = `${spec.hilt.name} hilt · ${spec.emitter.name} emitter · Kyber ${spec.crystal.name} · ${spec.blade.name} blade`;
+  $('duelPreviewGlow').style.background = `radial-gradient(ellipse, ${spec.crystal.color}55, transparent 68%)`;
+  const start = $('duelStart');
+  start.disabled = false;
+  start.innerHTML = `ENTER THE RING <span>↗</span>`;
+  requestAnimationFrame(resizeDuelPreview);
+}
+function renderDuelLobby() {
+  duel.screen = 'lobby';
+  $('duelLobby').hidden = false;
+  $('duelArena').hidden = true;
+  duelEnsureSelection();
+  updateDuelProfileUI();
+  renderDuelSaberList();
+  renderDuelStances();
+  renderDuelLoadoutPreview();
+  const hasItems = collection.length > 0;
+  $('duelFooterEyebrow').textContent = hasItems ? 'RING PREPARED' : 'TRAINING ISSUE READY';
+  $('duelFooterCopy').textContent = hasItems
+    ? 'Pick a saber and a stance. Your next opponent scales to your record.'
+    : 'No saber in the vault yet — the atelier training blade is ready for a first lesson.';
+  requestAnimationFrame(resizeDuelPreview);
+}
+function openDuel() {
+  duel.open = true;
+  duel.token++;
+  renderDuelLobby();
+  openOverlayElement($('duelOverlay'));
+  activityBodyLock();
+  requestAnimationFrame(() => {
+    resizeDuelPreview();
+    $('duelSaberList').scrollTop = 0;
+  });
+  playTone(700, .08);
+}
+function closeDuel() {
+  if (!duel.open) return;
+  duel.open = false;
+  duel.token++;
+  stopDuelLoop();
+  closeOverlayElement($('duelOverlay'));
+  $('duelLobby').hidden = false;
+  $('duelArena').hidden = true;
+  activityBodyLock();
+}
+function backToDuelLobby() {
+  if (!duel.open) return;
+  duel.token++;
+  stopDuelLoop();
+  $('duelArena').hidden = true;
+  $('duelLobby').hidden = false;
+  renderDuelLobby();
+  playTone(420, .08);
+}
+function resizeDuelPreview() {
+  if (duel.screen !== 'lobby') return;
+  const width = Math.max(1, duelPreviewCanvas.clientWidth);
+  const height = Math.max(1, duelPreviewCanvas.clientHeight);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  duelPreviewCanvas.width = Math.round(width * dpr);
+  duelPreviewCanvas.height = Math.round(height * dpr);
+  const context = duelPreviewCtx;
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.clearRect(0, 0, width, height);
+  const spec = duel.selectedSpec;
+  if (!spec) return;
+  const scale = Math.min(width / 5.35, height / 5.35);
+  const pommelX = width * .52;
+  const pommelY = height - 12;
+  drawDuelFlatSaber(context, spec, pommelX, pommelY, scale, -Math.PI / 2 + .035, true, 1);
+  context.save();
+  context.globalCompositeOperation = 'lighter';
+  context.strokeStyle = `rgba(${hexToRgb(spec.crystal.color)},.28)`;
+  context.lineWidth = 1;
+  context.beginPath();
+  context.ellipse(width * .5, height - 10, width * .19, 7, 0, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
+}
+function drawDuelThumb(canvas, artifact) {
+  const context = canvas.getContext('2d');
+  context.setTransform(2, 0, 0, 2, 0, 0);
+  context.clearRect(0, 0, 30, 48);
+  const spec = duelSpecFromArtifact(artifact);
+  drawDuelFlatSaber(context, spec, 15.2, 45, 8.9, -Math.PI / 2 + .05, true, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Flattened 2D saber renderer. The workbench builds real 3D geometry; the ring
+// projects the same part choices into a clean side-view silhouette.
+// ---------------------------------------------------------------------------
+function drawDuelFlatSaber(context, spec, x, y, scale, angle, bladeOn, alpha = 1) {
+  const ctx = context;
+  const { hilt, emitter, grip, pommel, crystal, accent, blade, switch: switchPart, engraving, tones } = spec;
+  const body = tones[0], light = tones[1], bodyDark = tones[2];
+  const accentColor = accent.color;
+  const crystalColor = crystal.color;
+  const hiltWidth = hilt.profile === 'slim' ? .25 : hilt.profile === 'hex' ? .31 : .29;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle - Math.PI / 2);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = alpha;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const round = (rx, ry, rw, rh, radius, color) => {
+    ctx.fillStyle = color;
+    if (radius && ctx.roundRect) { ctx.beginPath(); ctx.roundRect(rx, ry, rw, rh, radius); ctx.fill(); }
+    else ctx.fillRect(rx, ry, rw, rh);
+  };
+  const line = (x1, y1, x2, y2, color, width) => {
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  };
+  const poly = (points, color) => {
+    ctx.fillStyle = color; ctx.beginPath();
+    points.forEach(([px, py], index) => index ? ctx.lineTo(px, py) : ctx.moveTo(px, py));
+    ctx.closePath(); ctx.fill();
+  };
+  const ellipse = (cx, cy, rx, ry, color) => {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  };
+
+  const pommelStyle = pommel.style;
+  if (pommelStyle === 'spike') {
+    poly([[-hiltWidth * .3, .18], [0, -.34], [hiltWidth * .3, .18]], light);
+    round(-hiltWidth * .31, .02, hiltWidth * .62, .18, .02, bodyDark);
+  } else if (pommelStyle === 'ring') {
+    round(-hiltWidth * .34, .01, hiltWidth * .68, .18, .03, body);
+    ctx.strokeStyle = accentColor; ctx.lineWidth = .037;
+    ctx.beginPath(); ctx.arc(0, .10, .12, 0, Math.PI * 2); ctx.stroke();
+    line(-.07, .04, -.07, .18, accentColor, .02); line(.07, .04, .07, .18, accentColor, .02);
+  } else if (pommelStyle === 'fang') {
+    round(-hiltWidth * .36, .01, hiltWidth * .72, .19, .03, body);
+    for (const side of [-1, 1]) poly([[side * .07, .10], [side * .18, -.12], [side * .22, .11]], accentColor);
+  } else if (pommelStyle === 'prism') {
+    poly([[0, -.08], [.15, .10], [0, .24], [-.15, .10]], accentColor);
+    round(-hiltWidth * .33, .14, hiltWidth * .66, .13, .02, bodyDark);
+  } else if (pommelStyle === 'cage') {
+    round(-hiltWidth * .32, .02, hiltWidth * .64, .16, .02, bodyDark);
+    line(-hiltWidth * .34, .02, hiltWidth * .34, .02, accentColor, .026);
+    line(-hiltWidth * .31, .20, hiltWidth * .31, .20, accentColor, .026);
+    for (const side of [-1, 1]) line(side * hiltWidth * .23, .02, side * hiltWidth * .27, .20, accentColor, .018);
+  } else if (pommelStyle === 'weight') {
+    round(-hiltWidth * .41, .01, hiltWidth * .82, .24, .035, body);
+    round(-hiltWidth * .45, .04, hiltWidth * .9, .05, .02, light);
+  } else if (pommelStyle === 'smooth') {
+    round(-hiltWidth * .34, .03, hiltWidth * .68, .18, .08, body);
+  } else {
+    round(-hiltWidth * .34, .02, hiltWidth * .68, .19, .03, bodyDark);
+    for (const offset of [.06, .14]) line(-hiltWidth * .34, offset, hiltWidth * .34, offset, accentColor, .018);
+  }
+
+  round(-hiltWidth / 2, .19, hiltWidth, .84, .05, bodyDark);
+  round(-hiltWidth / 2 + .012, .20, hiltWidth - .024, .80, .045, body);
+  line(-hiltWidth * .33, .26, -hiltWidth * .33, .98, light, .025);
+  line(hiltWidth * .37, .26, hiltWidth * .37, .98, bodyDark, .02);
+  const gripColor = grip.style === 'wrap' ? '#6c543d' : grip.style === 'carbon' ? '#1c2826' : grip.style === 'panels' ? '#69726b' : '#29322e';
+  round(-hiltWidth * .55, .29, hiltWidth * 1.1, .39, .025, gripColor);
+  if (grip.style === 'ribs') {
+    for (let i = 0; i < 8; i++) line(-hiltWidth * .54, .31 + i * .048, hiltWidth * .54, .31 + i * .048, light, .016);
+  } else if (grip.style === 'wrap') {
+    for (let i = 0; i < 8; i++) line(-hiltWidth * .52, .30 + i * .048, hiltWidth * .52, .335 + i * .048, '#a58964', .013);
+  } else if (grip.style === 'knurl' || grip.style === 'carbon') {
+    for (let row = 0; row < 6; row++) for (let col = 0; col < 3; col++) {
+      const px = -hiltWidth * .30 + col * hiltWidth * .30, py = .32 + row * .06 + (row % 2) * .012;
+      round(px, py, .026, .018, .006, grip.style === 'knurl' ? light : '#65736c');
+    }
+  } else if (grip.style === 'spiral') {
+    for (let i = 0; i < 6; i++) line(-hiltWidth * .5, .31 + i * .058, hiltWidth * .5, .335 + i * .058, accentColor, .015);
+  } else if (grip.style === 'scales') {
+    for (let row = 0; row < 5; row++) for (let col = 0; col < 3; col++) {
+      ellipse(-hiltWidth * .30 + col * hiltWidth * .30, .32 + row * .062 + (row % 2) * .012, .035, .022, row % 2 ? light : bodyDark);
+    }
+  } else if (grip.style === 'studs') {
+    for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) {
+      ellipse(-hiltWidth * .23 + col * hiltWidth * .46, .335 + row * .077, .026, .026, accentColor);
+    }
+  } else if (grip.style === 'panels') {
+    for (let i = 0; i < 3; i++) round(-hiltWidth * .42 + i * hiltWidth * .30, .31, hiltWidth * .22, .34, .01, '#a5ada4');
+  }
+  for (const bandY of [.285, .69, .86]) round(-hiltWidth * .58, bandY, hiltWidth * 1.16, .034, .012, accentColor);
+  const switchX = hiltWidth * .39, switchY = .76;
+  round(switchX - .055, switchY - .035, .11, .07, .018, '#202825');
+  ellipse(switchX, switchY, .042, .042, switchPart.style === 'pulse' || switchPart.style === 'touch' ? crystalColor : accentColor);
+  if (switchPart.style === 'twin') { ellipse(switchX, switchY - .06, .026, .026, crystalColor); ellipse(switchX, switchY + .06, .026, .026, crystalColor); }
+  if (switchPart.style === 'lever') line(switchX - .03, switchY - .02, switchX + .01, switchY - .13, accentColor, .025);
+  if (switchPart.style === 'dial') { ctx.strokeStyle = accentColor; ctx.lineWidth = .018; ctx.beginPath(); ctx.arc(switchX, switchY, .07, 0, Math.PI * 2); ctx.stroke(); }
+  const etch = engraving.style;
+  if (etch !== 'none') {
+    const etchColor = etch === 'script' ? '#d9b568' : etch === 'mark' ? accentColor : light;
+    if (etch === 'stars' || etch === 'orbit') {
+      for (const [px, py, size] of [[-.08, .80, .018], [0, .88, .026], [.08, .82, .015]]) {
+        poly([[px, py - size], [px + size, py], [px, py + size], [px - size, py]], etchColor);
+      }
+      if (etch === 'orbit') { ctx.strokeStyle = etchColor; ctx.lineWidth = .012; ctx.beginPath(); ctx.ellipse(0, .86, .13, .055, 0, 0, Math.PI * 2); ctx.stroke(); }
+    } else if (etch === 'script' || etch === 'runes') {
+      for (let i = 0; i < 5; i++) {
+        const px = -.10 + i * .05;
+        line(px, .79, px + (i % 2 ? .012 : -.012), .91, etchColor, .012);
+        if (etch === 'runes') line(px - .012, .85, px + .014, .85, etchColor, .009);
+      }
+    } else if (etch === 'mark') {
+      ctx.strokeStyle = etchColor; ctx.lineWidth = .012;
+      ctx.beginPath(); ctx.arc(0, .855, .055, 0, Math.PI * 2); ctx.stroke();
+      line(-.08, .855, .08, .855, etchColor, .012); line(0, .78, 0, .93, etchColor, .012);
+    } else if (etch === 'flame') {
+      for (let i = 0; i < 4; i++) poly([[-.10 + i * .066, .90], [-.075 + i * .066, .81], [-.05 + i * .066, .90]], etchColor);
+    } else if (etch === 'serial') {
+      for (let i = 0; i < 9; i++) line(-.11 + i * .027, .83, -.11 + i * .027, .89 + (i % 3) * .016, etchColor, .01);
+    }
+  }
+
+  const emitterStyle = emitter.style;
+  round(-hiltWidth * .42, .98, hiltWidth * .84, .12, .02, bodyDark);
+  let emitterTop = 1.20;
+  if (emitterStyle === 'flare') {
+    poly([[-.16, 1.02], [.16, 1.02], [.23, 1.22], [-.23, 1.22]], body);
+    line(-.23, 1.20, .23, 1.20, accentColor, .026);
+    emitterTop = 1.22;
+  } else if (emitterStyle === 'long') {
+    round(-.13, 1.00, .26, .29, .02, body);
+    for (const py of [1.08, 1.18, 1.27]) line(-.13, py, .13, py, accentColor, .02);
+    emitterTop = 1.30;
+  } else if (emitterStyle === 'crown') {
+    poly([[-.18, 1.01], [.18, 1.01], [.22, 1.17], [-.22, 1.17]], body);
+    for (let i = 0; i < 4; i++) {
+      const px = -.16 + i * .107;
+      poly([[px - .035, 1.17], [px, 1.30], [px + .035, 1.17]], accentColor);
+    }
+    emitterTop = 1.28;
+  } else if (emitterStyle === 'vent') {
+    round(-.22, 1.00, .44, .21, .02, body);
+    for (let i = 0; i < 4; i++) round(-.17 + i * .09, 1.03, .045, .14, .01, bodyDark);
+    line(-.24, 1.20, .24, 1.20, accentColor, .026);
+    emitterTop = 1.21;
+  } else if (emitterStyle === 'needle') {
+    poly([[-.13, 1.00], [.13, 1.00], [.07, 1.29], [-.07, 1.29]], body);
+    round(-.075, 1.27, .15, .07, .02, accentColor);
+    emitterTop = 1.34;
+  } else if (emitterStyle === 'halo') {
+    round(-.16, 1.00, .32, .15, .02, body);
+    ctx.strokeStyle = accentColor; ctx.lineWidth = .028;
+    ctx.beginPath(); ctx.arc(0, 1.27, .20, 0, Math.PI * 2); ctx.stroke();
+    for (const side of [-1, 1]) line(side * .13, 1.10, side * .19, 1.25, accentColor, .02);
+    emitterTop = 1.30;
+  } else if (emitterStyle === 'fork') {
+    round(-.20, 1.00, .40, .14, .02, body);
+    for (const side of [-1, 1]) poly([[side * .06, 1.06], [side * .20, 1.33], [side * .10, 1.08]], accentColor);
+    emitterTop = 1.30;
+  } else if (emitterStyle === 'shroud') {
+    round(-.17, 1.00, .34, .18, .02, body);
+    poly([[.06, 1.03], [.29, 1.06], [.27, 1.30], [.10, 1.26]], bodyDark);
+    line(.13, 1.08, .24, 1.25, accentColor, .022);
+    emitterTop = 1.27;
+  } else {
+    poly([[-.15, 1.00], [.15, 1.00], [.19, 1.17], [-.19, 1.17]], body);
+    line(-.19, 1.16, .19, 1.16, accentColor, .024);
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.shadowColor = crystalColor; ctx.shadowBlur = 10;
+  ellipse(0, 1.05, .055, .085, crystalColor);
+  ctx.fillStyle = '#ffffff';
+  ellipse(0, 1.05, .018, .045, '#ffffff');
+  ctx.restore();
+
+  if (bladeOn) drawDuelFlatBlade(ctx, spec, emitterTop);
+
+  ctx.restore();
+}
+function drawDuelFlatBlade(ctx, spec, base) {
+  const color = spec.crystal.color;
+  const style = spec.blade.style;
+  const length = style === 'long' ? 4.08 : style === 'crossguard' ? 3.42 : style === 'fine' ? 3.62 : 3.56;
+  const widthFactor = Math.max(.72, Math.min(1.45, (spec.blade.width || .092) / .092));
+  const tip = base + length;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 20;
+  ctx.strokeStyle = `rgba(${hexToRgb(color)},.34)`;
+  ctx.lineWidth = .145 * widthFactor;
+  ctx.beginPath(); ctx.moveTo(0, base); ctx.lineTo(0, tip); ctx.stroke();
+  ctx.shadowBlur = 12;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = .078 * widthFactor;
+  ctx.beginPath(); ctx.moveTo(0, base); ctx.lineTo(0, tip); ctx.stroke();
+  ctx.shadowBlur = 5;
+  ctx.strokeStyle = 'rgba(255,255,255,.92)';
+  ctx.lineWidth = .027 * widthFactor;
+  ctx.beginPath(); ctx.moveTo(0, base); ctx.lineTo(0, tip); ctx.stroke();
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(0, tip, .06 * widthFactor, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(0, tip - .01, .025 * widthFactor, 0, Math.PI * 2); ctx.fill();
+  if (style === 'crossguard') {
+    for (const side of [-1, 1]) {
+      ctx.strokeStyle = `rgba(${hexToRgb(color)},.55)`;
+      ctx.lineWidth = .10 * widthFactor;
+      ctx.beginPath(); ctx.moveTo(side * .08, base + .17); ctx.lineTo(side * .48, base + .03); ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = .022;
+      ctx.beginPath(); ctx.moveTo(side * .08, base + .17); ctx.lineTo(side * .48, base + .03); ctx.stroke();
+    }
+  } else if (style === 'prismatic') {
+    ctx.shadowBlur = 8;
+    for (const off of [-.024, .024]) {
+      ctx.strokeStyle = 'rgba(255,255,255,.55)';
+      ctx.lineWidth = .012;
+      ctx.beginPath(); ctx.moveTo(off, base + .1); ctx.lineTo(off * 1.8, tip - .15); ctx.stroke();
+    }
+    for (let i = 1; i < 5; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,.72)';
+      ctx.beginPath(); ctx.arc((i % 2 ? .035 : -.035), base + length * (i / 5), .022, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (style === 'pulse') {
+    for (let i = 1; i < 8; i++) {
+      const py = base + length * (i / 8);
+      ctx.strokeStyle = 'rgba(255,255,255,.78)';
+      ctx.lineWidth = .015;
+      ctx.beginPath(); ctx.ellipse(0, py, .075 * widthFactor, .022, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Duel flow and turn-based combat
+// ---------------------------------------------------------------------------
+function buildDuelPlayer() {
+  const artifact = duel.selectedArtifact;
+  const spec = duel.selectedSpec;
+  const level = duel.record.level;
+  const maxHp = 110 + (level - 1) * 16;
+  duel.player = {
+    side: 'player', name: artifact.name, level,
+    rank: duelRank(level), spec,
+    hp: maxHp, maxHp, force: 45, maxForce: 100,
+    attack: 13 + level * 2,
+    stance: DUEL_STANCES[duel.stance]
+  };
+}
+function buildDuelOpponent() {
+  const record = duel.record;
+  const index = Math.min(DUEL_FOES.length - 1, Math.floor(record.wins / 2));
+  const foe = DUEL_FOES[index];
+  const artifact = { id: `foe-${index}`, name: foe.name, blade: true, parts: { ...foe.parts } };
+  const spec = duelSpecFromArtifact(artifact);
+  const maxHp = Math.round(84 + record.level * 12 + Math.min(record.wins, 18) * 4 + index * 2);
+  duel.enemy = {
+    side: 'enemy', name: foe.name, title: foe.title, form: foe.form,
+    spec, hp: maxHp, maxHp, focus: 20,
+    attack: 8.4 + record.level * 1.55 + Math.min(record.wins, 20) * .38,
+    intent: 'attack', defeated: false
+  };
+  return foe;
+}
+function startDuel() {
+  if (!duel.selectedArtifact) return;
+  if (!DUEL_STANCES[duel.stance]) duel.stance = 'shii';
+  duel.token++;
+  duel.screen = 'arena';
+  duel.round = 1;
+  duel.busy = false;
+  duel.over = false;
+  duel.playerBlocked = false;
+  duel.anim.player = { kind: '', start: -99, dur: .9 };
+  duel.anim.enemy = { kind: '', start: -99, dur: .9 };
+  duel.fx.hitPlayer = -99; duel.fx.hitEnemy = -99; duel.fx.clash = -99; duel.fx.shake = -99;
+  duel.fx.waves.length = 0; duel.fx.floaters.length = 0; duel.fx.sparks.length = 0;
+  duel.log.length = 0;
+  $('duelLobby').hidden = true;
+  $('duelArena').hidden = false;
+  $('duelResult').classList.remove('is-open');
+  $('duelResult').setAttribute('aria-hidden', 'true');
+  buildDuelPlayer();
+  const foe = buildDuelOpponent();
+  duel.player.name = duel.selectedArtifact.name;
+  rollDuelIntent();
+  updateDuelBattleUI(true);
+  renderDuelLog();
+  announceDuel('ROUND 01 · ENGAGE', '');
+  addDuelLog(`You enter the ring against ${foe.name}.`);
+  playTone(560, .1);
+  requestAnimationFrame(() => {
+    resizeDuelCanvas();
+    requestAnimationFrame(() => { resizeDuelCanvas(); startDuelLoop(); });
+  });
+}
+function rollDuelIntent() {
+  const enemy = duel.enemy;
+  if (!enemy) return;
+  let intent;
+  const roll = Math.random();
+  if (enemy.focus >= 62 && roll < .46) intent = 'force';
+  else if (roll < .12) intent = 'block';
+  else if (roll < .4) intent = 'heavy';
+  else intent = 'attack';
+  enemy.intent = intent;
+  if (intent === 'force') enemy.focus = Math.max(0, enemy.focus - 62);
+  else enemy.focus = Math.min(100, enemy.focus + 14);
+}
+function updateDuelBattleUI(force = false) {
+  const p = duel.player, e = duel.enemy;
+  if (!p || !e) return;
+  $('duelRound').textContent = String(duel.round).padStart(2, '0');
+  $('duelPlayerName').textContent = p.name;
+  $('duelPlayerRank').textContent = p.rank.toUpperCase();
+  $('duelEnemyName').textContent = e.name;
+  $('duelEnemyTier').textContent = e.title;
+  $('duelPlayerHpFill').style.width = `${Math.max(0, p.hp / p.maxHp * 100)}%`;
+  $('duelPlayerHpText').textContent = `${Math.max(0, Math.ceil(p.hp))} / ${p.maxHp}`;
+  $('duelPlayerForceFill').style.width = `${Math.max(0, p.force / p.maxForce * 100)}%`;
+  $('duelPlayerForceText').textContent = `FORCE ${Math.round(p.force)} / ${p.maxForce}`;
+  $('duelPlayerStance').textContent = `${p.stance.form} · ${p.stance.name.toUpperCase()}`;
+  $('duelEnemyHpFill').style.width = `${Math.max(0, e.hp / e.maxHp * 100)}%`;
+  $('duelEnemyHpText').textContent = `${Math.max(0, Math.ceil(e.hp))} / ${e.maxHp}`;
+  $('duelEnemyForceFill').style.width = `${Math.max(0, e.focus)}%`;
+  $('duelEnemyForceText').textContent = `FOCUS ${Math.round(e.focus)}`;
+  $('duelEnemyStance').textContent = e.form;
+  document.querySelector('.duel-hud-player').style.setProperty('--duel-color', p.spec.crystal.color);
+  document.querySelector('.duel-hud-enemy').style.setProperty('--duel-enemy-color', e.spec.crystal.color);
+  $('duelArenaOpponent').textContent = `${e.name} · ${e.title}`;
+  const intentMap = {
+    attack: { label: 'Closing in · basic strike', cls: '' },
+    heavy: { label: 'Winding up · heavy strike', cls: 'is-heavy' },
+    block: { label: 'Guard raised · strikes will be deflected', cls: 'is-block' },
+    force: { label: 'Reaching out · Force push', cls: 'is-force' }
+  };
+  const intent = intentMap[e.intent] || intentMap.attack;
+  const intentEl = $('duelIntent');
+  intentEl.className = `duel-intent ${duel.playerBlocked ? 'is-staggered' : intent.cls}`;
+  intentEl.innerHTML = `<span class="eyebrow">OPPONENT INTENT</span><b>${duel.busy ? 'The exchange is in motion…' : intent.label}</b>`;
+  updateDuelActionButtons();
+  if (force) updateDuelProfileUI();
+}
+function updateDuelActionButtons() {
+  const busy = duel.busy || duel.over;
+  document.querySelectorAll('#duelActions .duel-action').forEach(button => {
+    const isForce = button.dataset.duelAction === 'force';
+    const needsForce = isForce && (!duel.player || duel.player.force < 35);
+    button.disabled = busy || needsForce;
+    button.title = needsForce ? 'Requires 35 Force' : '';
+  });
+}
+function addDuelLog(text, type = '') {
+  duel.log.unshift({ text, type });
+  if (duel.log.length > 6) duel.log.length = 6;
+  renderDuelLog();
+}
+function renderDuelLog() {
+  const log = $('duelLog');
+  log.replaceChildren();
+  duel.log.forEach(entry => {
+    const row = document.createElement('div');
+    row.className = entry.type;
+    row.textContent = entry.text;
+    log.append(row);
+  });
+}
+function announceDuel(text, type = '') {
+  const element = $('duelAnnounce');
+  element.textContent = text;
+  element.className = `duel-announce show ${type}`.trim();
+  clearTimeout(duel.announceTimer);
+  duel.announceTimer = setTimeout(() => element.classList.remove('show'), 1700);
+}
+function duelDelay(ms, callback) {
+  const token = duel.token;
+  return setTimeout(() => {
+    if (!duel.open || duel.screen !== 'arena' || duel.token !== token) return;
+    callback();
+  }, ms);
+}
+function addDuelFloater(x, y, text, color, size = 16) {
+  duel.fx.floaters.push({ x, y, text, color, size, start: performance.now() / 1000, dur: 1.1 });
+}
+function addDuelSparks(x, y, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2, speed = 40 + Math.random() * 160;
+    duel.fx.sparks.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 30, color, life: .3 + Math.random() * .45, maxLife: .75, size: 1 + Math.random() * 2.4 });
+  }
+}
+function addDuelWave(x, y, color) {
+  duel.fx.waves.push({ x, y, color, start: performance.now() / 1000, dur: .7 });
+}
+function duelLayout() {
+  const w = duel.w, h = duel.h;
+  const floorY = h * .82;
+  const charH = Math.min(h * .44, 300);
+  return { w, h, floorY, charH, playerX: w * .30, enemyX: w * .70, scale: charH / 6.15 };
+}
+function duelCharacterPoint(side) {
+  const layout = duelLayout();
+  const x = side === 'player' ? layout.playerX : layout.enemyX;
+  return { x, y: layout.floorY - layout.charH * .64 };
+}
+function triggerDuelAnim(side, kind) {
+  const durations = { attack: .92, heavy: 1.12, block: .78, force: .96 };
+  duel.anim[side] = { kind, start: performance.now() / 1000, dur: durations[kind] || .9 };
+}
+function resolvePlayerHit(amount, label, crit = false) {
+  const e = duel.enemy;
+  if (!e || e.hp <= 0) return;
+  e.hp = Math.max(0, e.hp - amount);
+  const point = duelCharacterPoint('enemy');
+  addDuelFloater(point.x + duelRand(-16, 16), point.y - 22, `-${amount}`, crit ? '#ffe45c' : '#ff8d7e', crit ? 19 : 16);
+  addDuelSparks(point.x, point.y + 24, duel.player.spec.crystal.color, crit ? 20 : 12);
+  duel.fx.hitEnemy = performance.now() / 1000;
+  duel.fx.shake = performance.now() / 1000;
+  playTone(crit ? 350 : 300, .09);
+  addDuelLog(`${crit ? 'Critical! ' : ''}${label} deals ${amount} damage.`, 'is-good');
+  updateDuelBattleUI();
+  if (e.hp <= 0) endDuelVictory();
+}
+function resolveEnemyHit(amount, label, type = 'attack') {
+  const p = duel.player;
+  if (!p || p.hp <= 0) return;
+  let damage = amount;
+  let riposte = 0;
+  if (duel.playerBlocked) {
+    damage = Math.max(1, Math.round(damage * (1 - p.stance.guard) * p.stance.taken));
+    if (type !== 'force') riposte = Math.round((4 + p.level * .9) * p.stance.damage);
+    addDuelSparks(duelCharacterPoint('player').x + 28, duelCharacterPoint('player').y + 14, p.spec.crystal.color, 14);
+    duel.fx.clash = performance.now() / 1000;
+    duel.fx.clashX = duelCharacterPoint('player').x + 42;
+    duel.fx.clashY = duelCharacterPoint('player').y + 5;
+    playTone(780, .05);
+  } else {
+    damage = Math.round(damage * p.stance.taken);
+  }
+  p.hp = Math.max(0, p.hp - damage);
+  const point = duelCharacterPoint('player');
+  addDuelFloater(point.x + duelRand(-14, 14), point.y - 22, `-${damage}`, '#ff8e83', 16);
+  duel.fx.hitPlayer = performance.now() / 1000;
+  duel.fx.shake = performance.now() / 1000;
+  playTone(180, .11);
+  addDuelLog(duel.playerBlocked ? `${label} is caught on your guard for ${damage}.` : `${label} lands for ${damage} damage.`, 'is-bad');
+  if (riposte > 0) {
+    const e = duel.enemy;
+    e.hp = Math.max(0, e.hp - riposte);
+    addDuelFloater(duelCharacterPoint('enemy').x, duelCharacterPoint('enemy').y - 12, `-${riposte}`, '#d8f36a', 13);
+    addDuelLog(`Riposte cuts back for ${riposte}.`, 'is-good');
+  }
+  updateDuelBattleUI();
+  if (p.hp <= 0) endDuelDefeat();
+  else if (duel.enemy && duel.enemy.hp <= 0) endDuelVictory();
+}
+function playerDuelAction(action) {
+  if (!duel.open || duel.screen !== 'arena' || duel.busy || duel.over) return;
+  const p = duel.player, e = duel.enemy, stance = p.stance;
+  if (!p || !e) return;
+  if (action === 'force' && p.force < 35) { announceDuel('NOT ENOUGH FORCE', 'is-hit'); return; }
+  duel.busy = true;
+  duel.playerBlocked = false;
+  updateDuelBattleUI();
+  if (action === 'attack') {
+    const guarded = e.intent === 'block';
+    const amount = Math.max(3, Math.round(p.attack * stance.damage * duelRand(.9, 1.12) * (guarded ? .42 : 1)));
+    const crit = Math.random() < (duel.stance === 'djem' ? .16 : .06);
+    const finalAmount = crit ? Math.round(amount * 1.55) : amount;
+    p.force = Math.min(p.maxForce, p.force + Math.round(12 * stance.force));
+    triggerDuelAnim('player', 'attack');
+    addDuelLog(guarded ? 'Your strike meets a raised guard.' : 'You step in with a clean strike.');
+    duelDelay(390, () => resolvePlayerHit(finalAmount, guarded ? 'Deflected strike' : 'Strike', crit));
+    duelDelay(1180, () => { if (!duel.over) enemyDuelTurn(); });
+  } else if (action === 'heavy') {
+    const guarded = e.intent === 'block';
+    const hits = Math.random() < .76;
+    const amount = Math.max(4, Math.round(p.attack * 2.1 * stance.damage * duelRand(.9, 1.1) * (guarded ? .35 : 1)));
+    p.force = Math.min(p.maxForce, p.force + Math.round(8 * stance.force));
+    triggerDuelAnim('player', 'heavy');
+    addDuelLog('You wind up a heavy strike.');
+    duelDelay(520, () => {
+      if (hits) resolvePlayerHit(amount, guarded ? 'Deflected heavy strike' : 'Heavy strike');
+      else {
+        addDuelFloater(duelCharacterPoint('enemy').x, duelCharacterPoint('enemy').y + 4, 'MISS', '#a9b5a9', 14);
+        addDuelLog('The heavy strike cuts air.', '');
+        playTone(220, .07);
+      }
+    });
+    duelDelay(1420, () => { if (!duel.over) enemyDuelTurn(); });
+  } else if (action === 'block') {
+    duel.playerBlocked = true;
+    p.force = Math.min(p.maxForce, p.force + Math.round(20 * stance.force));
+    triggerDuelAnim('player', 'block');
+    addDuelLog(`You set your guard. ${stance.name} absorbs the next exchange.`);
+    updateDuelBattleUI();
+    duelDelay(760, () => { if (!duel.over) enemyDuelTurn(); });
+  } else if (action === 'force') {
+    p.force = Math.max(0, p.force - 35);
+    triggerDuelAnim('player', 'force');
+    addDuelLog('You reach out and release a wave of Force.', 'is-force');
+    const point = duelCharacterPoint('enemy');
+    const amount = Math.round((10 + p.level * 1.5) * stance.damage * duelRand(.92, 1.12));
+    duelDelay(340, () => {
+      addDuelWave(point.x, point.y + 18, p.spec.crystal.color);
+      addDuelSparks(point.x, point.y + 26, p.spec.crystal.color, 18);
+      resolvePlayerHit(amount, 'Force push');
+      if (!duel.over) {
+        announceDuel('STAGGERED · ENEMY TURN LOST', 'is-force');
+        addDuelLog('The push staggers your opponent — their next action is lost.', 'is-force');
+        duelDelay(880, () => finishDuelRound(true));
+      }
+    });
+  }
+}
+function enemyDuelTurn() {
+  if (duel.over || !duel.open || duel.screen !== 'arena') return;
+  const p = duel.player, e = duel.enemy;
+  if (!e || e.hp <= 0 || p.hp <= 0) return;
+  const intent = e.intent;
+  updateDuelBattleUI();
+  if (intent === 'block') {
+    addDuelLog(`${e.name} holds a high guard.`, '');
+    duelDelay(500, () => finishDuelRound());
+    return;
+  }
+  if (intent === 'force') {
+    triggerDuelAnim('enemy', 'force');
+    addDuelLog(`${e.name} gathers the Force.`, 'is-force');
+    const point = duelCharacterPoint('player');
+    duelDelay(430, () => {
+      addDuelWave(point.x, point.y + 20, e.spec.crystal.color);
+      const amount = e.attack * 1.22;
+      p.force = Math.max(0, p.force - 15);
+      resolveEnemyHit(amount, 'Force push', 'force');
+      if (!duel.over) duelDelay(720, () => finishDuelRound());
+    });
+    return;
+  }
+  if (intent === 'heavy') {
+    triggerDuelAnim('enemy', 'heavy');
+    addDuelLog(`${e.name} winds up a heavy strike.`, 'is-bad');
+    duelDelay(510, () => {
+      if (Math.random() < .79) resolveEnemyHit(e.attack * 1.85, 'Heavy strike', 'heavy');
+      else {
+        addDuelFloater(duelCharacterPoint('player').x, duelCharacterPoint('player').y + 2, 'MISS', '#a9b5a9', 14);
+        addDuelLog(`${e.name}'s heavy strike misses.`, '');
+      }
+      if (!duel.over) duelDelay(760, () => finishDuelRound());
+    });
+    return;
+  }
+  triggerDuelAnim('enemy', 'attack');
+  addDuelLog(`${e.name} presses forward.`, 'is-bad');
+  duelDelay(400, () => {
+    resolveEnemyHit(e.attack * duelRand(.9, 1.12), 'Strike', 'attack');
+    if (!duel.over) duelDelay(620, () => finishDuelRound());
+  });
+}
+function finishDuelRound(forcePush = false) {
+  if (duel.over || !duel.open || duel.screen !== 'arena') return;
+  duel.player.force = Math.min(duel.player.maxForce, duel.player.force + 5);
+  duel.playerBlocked = false;
+  duel.round += 1;
+  duel.busy = false;
+  rollDuelIntent();
+  updateDuelBattleUI();
+  addDuelLog(`Round ${duel.round}. Read your opponent.`, '');
+  announceDuel(forcePush ? `ROUND ${String(duel.round).padStart(2, '0')} · RESET` : `ROUND ${String(duel.round).padStart(2, '0')}`, '');
+}
+function gainDuelXp(amount) {
+  const record = duel.record;
+  record.xp += amount;
+  let levels = 0;
+  while (record.xp >= duelXpNeeded(record.level)) {
+    record.xp -= duelXpNeeded(record.level);
+    record.level += 1;
+    levels += 1;
+  }
+  return levels;
+}
+function endDuelVictory() {
+  if (duel.over) return;
+  duel.over = true;
+  duel.busy = true;
+  duel.enemy.defeated = true;
+  updateDuelBattleUI();
+  const record = duel.record;
+  const xpGain = 24 + Math.floor(record.wins / 2) * 4 + Math.min(record.streak, 5) * 2;
+  record.wins += 1;
+  record.streak += 1;
+  record.bestStreak = Math.max(record.bestStreak, record.streak);
+  const levels = gainDuelXp(xpGain);
+  saveDuelRecord();
+  playTone(760, .12);
+  announceDuel('VICTORY', '');
+  addDuelLog(`${duel.enemy.name} yields. +${xpGain} XP.`, 'is-good');
+  updateDuelProfileUI();
+  duelDelay(760, () => showDuelResult('victory', xpGain, levels));
+}
+function endDuelDefeat() {
+  if (duel.over) return;
+  duel.over = true;
+  duel.busy = true;
+  updateDuelBattleUI();
+  const record = duel.record;
+  record.losses += 1;
+  record.streak = 0;
+  saveDuelRecord();
+  playTone(150, .2);
+  announceDuel('THE RING WINS THIS ROUND', 'is-hit');
+  addDuelLog('You are disarmed. The lesson is yours.', 'is-bad');
+  updateDuelProfileUI();
+  duelDelay(900, () => showDuelResult('defeat', 0, 0));
+}
+function showDuelResult(kind, xpGain, levels) {
+  const record = duel.record;
+  const victory = kind === 'victory';
+  const card = document.querySelector('.duel-result-card');
+  card.className = `duel-result-card is-${kind}${levels > 0 ? ' is-levelup' : ''}`;
+  $('duelResultEyebrow').textContent = victory ? (levels > 0 ? 'A NEW RANK' : 'ROUND COMPLETE · VICTORY') : 'ROUND COMPLETE · DEFEAT';
+  $('duelResultTitle').innerHTML = victory
+    ? (levels > 0 ? `Level <em>${record.level}.</em>` : 'Victory in the <em>ring.</em>')
+    : 'The ring wins <em>this round.</em>';
+  $('duelResultCopy').textContent = victory
+    ? `${duel.enemy.name} yields. ${levels > 0 ? `You reached level ${record.level} — your stance and footwork are sharper.` : 'Your record grows, and the next challenger is already watching.'}`
+    : `${duel.enemy.name} found the opening. Shake out your blade and take the rematch when you are ready.`;
+  $('duelResultXp').textContent = victory ? `+${xpGain}` : '+0';
+  $('duelResultLevel').textContent = String(record.level).padStart(2, '0');
+  $('duelResultStreak').textContent = String(record.streak).padStart(2, '0');
+  $('duelNext').innerHTML = victory ? 'NEXT DUEL <span>↗</span>' : 'REMATCH <span>↗</span>';
+  $('duelResult').classList.add('is-open');
+  $('duelResult').setAttribute('aria-hidden', 'false');
+  duel.resultKind = kind;
+  if (levels > 0) playTone(920, .16);
+}
+function nextDuelFromResult() {
+  if (!duel.open) return;
+  $('duelResult').classList.remove('is-open');
+  $('duelResult').setAttribute('aria-hidden', 'true');
+  startDuel();
+}
+
+// ---------------------------------------------------------------------------
+// Duel canvas rendering
+// ---------------------------------------------------------------------------
+function startDuelLoop() {
+  if (duel.raf) return;
+  duel.lastFrame = 0;
+  duel.raf = requestAnimationFrame(duelLoop);
+}
+function stopDuelLoop() {
+  if (duel.raf) cancelAnimationFrame(duel.raf);
+  duel.raf = 0;
+}
+function resizeDuelCanvas() {
+  if (duel.screen !== 'arena') return;
+  const width = Math.max(1, $('duelStage').clientWidth);
+  const height = Math.max(1, $('duelStage').clientHeight);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  duelCanvas.width = Math.round(width * dpr);
+  duelCanvas.height = Math.round(height * dpr);
+  duelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  duel.w = width; duel.h = height; duel.dpr = dpr;
+  duel.bg = buildDuelBackdrop(width, height, dpr, duel.player?.spec.crystal.color || '#d8f36a');
+}
+function buildDuelBackdrop(width, height, dpr, bladeColor) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * dpr));
+  canvas.height = Math.max(1, Math.round(height * dpr));
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const floorY = height * .82;
+  const bg = ctx.createLinearGradient(0, 0, 0, height);
+  bg.addColorStop(0, '#1a2821');
+  bg.addColorStop(.46, '#101812');
+  bg.addColorStop(1, '#070b08');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, width, height);
+  let seed = 1337;
+  const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  for (let i = 0; i < 46; i++) {
+    const x = random() * width, y = random() * floorY * .82;
+    const size = random() < .8 ? .8 : 1.6;
+    ctx.fillStyle = `rgba(216,243,106,${.06 + random() * .16})`;
+    ctx.fillRect(x, y, size, size);
+  }
+  const skyline = ctx.createLinearGradient(0, floorY - height * .22, 0, floorY);
+  skyline.addColorStop(0, '#101a14');
+  skyline.addColorStop(1, '#080e0a');
+  for (let i = 0; i < 17; i++) {
+    const w = width * (.025 + random() * .06);
+    const x = random() * (width + 40) - 20;
+    const h = height * (.05 + random() * .18);
+    ctx.fillStyle = skyline;
+    ctx.fillRect(x, floorY - h, w, h);
+    for (let wY = floorY - h + 7; wY < floorY - 5; wY += 11) {
+      for (let wX = x + 5; wX < x + w - 4; wX += 8) {
+        if (random() < .22) {
+          ctx.fillStyle = 'rgba(216,243,106,.11)';
+          ctx.fillRect(wX, wY, 2, 2);
+        }
+      }
+    }
+  }
+  const floor = ctx.createLinearGradient(0, floorY, 0, height);
+  floor.addColorStop(0, '#1a251e');
+  floor.addColorStop(.35, '#111a14');
+  floor.addColorStop(1, '#090d0b');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, floorY, width, height - floorY);
+  ctx.strokeStyle = 'rgba(216,243,106,.24)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, floorY + .5); ctx.lineTo(width, floorY + .5); ctx.stroke();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, floorY, width, height - floorY); ctx.clip();
+  const vanishX = width / 2, vanishY = floorY - 12;
+  for (let i = -8; i <= 8; i++) {
+    const bottomX = width / 2 + i * width * .095;
+    ctx.strokeStyle = 'rgba(180,204,160,.075)';
+    ctx.beginPath(); ctx.moveTo(vanishX, vanishY); ctx.lineTo(bottomX, height + 16); ctx.stroke();
+  }
+  for (let i = 1; i <= 5; i++) {
+    const y = floorY + Math.pow(i / 5, 1.7) * (height - floorY);
+    ctx.strokeStyle = 'rgba(180,204,160,.06)';
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = 'rgba(216,243,106,.3)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(width * .5, floorY + 6, width * .29, height * .045, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(216,243,106,.1)';
+  ctx.beginPath(); ctx.ellipse(width * .5, floorY + 8, width * .23, height * .032, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  for (const x of [width * .18, width * .82]) {
+    const beam = ctx.createLinearGradient(0, floorY - 150, 0, floorY);
+    beam.addColorStop(0, 'rgba(120,170,140,0)');
+    beam.addColorStop(1, 'rgba(120,170,140,.055)');
+    ctx.fillStyle = beam;
+    ctx.beginPath(); ctx.moveTo(x - 26, floorY); ctx.lineTo(x + 26, floorY); ctx.lineTo(x + 50, 0); ctx.lineTo(x - 50, 0); ctx.closePath(); ctx.fill();
+  }
+  const glow = ctx.createRadialGradient(width * .5, floorY - 70, 8, width * .5, floorY - 70, width * .42);
+  glow.addColorStop(0, `rgba(${hexToRgb(bladeColor)},.11)`);
+  glow.addColorStop(.55, `rgba(${hexToRgb(bladeColor)},.035)`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, width, height);
+  return canvas;
+}
+function duelPose(side, now) {
+  const facing = side === 'player' ? 1 : -1;
+  const rest = facing === 1 ? -1.02 : -2.12;
+  const anim = duel.anim[side];
+  const raw = anim.kind ? (now - anim.start) / anim.dur : 1;
+  const p = Math.max(0, Math.min(1, raw));
+  const kind = anim.kind && raw < 1 ? anim.kind : '';
+  let angle = rest, handForward = 0, handRaise = 0, shield = 0;
+  if (kind === 'attack' || kind === 'heavy') {
+    const windup = rest - facing * (kind === 'heavy' ? .68 : .44);
+    const target = facing === 1 ? (kind === 'heavy' ? .46 : .18) : (kind === 'heavy' ? -3.14 : -2.96);
+    if (p < .27) angle = rest + (windup - rest) * (p / .27);
+    else if (p < .57) angle = windup + (target - windup) * duelEaseOut((p - .27) / .3);
+    else angle = target + (rest - target) * duelEaseInOut((p - .57) / .43);
+    const reach = Math.sin(Math.min(1, p / .78) * Math.PI);
+    handForward = reach * .07;
+    handRaise = reach * .035;
+  } else if (kind === 'block') {
+    angle = facing === 1 ? -1.64 : -1.50;
+    const brace = Math.sin(Math.min(1, p / .9) * Math.PI);
+    handForward = brace * .025;
+    handRaise = brace * .02;
+    shield = brace;
+  } else if (kind === 'force') {
+    angle = rest;
+    const reach = Math.sin(Math.min(1, p / .72) * Math.PI);
+    handForward = reach * .10;
+    handRaise = reach * .025;
+  }
+  return { angle: angle + Math.sin(now * 1.8 + (side === 'player' ? 0 : 1.9)) * .012, handForward, handRaise, kind, p, shield };
+}
+function drawDuelFighter(side, now) {
+  const layout = duelLayout();
+  const ctx = duelCtx;
+  const player = side === 'player';
+  const fighter = player ? duel.player : duel.enemy;
+  if (!fighter) return;
+  const facing = player ? 1 : -1;
+  const x = player ? layout.playerX : layout.enemyX;
+  const footY = layout.floorY;
+  const height = layout.charH;
+  const spec = fighter.spec;
+  const pose = duelPose(side, now);
+  const defeated = fighter.hp <= 0;
+  const hitStart = player ? duel.fx.hitPlayer : duel.fx.hitEnemy;
+  const hit = Math.max(0, 1 - (now - hitStart) / .36);
+  const palette = player
+    ? { robe: '#26332b', robeLight: '#3a4a3c', robeDark: '#17201a', pants: '#1b241e', glove: '#2f3b31', trim: spec.crystal.color, face: '#8f8474', visor: spec.crystal.color }
+    : { robe: '#271b1e', robeLight: '#3c292d', robeDark: '#160f11', pants: '#1b1214', glove: '#322326', trim: '#ff5b6b', face: '#6f5551', visor: '#ff6b78' };
+  ctx.save();
+  if (defeated) {
+    ctx.translate(x, footY);
+    ctx.rotate(facing * .13);
+    ctx.scale(1, .9);
+    ctx.translate(-x, -footY);
+  }
+  const scale = layout.scale;
+  const shoulderX = x + facing * height * .045;
+  const shoulderY = footY - height * .74;
+  const hipY = footY - height * .44;
+  const waistY = footY - height * .55;
+  const headY = footY - height * .86;
+  const baseHandX = x + facing * height * .16;
+  const baseHandY = footY - height * .51;
+  const handX = baseHandX + facing * pose.handForward * height;
+  const handY = baseHandY - pose.handRaise * height;
+  const headRadius = height * .062;
+  ctx.fillStyle = 'rgba(0,0,0,.36)';
+  ctx.beginPath(); ctx.ellipse(x, footY + 3, height * .18, height * .026, 0, 0, Math.PI * 2); ctx.fill();
+  const legColor = palette.pants, bootColor = palette.robeDark;
+  const backFootX = x - height * .145, frontFootX = x + height * .15;
+  const backKneeX = x - height * .10, frontKneeX = x + height * .09;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = legColor; ctx.lineWidth = height * .047;
+  ctx.beginPath(); ctx.moveTo(x - height * .045, hipY); ctx.lineTo(backKneeX, footY - height * .22); ctx.lineTo(backFootX, footY - 2); ctx.stroke();
+  ctx.strokeStyle = palette.pants; ctx.lineWidth = height * .052;
+  ctx.beginPath(); ctx.moveTo(x + height * .04, hipY); ctx.lineTo(frontKneeX, footY - height * .22); ctx.lineTo(frontFootX, footY - 2); ctx.stroke();
+  ctx.fillStyle = bootColor;
+  ctx.beginPath(); ctx.ellipse(backFootX - height * .02, footY - 1, height * .075, height * .025, -.08, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(frontFootX + height * .018, footY - 1, height * .085, height * .027, -.08, 0, Math.PI * 2); ctx.fill();
+  if (!player) {
+    ctx.fillStyle = palette.robeDark;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX - facing * height * .05, shoulderY - height * .02);
+    ctx.quadraticCurveTo(x - facing * height * .16, footY - height * .42, x - facing * height * .24, footY - height * .07);
+    ctx.quadraticCurveTo(x - facing * height * .1, footY - height * .14, x + facing * height * .07, hipY);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = palette.robe;
+  ctx.beginPath();
+  ctx.moveTo(shoulderX - height * .095, shoulderY + height * .012);
+  ctx.quadraticCurveTo(x - height * .115, shoulderY + height * .13, x - height * .09, waistY);
+  ctx.lineTo(x - height * .085, hipY + height * .035);
+  ctx.lineTo(x + height * .085, hipY + height * .035);
+  ctx.lineTo(x + height * .09, waistY);
+  ctx.quadraticCurveTo(x + height * .115, shoulderY + height * .13, shoulderX + height * .095, shoulderY + height * .012);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = palette.robeLight; ctx.lineWidth = height * .012;
+  ctx.beginPath(); ctx.moveTo(x + facing * height * .015, shoulderY + height * .03); ctx.lineTo(x + facing * height * .02, waistY); ctx.stroke();
+  ctx.fillStyle = palette.trim;
+  ctx.fillRect(x - height * .077, hipY + height * .008, height * .154, height * .013);
+  ctx.fillStyle = palette.robeLight;
+  for (const sideOffset of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(shoulderX + sideOffset * height * .065, shoulderY + height * .01, height * .055, height * .026, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.strokeStyle = palette.robeDark; ctx.lineWidth = height * .038;
+  ctx.beginPath(); ctx.moveTo(shoulderX - facing * height * .04, shoulderY + height * .025); ctx.lineTo(x - facing * height * .055, waistY + height * .06); ctx.stroke();
+  ctx.fillStyle = palette.robeDark;
+  ctx.beginPath();
+  ctx.moveTo(shoulderX - height * .09, shoulderY + height * .02);
+  ctx.quadraticCurveTo(x - height * .12, headY - height * .01, x - height * .07, headY - headRadius * 1.7);
+  ctx.quadraticCurveTo(x, headY - headRadius * 2.3, x + height * .07, headY - headRadius * 1.7);
+  ctx.quadraticCurveTo(x + height * .12, headY - height * .01, shoulderX + height * .09, shoulderY + height * .02);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = palette.face;
+  ctx.beginPath(); ctx.arc(x + facing * height * .018, headY, headRadius, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = palette.robeDark;
+  ctx.beginPath(); ctx.arc(x + facing * height * .018, headY - headRadius * .15, headRadius * .86, Math.PI * 1.05, Math.PI * 2.05); ctx.fill();
+  ctx.strokeStyle = palette.visor; ctx.lineWidth = height * .009;
+  ctx.beginPath(); ctx.moveTo(x + facing * height * .01, headY + headRadius * .1); ctx.lineTo(x + facing * height * .065, headY + headRadius * .12); ctx.stroke();
+  ctx.strokeStyle = palette.robeLight; ctx.lineWidth = height * .045;
+  ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY + height * .03); ctx.quadraticCurveTo(handX - facing * height * .02, handY + height * .04, handX, handY); ctx.stroke();
+  ctx.strokeStyle = palette.glove; ctx.lineWidth = height * .032;
+  ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(handX + facing * height * .035, handY - height * .015); ctx.stroke();
+  const dirX = Math.cos(pose.angle), dirY = Math.sin(pose.angle);
+  const pommelX = handX - dirX * .62 * scale;
+  const pommelY = handY - dirY * .62 * scale;
+  drawDuelFlatSaber(ctx, spec, pommelX, pommelY, scale, pose.angle, !defeated, defeated ? .28 : 1);
+  ctx.fillStyle = palette.glove;
+  ctx.beginPath(); ctx.arc(handX, handY, height * .026, 0, Math.PI * 2); ctx.fill();
+  if (pose.shield > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = pose.shield * .22;
+    ctx.strokeStyle = spec.crystal.color;
+    ctx.lineWidth = 2;
+    const guardX = x + facing * height * .16;
+    const guardY = footY - height * .52;
+    ctx.beginPath(); ctx.arc(guardX, guardY, height * .16, facing === 1 ? -1.2 : Math.PI - 1.2, facing === 1 ? 1.2 : Math.PI + 1.2); ctx.stroke();
+    ctx.restore();
+  }
+  if (pose.kind === 'force' && pose.p < .8) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `rgba(${hexToRgb(spec.crystal.color)},${.36 * (1 - pose.p)})`;
+    ctx.beginPath(); ctx.arc(handX + facing * height * .035, handY, height * .055 * (1 + pose.p), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  if (hit > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `rgba(255,76,65,${hit * .22})`;
+    ctx.beginPath(); ctx.ellipse(x, footY - height * .48, height * .17, height * .3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function drawDuelEffects(now) {
+  const ctx = duelCtx;
+  const clashAge = now - duel.fx.clash;
+  if (clashAge >= 0 && clashAge < .38) {
+    const t = clashAge / .38;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(duel.fx.clashX, duel.fx.clashY);
+    for (let i = 0; i < 9; i++) {
+      const angle = i / 9 * Math.PI * 2 + .3;
+      const length = 10 + t * 28;
+      ctx.strokeStyle = `rgba(255,245,190,${(1 - t) * .7})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 4, Math.sin(angle) * 4); ctx.lineTo(Math.cos(angle) * length, Math.sin(angle) * length); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  for (let i = duel.fx.waves.length - 1; i >= 0; i--) {
+    const wave = duel.fx.waves[i];
+    const t = (now - wave.start) / wave.dur;
+    if (t >= 1) { duel.fx.waves.splice(i, 1); continue; }
+    const radius = 12 + t * 95;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(${hexToRgb(wave.color)},${(1 - t) * .55})`;
+    ctx.lineWidth = 2.2 * (1 - t) + .6;
+    ctx.beginPath(); ctx.ellipse(wave.x, wave.y, radius * 1.35, radius * .42, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,255,255,${(1 - t) * .22})`;
+    ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.ellipse(wave.x, wave.y, radius * 1.15, radius * .34, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const spark of duel.fx.sparks) {
+    const alpha = Math.max(0, spark.life / spark.maxLife);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = spark.color;
+    ctx.fillRect(spark.x - spark.size / 2, spark.y - spark.size / 2, spark.size, spark.size);
+  }
+  ctx.restore();
+  for (const floater of duel.fx.floaters) {
+    const age = now - floater.start;
+    if (age >= floater.dur) continue;
+    const t = age / floater.dur;
+    ctx.save();
+    ctx.globalAlpha = 1 - t;
+    ctx.fillStyle = floater.color;
+    ctx.font = `700 ${floater.size}px Manrope, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(floater.text, floater.x, floater.y - t * 32);
+    ctx.restore();
+  }
+}
+function drawDuelFrame(now) {
+  if (!duel.w || !duel.h) return;
+  const ctx = duelCtx;
+  ctx.clearRect(0, 0, duel.w, duel.h);
+  if (duel.bg) ctx.drawImage(duel.bg, 0, 0, duel.w, duel.h);
+  const shakeAge = now - duel.fx.shake;
+  ctx.save();
+  if (shakeAge >= 0 && shakeAge < .22) {
+    const strength = (1 - shakeAge / .22) * 5;
+    ctx.translate((Math.random() - .5) * strength, (Math.random() - .5) * strength);
+  }
+  const layout = duelLayout();
+  for (const side of ['player', 'enemy']) {
+    const fighter = side === 'player' ? duel.player : duel.enemy;
+    if (!fighter || fighter.hp <= 0) continue;
+    const x = side === 'player' ? layout.playerX : layout.enemyX;
+    const grd = ctx.createRadialGradient(x, layout.floorY + 2, 2, x, layout.floorY + 2, layout.charH * .34);
+    grd.addColorStop(0, `rgba(${hexToRgb(fighter.spec.crystal.color)},.10)`);
+    grd.addColorStop(1, `rgba(${hexToRgb(fighter.spec.crystal.color)},0)`);
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.ellipse(x, layout.floorY + 3, layout.charH * .35, layout.charH * .06, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  drawDuelFighter('player', now);
+  drawDuelFighter('enemy', now);
+  drawDuelEffects(now);
+  ctx.restore();
+}
+function updateDuelVisuals(now, delta) {
+  for (let i = duel.fx.floaters.length - 1; i >= 0; i--) if (now - duel.fx.floaters[i].start >= duel.fx.floaters[i].dur) duel.fx.floaters.splice(i, 1);
+  for (let i = duel.fx.sparks.length - 1; i >= 0; i--) {
+    const spark = duel.fx.sparks[i];
+    spark.life -= delta;
+    if (spark.life <= 0) { duel.fx.sparks.splice(i, 1); continue; }
+    spark.x += spark.vx * delta;
+    spark.y += spark.vy * delta;
+    spark.vy += 190 * delta;
+    spark.vx *= .985;
+  }
+}
+function duelLoop(timestamp) {
+  if (!duel.open || duel.screen !== 'arena') { duel.raf = 0; return; }
+  const now = timestamp / 1000;
+  if (!duel.lastFrame) duel.lastFrame = now;
+  const delta = Math.min(.05, Math.max(0, now - duel.lastFrame));
+  duel.lastFrame = now;
+  updateDuelVisuals(now, delta);
+  drawDuelFrame(now);
+  duel.raf = requestAnimationFrame(duelLoop);
+}
+
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
+$('duelClose').addEventListener('click', closeDuel);
+$('duelArenaClose').addEventListener('click', backToDuelLobby);
+$('duelBack').addEventListener('click', closeDuel);
+$('duelStart').addEventListener('click', startDuel);
+$('duelNext').addEventListener('click', nextDuelFromResult);
+$('duelLeave').addEventListener('click', backToDuelLobby);
+$('duelEmptyBuild').addEventListener('click', () => {
+  closeDuel();
+  closeActivities();
+  setStep(0);
+  showToast('Finish and keep a saber, then return to the training ring.');
+});
+$('duelLoaner').addEventListener('click', () => {
+  duel.loanerArtifact ||= makeDuelLoaner();
+  duel.selectedArtifact = duel.loanerArtifact;
+  duel.selectedSaberId = 'loaner';
+  duel.selectedSpec = duelSpecFromArtifact(duel.loanerArtifact);
+  saveDuelRecord();
+  renderDuelLoadoutPreview();
+  playTone(620, .07);
+});
+document.querySelectorAll('#duelActions .duel-action').forEach(button => {
+  button.addEventListener('click', () => playerDuelAction(button.dataset.duelAction));
+});
+document.addEventListener('keydown', event => {
+  if (!duel.open || duel.screen !== 'arena' || $('duelResult').classList.contains('is-open')) return;
+  const keys = { 1: 'attack', 2: 'heavy', 3: 'block', 4: 'force' };
+  if (keys[event.key]) { event.preventDefault(); playerDuelAction(keys[event.key]); }
+});
+new ResizeObserver(() => {
+  if (duel.screen === 'arena') resizeDuelCanvas();
+  else if (duel.open) resizeDuelPreview();
+}).observe($('duelStage'));
+new ResizeObserver(() => { if (duel.open && duel.screen === 'lobby') resizeDuelPreview(); }).observe($('duelSaberPreview'));
 
 animate();

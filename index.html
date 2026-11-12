@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="auction.css" />
   <link rel="stylesheet" href="collection.css" />
   <link rel="stylesheet" href="activities.css" />
+  <link rel="stylesheet" href="duel.css" />
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
   <script type="module" src="game.js"></script>
 </head>
@@ -153,26 +154,26 @@
           <span class="activity-cta">START THE RUN <b>↗</b></span>
         </button>
 
-        <button type="button" class="activity-card is-locked" id="activityDuel" aria-label="Training Duel, coming soon">
+        <button type="button" class="activity-card" id="activityDuel" aria-label="Training Duel">
           <span class="activity-index">03 / DUEL</span>
           <span class="activity-art" aria-hidden="true">
             <svg viewBox="0 0 120 130" focusable="false">
-              <g opacity=".72">
-                <path d="M24 112L52 62" stroke="#4a8dff" stroke-width="5" stroke-linecap="round" opacity=".28"/>
-                <path d="M24 112L52 62" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".85"/>
+              <g opacity=".86">
+                <path d="M24 112L52 62" stroke="#4a8dff" stroke-width="5" stroke-linecap="round" opacity=".3"/>
+                <path d="M24 112L52 62" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".9"/>
                 <rect x="18" y="108" width="15" height="9" rx="2" transform="rotate(31 25 112)" fill="#9aa69e"/>
-                <path d="M96 112L68 62" stroke="#ff3b4f" stroke-width="5" stroke-linecap="round" opacity=".28"/>
-                <path d="M96 112L68 62" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".85"/>
+                <path d="M96 112L68 62" stroke="#ff3b4f" stroke-width="5" stroke-linecap="round" opacity=".3"/>
+                <path d="M96 112L68 62" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".9"/>
                 <rect x="87" y="108" width="15" height="9" rx="2" transform="rotate(-31 94 112)" fill="#9aa69e"/>
-                <circle cx="60" cy="54" r="12" fill="none" stroke="#d8f36a" stroke-opacity=".4" stroke-dasharray="3 4"/>
-                <path d="M52 54h16M60 46v16" stroke="#d8f36a" stroke-width="1.2" opacity=".7"/>
+                <circle cx="60" cy="54" r="12" fill="none" stroke="#d8f36a" stroke-opacity=".55" stroke-dasharray="3 4"/>
+                <path d="M52 54h16M60 46v16" stroke="#d8f36a" stroke-width="1.2" opacity=".8"/>
+                <path d="M43 110h34" stroke="#d8f36a" stroke-width="1.4" opacity=".5"/>
               </g>
             </svg>
-            <span class="activity-lock">⌁</span>
           </span>
           <strong>Training Duel</strong>
-          <small>A challenger is still making their way in from the Outer Rim. The training ring is being prepared.</small>
-          <span class="activity-cta soon">COMING SOON</span>
+          <small>Pick a saber from your vault, choose a stance, then fight a turn-based duel. Wins earn XP and levels.</small>
+          <span class="activity-cta">ENTER THE RING <b>↗</b></span>
         </button>
       </div>
       <footer class="activities-footer">
@@ -252,6 +253,126 @@
         </div>
       </div>
       <footer class="slicer-footer"><span><i class="status-dot"></i> SALVAGE CHUTE OPEN</span><span class="slicer-footer-center" id="slicerFooterStatus">AWAITING RUN</span><span>KEEP YOUR GUARD UP <b>✳</b></span></footer>
+    </section>
+  </div>
+
+  <div class="duel-overlay" id="duelOverlay" aria-hidden="true">
+    <section class="duel-room" id="duelLobby" role="dialog" aria-modal="true" aria-labelledby="duelLobbyTitle">
+      <header class="activity-stage-header duel-stage-header">
+        <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">ACTIVITY 03 · TRAINING RING</span><strong id="duelLobbyTitle">SABER DUEL</strong></div></div>
+        <div class="duel-header-stats">
+          <span>LEVEL <b id="duelHeaderLevel">01</b></span>
+          <span>WINS <b id="duelHeaderWins">00</b></span>
+          <span>STREAK <b id="duelHeaderStreak">00</b></span>
+        </div>
+        <button class="sale-close" id="duelClose" aria-label="Close training ring">×</button>
+      </header>
+      <div class="duel-lobby-grid">
+        <aside class="duel-profile">
+          <span class="eyebrow">DUELIST PROFILE</span>
+          <div class="duel-level-mark"><span>LEVEL</span><b id="duelProfileLevel">01</b></div>
+          <strong id="duelProfileRank">Initiate</strong>
+          <p id="duelProfileNote">Every duel sharpens the bond between you and your blade.</p>
+          <div class="duel-xp">
+            <span><b id="duelXpNow">0</b> / <span id="duelXpNext">60</span> XP</span>
+            <i><b id="duelXpFill"></b></i>
+          </div>
+          <div class="duel-record">
+            <div><small>WINS</small><b id="duelWins">00</b></div>
+            <div><small>LOSSES</small><b id="duelLosses">00</b></div>
+            <div><small>STREAK</small><b id="duelStreak">00</b></div>
+            <div><small>BEST</small><b id="duelBest">00</b></div>
+          </div>
+          <div class="duel-equal-note"><i>✧</i><p><strong>EVENLY MATCHED</strong><span>Every custom saber shares one combat base. Parts are cosmetic — nothing in the ring costs credits.</span></p></div>
+        </aside>
+
+        <div class="duel-loadout">
+          <div class="duel-picker-panel">
+            <div class="duel-panel-head"><div><span class="eyebrow">FROM YOUR VAULT</span><h2>Choose a <em>saber.</em></h2></div><span id="duelSaberCount">00 SABERS</span></div>
+            <div class="duel-saber-list" id="duelSaberList"></div>
+            <div class="duel-empty" id="duelEmpty" hidden>
+              <span>◇</span>
+              <strong>Your vault is empty.</strong>
+              <p>Build a lightsaber and keep it, or borrow the atelier's standard training blade. Both fight with the same base stats.</p>
+              <div class="duel-empty-actions">
+                <button type="button" class="text-button" id="duelEmptyBuild">BUILD A SABER ↗</button>
+                <button type="button" class="duel-loaner-button" id="duelLoaner">USE TRAINING BLADE</button>
+              </div>
+            </div>
+          </div>
+          <div class="duel-preview-panel">
+            <div class="duel-preview-glow" id="duelPreviewGlow"></div>
+            <canvas id="duelSaberPreview" aria-label="Flattened two-dimensional preview of the selected saber"></canvas>
+            <span class="duel-preview-tag">2D COMBAT RIG</span>
+            <div class="duel-preview-meta">
+              <span class="eyebrow">SELECTED BUILD · FLATTENED FOR THE RING</span>
+              <strong id="duelPreviewName">—</strong>
+              <small id="duelPreviewParts">—</small>
+            </div>
+          </div>
+        </div>
+
+        <section class="duel-stance-panel">
+          <div class="duel-panel-head"><div><span class="eyebrow">FORM &amp; FOOTWORK</span><h2>Pick a <em>stance.</em></h2></div></div>
+          <div class="duel-stance-list" id="duelStanceList"></div>
+          <p class="duel-stance-note">Stance changes your damage, guard, and Force flow. You can switch it between duels.</p>
+        </section>
+      </div>
+      <footer class="activity-stage-footer">
+        <div class="stage-copy"><span class="eyebrow" id="duelFooterEyebrow">RING PREPARED</span><p id="duelFooterCopy">Pick a saber and a stance. Your next opponent scales to your record.</p></div>
+        <div class="stage-actions"><button class="text-button" id="duelBack">← BACK TO ACTIVITIES</button><button class="primary-button" id="duelStart" disabled>ENTER THE RING <span>↗</span></button></div>
+      </footer>
+    </section>
+
+    <section class="duel-room duel-arena" id="duelArena" role="dialog" aria-modal="true" aria-labelledby="duelArenaTitle" hidden>
+      <header class="activity-stage-header duel-stage-header">
+        <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">TRAINING RING · LIVE</span><strong id="duelArenaTitle">DUEL IN PROGRESS</strong></div></div>
+        <div class="duel-round"><span>ROUND <b id="duelRound">01</b></span><i></i><span id="duelArenaOpponent">—</span></div>
+        <button class="sale-close" id="duelArenaClose" aria-label="Leave the ring">×</button>
+      </header>
+      <div class="duel-stage" id="duelStage">
+        <canvas id="duelCanvas" aria-label="Side view of two duelists and their glowing lightsabers"></canvas>
+        <div class="duel-vignette" aria-hidden="true"></div>
+        <div class="duel-hud duel-hud-player">
+          <div class="duel-hud-name"><span class="eyebrow">YOU · <b id="duelPlayerRank">INITIATE</b></span><strong id="duelPlayerName">—</strong></div>
+          <div class="duel-bar duel-bar-hp"><i id="duelPlayerHpFill"></i><span id="duelPlayerHpText">100 / 100</span></div>
+          <div class="duel-bar duel-bar-force"><i id="duelPlayerForceFill"></i><span id="duelPlayerForceText">FORCE 40 / 100</span></div>
+          <span class="duel-stance-chip" id="duelPlayerStance">SHII-CHO</span>
+        </div>
+        <div class="duel-hud duel-hud-enemy">
+          <div class="duel-hud-name"><span class="eyebrow" id="duelEnemyTier">OPPONENT</span><strong id="duelEnemyName">—</strong></div>
+          <div class="duel-bar duel-bar-hp"><i id="duelEnemyHpFill"></i><span id="duelEnemyHpText">100 / 100</span></div>
+          <div class="duel-bar duel-bar-enemy-force"><i id="duelEnemyForceFill"></i><span id="duelEnemyForceText">FOCUS</span></div>
+          <span class="duel-stance-chip is-enemy" id="duelEnemyStance">UNREADABLE</span>
+        </div>
+        <div class="duel-intent" id="duelIntent"><span class="eyebrow">OPPONENT INTENT</span><b>Reading the room…</b></div>
+        <div class="duel-announce" id="duelAnnounce" aria-live="polite">ROUND 01</div>
+        <div class="duel-result" id="duelResult" aria-hidden="true">
+          <div class="duel-result-card">
+            <span class="eyebrow" id="duelResultEyebrow">ROUND COMPLETE</span>
+            <h2 id="duelResultTitle">Victory.</h2>
+            <p id="duelResultCopy">The ring is yours.</p>
+            <div class="duel-result-stats">
+              <div><small>XP EARNED</small><b id="duelResultXp">+0</b></div>
+              <div><small>LEVEL</small><b id="duelResultLevel">01</b></div>
+              <div><small>STREAK</small><b id="duelResultStreak">00</b></div>
+            </div>
+            <div class="duel-result-actions">
+              <button class="primary-button" id="duelNext">NEXT DUEL <span>↗</span></button>
+              <button class="text-button" id="duelLeave">LEAVE THE RING</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="duel-battle-footer">
+        <div class="duel-log-wrap"><span class="eyebrow">COMBAT FEED</span><div class="duel-log" id="duelLog"></div></div>
+        <div class="duel-actions" id="duelActions">
+          <button type="button" class="duel-action" data-duel-action="attack"><span class="duel-action-key">1</span><strong>Strike</strong><small>Reliable hit · builds Force</small></button>
+          <button type="button" class="duel-action" data-duel-action="heavy"><span class="duel-action-key">2</span><strong>Heavy Strike</strong><small>Big damage · can miss</small></button>
+          <button type="button" class="duel-action" data-duel-action="block"><span class="duel-action-key">3</span><strong>Block</strong><small>Soften the hit · gain Force</small></button>
+          <button type="button" class="duel-action" data-duel-action="force"><span class="duel-action-key">4</span><strong>Force Push</strong><small>35 Force · stagger the enemy</small></button>
+        </div>
+      </footer>
     </section>
   </div>
 
