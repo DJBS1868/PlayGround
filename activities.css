@@ -179,7 +179,7 @@
   .disassembly-readout{left:14px;top:14px;bottom:auto;max-width:42%;padding:8px 10px}
   .disassembly-readout strong{font-size:11px}
   .disassembly-readout p{display:none}
-  .part-label{width:min(46vw,184px);padding:6px 16px 6px 9px}
+  .part-label{width:min(43vw,168px);padding:6px 16px 6px 9px}
   .part-label-kicker{font-size:6.4px;letter-spacing:.08em}
   .part-label strong{font-size:10.5px}
   .part-label-spec{font-size:6.2px}

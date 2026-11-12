@@ -324,6 +324,57 @@
       </footer>
     </section>
 
+    <section class="duel-room duel-match" id="duelMatch" role="dialog" aria-modal="true" aria-labelledby="duelMatchTitle" hidden>
+      <header class="activity-stage-header duel-stage-header">
+        <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">TRAINING RING · MATCHMAKING</span><strong id="duelMatchTitle">FINDING A CHALLENGER</strong></div></div>
+        <div class="duel-round duel-match-status"><span id="duelMatchRegion">SECTOR 07 · OPEN RING</span><i></i><span>PING <b id="duelMatchPing">24</b> MS</span></div>
+        <button class="sale-close" id="duelMatchClose" aria-label="Cancel matchmaking">×</button>
+      </header>
+      <div class="duel-match-stage" id="duelMatchStage">
+        <div class="duel-match-search" id="duelMatchSearch">
+          <div class="duel-radar" aria-hidden="true">
+            <i></i><i></i><i></i><i></i>
+            <span></span>
+            <b></b>
+          </div>
+          <div class="duel-search-copy">
+            <span class="eyebrow">OPEN RING · SKILL-BASED MATCH</span>
+            <strong id="duelMatchHeadline" aria-live="polite">Searching the atelier network…</strong>
+            <p id="duelMatchSubline">Matching by level, stance, and blade signature.</p>
+            <div class="duel-match-tags" id="duelMatchTags" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="duel-match-found" id="duelMatchFound" hidden>
+          <div class="duel-found-heading">
+            <span class="eyebrow">OPPONENT LOCKED · SIGNAL CLEAN</span>
+            <h2>Challenger <em>found.</em></h2>
+          </div>
+          <div class="duel-versus">
+            <article class="duel-versus-card is-player">
+              <span class="eyebrow">YOUR BLADE</span>
+              <canvas id="duelMatchPlayerSaber" aria-label="Your selected lightsaber"></canvas>
+              <strong id="duelMatchPlayerName">—</strong>
+              <small id="duelMatchPlayerMeta">—</small>
+              <span class="duel-versus-stance" id="duelMatchPlayerStance">—</span>
+            </article>
+            <div class="duel-versus-mark" aria-hidden="true"><span>VS</span><i></i></div>
+            <article class="duel-versus-card is-opponent">
+              <span class="eyebrow">CHALLENGER</span>
+              <canvas id="duelMatchOpponentSaber" aria-label="Opponent lightsaber"></canvas>
+              <strong id="duelMatchOpponentName">—</strong>
+              <small id="duelMatchOpponentMeta">—</small>
+              <span class="duel-versus-stance" id="duelMatchOpponentStance">—</span>
+            </article>
+          </div>
+          <div class="duel-found-banner" role="status"><span class="live-dot"></span><strong>MATCH FOUND</strong><small>Blades synced · entering the ring</small></div>
+        </div>
+      </div>
+      <footer class="activity-stage-footer">
+        <div class="stage-copy"><span class="eyebrow" id="duelMatchEyebrow">MATCHMAKING · OPEN RING</span><p id="duelMatchCopy">Scanning for a duelist near your level. Every challenger forges a different blade.</p></div>
+        <div class="stage-actions"><button class="text-button" id="duelMatchCancel">← CANCEL SEARCH</button></div>
+      </footer>
+    </section>
+
     <section class="duel-room duel-arena" id="duelArena" role="dialog" aria-modal="true" aria-labelledby="duelArenaTitle" hidden>
       <header class="activity-stage-header duel-stage-header">
         <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">TRAINING RING · LIVE</span><strong id="duelArenaTitle">DUEL IN PROGRESS</strong></div></div>
@@ -342,27 +393,11 @@
         <div class="duel-hud duel-hud-enemy">
           <div class="duel-hud-name"><span class="eyebrow" id="duelEnemyTier">OPPONENT</span><strong id="duelEnemyName">—</strong></div>
           <div class="duel-bar duel-bar-hp"><i id="duelEnemyHpFill"></i><span id="duelEnemyHpText">100 / 100</span></div>
-          <div class="duel-bar duel-bar-enemy-force"><i id="duelEnemyForceFill"></i><span id="duelEnemyForceText">FOCUS</span></div>
+          <div class="duel-bar duel-bar-force duel-bar-enemy-force"><i id="duelEnemyForceFill"></i><span id="duelEnemyForceText">FOCUS</span></div>
           <span class="duel-stance-chip is-enemy" id="duelEnemyStance">UNREADABLE</span>
         </div>
         <div class="duel-intent" id="duelIntent"><span class="eyebrow">OPPONENT INTENT</span><b>Reading the room…</b></div>
         <div class="duel-announce" id="duelAnnounce" aria-live="polite">ROUND 01</div>
-        <div class="duel-result" id="duelResult" aria-hidden="true">
-          <div class="duel-result-card">
-            <span class="eyebrow" id="duelResultEyebrow">ROUND COMPLETE</span>
-            <h2 id="duelResultTitle">Victory.</h2>
-            <p id="duelResultCopy">The ring is yours.</p>
-            <div class="duel-result-stats">
-              <div><small>XP EARNED</small><b id="duelResultXp">+0</b></div>
-              <div><small>LEVEL</small><b id="duelResultLevel">01</b></div>
-              <div><small>STREAK</small><b id="duelResultStreak">00</b></div>
-            </div>
-            <div class="duel-result-actions">
-              <button class="primary-button" id="duelNext">NEXT DUEL <span>↗</span></button>
-              <button class="text-button" id="duelLeave">LEAVE THE RING</button>
-            </div>
-          </div>
-        </div>
       </div>
       <footer class="duel-battle-footer">
         <div class="duel-log-wrap"><span class="eyebrow">COMBAT FEED</span><div class="duel-log" id="duelLog"></div></div>
@@ -373,6 +408,22 @@
           <button type="button" class="duel-action" data-duel-action="force"><span class="duel-action-key">4</span><strong>Force Push</strong><small>35 Force · stagger the enemy</small></button>
         </div>
       </footer>
+      <div class="duel-result" id="duelResult" aria-hidden="true">
+        <div class="duel-result-card">
+          <span class="eyebrow" id="duelResultEyebrow">ROUND COMPLETE</span>
+          <h2 id="duelResultTitle">Victory.</h2>
+          <p id="duelResultCopy">The ring is yours.</p>
+          <div class="duel-result-stats">
+            <div><small>XP EARNED</small><b id="duelResultXp">+0</b></div>
+            <div><small>LEVEL</small><b id="duelResultLevel">01</b></div>
+            <div><small>STREAK</small><b id="duelResultStreak">00</b></div>
+          </div>
+          <div class="duel-result-actions">
+            <button class="primary-button" id="duelNext">NEXT DUEL <span>↗</span></button>
+            <button class="text-button" id="duelLeave">LEAVE THE RING</button>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 

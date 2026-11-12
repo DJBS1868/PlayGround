@@ -1647,7 +1647,8 @@ function updateDisassemblyLabels() {
   const height = stage.clientHeight;
   leaders.setAttribute('viewBox', `0 0 ${width} ${height}`);
   const narrow = width < 760;
-  const centerX = width / 2;
+  const labelBias = narrow ? 10 : 20;
+  const centerX = width / 2 + labelBias;
   const projected = new THREE.Vector3();
   const anchors = [];
   const lastBottom = { left: -Infinity, right: -Infinity };
@@ -1670,10 +1671,10 @@ function updateDisassemblyLabels() {
     let left;
     if (side === 'right') {
       left = Math.max(sx + 74, centerX + 108);
-      left = Math.min(width - labelWidth - 18, left);
+      left = Math.min(width - labelWidth - (narrow ? 10 : 18), left);
     } else {
       left = Math.min(sx - 74 - labelWidth, centerX - 108 - labelWidth);
-      left = Math.max(18, left);
+      left = Math.max(narrow ? 10 : 18, left);
     }
     label.style.transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0)`;
     const lineX = side === 'right' ? left : left + labelWidth;
@@ -1737,10 +1738,11 @@ function layoutDisassemblyCamera() {
   const fitHeight = 2.45 + 1.16 * disassemblyProgress;
   const fitWidth = 2.2 + .72 * disassemblyProgress;
   const distance = Math.max(fitHeight / Math.tan(halfFov), fitWidth / (Math.tan(halfFov) * aspect)) + 1.15;
-  // Keep the split dead center so the label leaders can fan out left and right.
   const centerY = .08;
-  disassemblyCamera.position.set(0, centerY + .04, distance);
-  disassemblyCamera.lookAt(0, centerY, 0);
+  // Nudge the whole 3D rig left of centre so the part labels have clear air.
+  const frameOffsetX = width < 760 ? .72 : .44;
+  disassemblyCamera.position.set(frameOffsetX, centerY + .04, distance);
+  disassemblyCamera.lookAt(frameOffsetX, centerY, 0);
   disassemblyCamera.updateProjectionMatrix();
   disassemblyCamera.updateMatrixWorld();
   disassemblyCameraProgress = disassemblyProgress;
@@ -3907,16 +3909,25 @@ const DUEL_STANCES = {
 const DUEL_RANKS = [
   [15, 'Grandmaster'], [11, 'Battlemaster'], [8, 'Duelist'], [5, 'Knight'], [3, 'Padawan'], [1, 'Initiate']
 ];
-const DUEL_FOES = [
-  { name: 'Vex-9', title: 'SALVAGE ACOLYTE', form: 'FORM I · SHII-CHO', parts: { hilt: 6, emitter: 7, grip: 1, pommel: 3, crystal: 4, accent: 3, blade: 0, switch: 1, engraving: 0 } },
-  { name: 'Sera Tal', title: 'TEMPLE INITIATE', form: 'FORM III · SORESU', parts: { hilt: 0, emitter: 0, grip: 0, pommel: 1, crystal: 1, accent: 0, blade: 0, switch: 0, engraving: 1 } },
-  { name: 'Korr Vance', title: 'OUTER RIM DUELIST', form: 'FORM V · DJEM SO', parts: { hilt: 1, emitter: 4, grip: 2, pommel: 2, crystal: 10, accent: 1, blade: 2, switch: 2, engraving: 4 } },
-  { name: 'Master Sol', title: 'JEDI ARCHIVIST', form: 'FORM III · SORESU', parts: { hilt: 3, emitter: 5, grip: 4, pommel: 5, crystal: 5, accent: 2, blade: 3, switch: 3, engraving: 3 } },
-  { name: 'Nyx Korr', title: 'BOUNTY HUNTER', form: 'FORM V · DJEM SO', parts: { hilt: 2, emitter: 6, grip: 5, pommel: 4, crystal: 7, accent: 7, blade: 6, switch: 5, engraving: 7 } },
-  { name: 'The Curator', title: 'PRIVATE VAULT', form: 'FORM II · MAKASHI', parts: { hilt: 7, emitter: 3, grip: 7, pommel: 6, crystal: 3, accent: 5, blade: 3, switch: 6, engraving: 2 } },
-  { name: 'Darth Veyra', title: 'SITH APPRENTICE', form: 'FORM V · DJEM SO', parts: { hilt: 2, emitter: 2, grip: 6, pommel: 7, crystal: 4, accent: 3, blade: 1, switch: 7, engraving: 5 } },
-  { name: 'Mira Sunrider', title: 'BLADE MASTER', form: 'FORM IV · ATARU', parts: { hilt: 4, emitter: 2, grip: 3, pommel: 0, crystal: 8, accent: 6, blade: 4, switch: 4, engraving: 6 } }
+const DUEL_TITLES = [
+  'SALVAGE ACOLYTE', 'TEMPLE INITIATE', 'OUTER RIM DUELIST', 'JEDI ARCHIVIST',
+  'BOUNTY HUNTER', 'PRIVATE VAULT', 'SITH APPRENTICE', 'BLADE MASTER',
+  'CIRCUIT CHAMPION', 'RING VETERAN', 'KYBER SCAVENGER', 'NIGHTBROKER',
+  'CRIMSON ADEPT', 'GRAV-BALL PRODIGY', 'CONSULAR EMISSARY', 'UNDERWORLD CHAMPION',
+  'DUNE WANDERER', 'FORGE ADEPT', 'ORBITAL MARSHAL', 'VEIL SENTINEL'
 ];
+const DUEL_TAG_FIRST = [
+  'Vex', 'Nyx', 'Kael', 'Sora', 'Ren', 'Mira', 'Jax', 'Talon', 'Rook', 'Sable',
+  'Kestis', 'Wren', 'Nova', 'Vale', 'Cinder', 'Echo', 'Havoc', 'Juno', 'Korr', 'Lumen',
+  'Mace', 'Onyx', 'Pike', 'Quill', 'Rune', 'Sly', 'Thorn', 'Umbra', 'Vanta', 'Zephyr',
+  'Ash', 'Brix', 'Cyra', 'Dax', 'Eira', 'Fenn', 'Galen', 'Hera', 'Ivo', 'Jade'
+];
+const DUEL_TAG_SECOND = [
+  'Walker', 'Runner', 'Blade', 'Warden', 'Rider', 'Fang', 'Vigil', 'Storm',
+  'Shade', 'Spark', 'Hawk', 'Reign', 'Drift', 'Pulse', 'Knight', 'Rogue',
+  'Edge', 'Flux', 'Dusk', 'Ember', 'Saber', 'Wraith', 'Tide', 'Crow'
+];
+const DUEL_LOOK_KEYS = ['hilt', 'emitter', 'grip', 'pommel', 'crystal', 'accent', 'blade', 'switch', 'engraving'];
 const DUEL_FINISH_TONES = {
   satin: ['#a6ada3', '#d2d9d0', '#6f7972'],
   copper: ['#b7835d', '#d9ac81', '#7f5739'],
@@ -3927,8 +3938,11 @@ const DUEL_FINISH_TONES = {
   frost: ['#b8c9d0', '#e5f1f4', '#7d8d94'],
   patina: ['#668d79', '#90b9a2', '#3d5b4c']
 };
-const duelRecordDefaults = { level: 1, xp: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, stance: 'shii', selectedSaberId: null };
-let duelRecord = { ...duelRecordDefaults };
+const duelRecordDefaults = {
+  level: 1, xp: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0,
+  stance: 'shii', selectedSaberId: null, opponentNames: [], opponentLooks: []
+};
+let duelRecord = { ...duelRecordDefaults, opponentNames: [], opponentLooks: [] };
 try {
   const storedDuel = JSON.parse(localStorage.getItem(DUEL_KEY) || '{}');
   if (storedDuel && typeof storedDuel === 'object') {
@@ -3940,7 +3954,13 @@ try {
       wins: Math.max(0, Math.round(Number(storedDuel.wins) || 0)),
       losses: Math.max(0, Math.round(Number(storedDuel.losses) || 0)),
       streak: Math.max(0, Math.round(Number(storedDuel.streak) || 0)),
-      bestStreak: Math.max(0, Math.round(Number(storedDuel.bestStreak) || 0))
+      bestStreak: Math.max(0, Math.round(Number(storedDuel.bestStreak) || 0)),
+      opponentNames: Array.isArray(storedDuel.opponentNames)
+        ? storedDuel.opponentNames.filter(name => typeof name === 'string').slice(-120)
+        : [],
+      opponentLooks: Array.isArray(storedDuel.opponentLooks)
+        ? storedDuel.opponentLooks.filter(look => typeof look === 'string').slice(-120)
+        : []
     };
   }
 } catch (_) { /* A blocked local store should not stop the training ring. */ }
@@ -3956,7 +3976,8 @@ const duel = {
     enemy: { kind: '', start: -99, dur: .9 }
   },
   fx: { hitPlayer: -99, hitEnemy: -99, clash: -99, clashX: 0, clashY: 0, shake: -99, waves: [], floaters: [], sparks: [] },
-  log: [], bg: null, resultKind: null
+  log: [], bg: null, resultKind: null,
+  matchInterval: 0, matchTimers: [], matchOpponent: null, introStart: 0
 };
 const duelCanvas = $('duelCanvas');
 const duelCtx = duelCanvas.getContext('2d');
@@ -3989,6 +4010,55 @@ function duelSpecFromArtifact(artifact) {
     crystal: parts.crystal, accent: parts.accent, blade: parts.blade, switch: parts.switch, engraving: parts.engraving,
     tones: DUEL_FINISH_TONES[parts.hilt.finish] || DUEL_FINISH_TONES.satin
   };
+}
+function duelPick(list) { return list[Math.floor(Math.random() * list.length)]; }
+function duelPartSignature(parts = {}) {
+  return DUEL_LOOK_KEYS.map(key => Math.max(0, Math.round(Number(parts[key]) || 0))).join('.');
+}
+function makeDuelGamertag(usedNames) {
+  for (let attempt = 0; attempt < 90; attempt++) {
+    const first = duelPick(DUEL_TAG_FIRST);
+    const second = duelPick(DUEL_TAG_SECOND);
+    const style = Math.random();
+    let tag;
+    if (style < .46) tag = `${first}${second}`;
+    else if (style < .68) tag = `${first}_${second}`;
+    else if (style < .84) tag = `${first}${Math.floor(duelRand(10, 100))}`;
+    else if (style < .94) tag = `${first}-${Math.floor(duelRand(10, 100))}`;
+    else tag = `${first}${second}${Math.floor(duelRand(10, 100))}`;
+    if (!usedNames.has(tag)) return tag;
+  }
+  return `${duelPick(DUEL_TAG_FIRST)}${duelPick(DUEL_TAG_SECOND)}${Date.now().toString(36).slice(-3).toUpperCase()}`;
+}
+function makeDuelOpponentLook(usedLooks) {
+  for (let attempt = 0; attempt < 90; attempt++) {
+    const parts = {};
+    DUEL_LOOK_KEYS.forEach(key => {
+      parts[key] = Math.floor(Math.random() * options[key].length);
+    });
+    const signature = duelPartSignature(parts);
+    if (!usedLooks.has(signature)) return { parts, signature };
+  }
+  const parts = {};
+  DUEL_LOOK_KEYS.forEach((key, index) => {
+    parts[key] = (Math.floor(Math.random() * options[key].length) + index + Date.now()) % options[key].length;
+  });
+  return { parts, signature: duelPartSignature(parts) };
+}
+function makeDuelOpponentIdentity() {
+  const record = duel.record;
+  const usedNames = new Set(record.opponentNames);
+  const usedLooks = new Set(record.opponentLooks);
+  const playerSignature = duelPartSignature(duel.selectedArtifact?.parts || {});
+  if (duel.selectedArtifact?.parts) usedLooks.add(playerSignature);
+  const name = makeDuelGamertag(usedNames);
+  const look = makeDuelOpponentLook(usedLooks);
+  record.opponentNames.push(name);
+  record.opponentLooks.push(look.signature);
+  if (record.opponentNames.length > 120) record.opponentNames.splice(0, record.opponentNames.length - 120);
+  if (record.opponentLooks.length > 120) record.opponentLooks.splice(0, record.opponentLooks.length - 120);
+  saveDuelRecord();
+  return { name, parts: look.parts };
 }
 function makeDuelLoaner() {
   return {
@@ -4108,10 +4178,142 @@ function renderDuelLoadoutPreview() {
   start.innerHTML = `ENTER THE RING <span>↗</span>`;
   requestAnimationFrame(resizeDuelPreview);
 }
+function clearDuelMatchTimers() {
+  if (duel.matchInterval) clearInterval(duel.matchInterval);
+  duel.matchInterval = 0;
+  duel.matchTimers.forEach(timer => clearTimeout(timer));
+  duel.matchTimers = [];
+}
+function renderDuelMatchTags() {
+  const feed = $('duelMatchTags');
+  if (!feed) return;
+  feed.replaceChildren();
+  const used = new Set(duel.record.opponentNames);
+  for (let i = 0; i < 5; i++) {
+    const tag = makeDuelGamertag(used);
+    used.add(tag);
+    const row = document.createElement('div');
+    row.className = 'duel-match-tag' + (i === 2 ? ' is-target' : '');
+    const dot = document.createElement('i');
+    const name = document.createElement('span');
+    name.textContent = tag;
+    const meta = document.createElement('small');
+    const level = 2 + Math.floor(Math.random() * Math.max(4, duel.record.level + 5));
+    meta.textContent = `LV ${String(level).padStart(2, '0')} · ${18 + Math.floor(Math.random() * 30)} MS`;
+    row.append(dot, name, meta);
+    feed.append(row);
+  }
+}
+function drawDuelMatchSaber(canvas, spec) {
+  if (!canvas || !spec) return;
+  const width = Math.max(1, canvas.clientWidth);
+  const height = Math.max(1, canvas.clientHeight);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  const context = canvas.getContext('2d');
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.clearRect(0, 0, width, height);
+  const scale = Math.min(width / 5.2, height / 4.9);
+  const pommelX = width * .58;
+  const pommelY = height - 10;
+  drawDuelFlatSaber(context, spec, pommelX, pommelY, scale, -Math.PI / 2 + .04, true, 1);
+  context.save();
+  context.globalCompositeOperation = 'lighter';
+  context.strokeStyle = `rgba(${hexToRgb(spec.crystal.color)},.3)`;
+  context.lineWidth = 1;
+  context.beginPath();
+  context.ellipse(width * .5, height - 8, width * .21, 6, 0, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
+}
+function resizeDuelMatchSabers() {
+  drawDuelMatchSaber($('duelMatchPlayerSaber'), duel.selectedSpec);
+  drawDuelMatchSaber($('duelMatchOpponentSaber'), duel.matchOpponent?.spec);
+}
+function beginDuelMatchmaking() {
+  if (!duel.open) return;
+  duelEnsureSelection();
+  if (!duel.selectedArtifact) return;
+  clearDuelMatchTimers();
+  duel.token++;
+  const token = duel.token;
+  duel.screen = 'match';
+  duel.matchOpponent = null;
+  stopDuelLoop();
+  $('duelLobby').hidden = true;
+  $('duelArena').hidden = true;
+  $('duelMatch').hidden = false;
+  $('duelMatchSearch').hidden = false;
+  $('duelMatchFound').hidden = true;
+  $('duelMatchHeadline').textContent = 'Searching the atelier network…';
+  $('duelMatchSubline').textContent = 'Matching by level, stance, and blade signature.';
+  $('duelMatchTitle').textContent = 'FINDING A CHALLENGER';
+  $('duelMatchEyebrow').textContent = 'MATCHMAKING · OPEN RING';
+  $('duelMatchCopy').textContent = 'Scanning for a duelist near your level. Every challenger forges a different blade.';
+  $('duelMatchCancel').textContent = '← CANCEL SEARCH';
+  $('duelMatchPing').textContent = String(18 + Math.floor(Math.random() * 19));
+  renderDuelMatchTags();
+  playTone(520, .06);
+  let ticks = 0;
+  duel.matchInterval = setInterval(() => {
+    if (!duel.open || duel.screen !== 'match' || duel.token !== token) return;
+    ticks++;
+    if (ticks % 2 === 0) $('duelMatchPing').textContent = String(16 + Math.floor(Math.random() * 33));
+    if (ticks % 3 === 1) renderDuelMatchTags();
+    if (ticks === 6) $('duelMatchHeadline').textContent = 'Narrowing the field…';
+    if (ticks === 11) $('duelMatchHeadline').textContent = 'One challenger is answering…';
+    if (ticks >= 15) {
+      clearInterval(duel.matchInterval);
+      duel.matchInterval = 0;
+      revealDuelMatchOpponent(token);
+    }
+  }, 130);
+}
+function revealDuelMatchOpponent(token) {
+  if (!duel.open || duel.screen !== 'match' || duel.token !== token) return;
+  const foe = buildDuelOpponent();
+  duel.matchOpponent = foe;
+  const player = duel.selectedArtifact;
+  const rank = duelRank(duel.record.level);
+  $('duelMatchSearch').hidden = true;
+  $('duelMatchFound').hidden = false;
+  $('duelMatchPlayerName').textContent = player.name;
+  $('duelMatchPlayerMeta').textContent = `${rank.toUpperCase()} · LEVEL ${String(duel.record.level).padStart(2, '0')}`;
+  $('duelMatchPlayerStance').textContent = `${duel.selectedSpec.crystal.name.toUpperCase()} · ${DUEL_STANCES[duel.stance].name.toUpperCase()}`;
+  $('duelMatchOpponentName').textContent = foe.name;
+  $('duelMatchOpponentMeta').textContent = `${foe.title} · LEVEL ${String(duel.record.level).padStart(2, '0')}`;
+  $('duelMatchOpponentStance').textContent = foe.form;
+  $('duelMatchTitle').textContent = 'CHALLENGER FOUND';
+  document.querySelector('.duel-versus-card.is-player').style.setProperty('--versus-color', duel.selectedSpec.crystal.color);
+  document.querySelector('.duel-versus-card.is-player').style.setProperty('--versus-glow', `rgba(${hexToRgb(duel.selectedSpec.crystal.color)},.14)`);
+  document.querySelector('.duel-versus-card.is-opponent').style.setProperty('--versus-color', foe.spec.crystal.color);
+  document.querySelector('.duel-versus-card.is-opponent').style.setProperty('--versus-glow', `rgba(${hexToRgb(foe.spec.crystal.color)},.13)`);
+  $('duelMatchEyebrow').textContent = 'MATCH FOUND · RING 07';
+  $('duelMatchCopy').textContent = `${foe.name} answered the call. Blades syncing — entering the ring.`;
+  $('duelMatchCancel').textContent = '← BACK TO LOADOUT';
+  requestAnimationFrame(() => resizeDuelMatchSabers());
+  playTone(880, .1);
+  duel.matchTimers.push(setTimeout(() => playTone(1180, .07), 150));
+  duel.matchTimers.push(setTimeout(() => {
+    if (duel.open && duel.screen === 'match' && duel.token === token) startDuel();
+  }, 1950));
+}
+function cancelDuelMatchmaking() {
+  if (!duel.open || duel.screen !== 'match') return;
+  clearDuelMatchTimers();
+  duel.token++;
+  duel.matchOpponent = null;
+  $('duelMatch').hidden = true;
+  duel.screen = 'lobby';
+  renderDuelLobby();
+  playTone(420, .08);
+}
 function renderDuelLobby() {
   duel.screen = 'lobby';
   $('duelLobby').hidden = false;
   $('duelArena').hidden = true;
+  $('duelMatch').hidden = true;
   duelEnsureSelection();
   updateDuelProfileUI();
   renderDuelSaberList();
@@ -4140,17 +4342,23 @@ function closeDuel() {
   if (!duel.open) return;
   duel.open = false;
   duel.token++;
+  clearDuelMatchTimers();
+  duel.matchOpponent = null;
   stopDuelLoop();
   closeOverlayElement($('duelOverlay'));
   $('duelLobby').hidden = false;
   $('duelArena').hidden = true;
+  $('duelMatch').hidden = true;
   activityBodyLock();
 }
 function backToDuelLobby() {
   if (!duel.open) return;
   duel.token++;
+  clearDuelMatchTimers();
+  duel.matchOpponent = null;
   stopDuelLoop();
   $('duelArena').hidden = true;
+  $('duelMatch').hidden = true;
   $('duelLobby').hidden = false;
   renderDuelLobby();
   playTone(420, .08);
@@ -4192,7 +4400,7 @@ function drawDuelThumb(canvas, artifact) {
 // Flattened 2D saber renderer. The workbench builds real 3D geometry; the ring
 // projects the same part choices into a clean side-view silhouette.
 // ---------------------------------------------------------------------------
-function drawDuelFlatSaber(context, spec, x, y, scale, angle, bladeOn, alpha = 1) {
+function drawDuelFlatSaber(context, spec, x, y, scale, angle, bladeOn, alpha = 1, reveal = 1) {
   const ctx = context;
   const { hilt, emitter, grip, pommel, crystal, accent, blade, switch: switchPart, engraving, tones } = spec;
   const body = tones[0], light = tones[1], bodyDark = tones[2];
@@ -4369,14 +4577,15 @@ function drawDuelFlatSaber(context, spec, x, y, scale, angle, bladeOn, alpha = 1
   ellipse(0, 1.05, .018, .045, '#ffffff');
   ctx.restore();
 
-  if (bladeOn) drawDuelFlatBlade(ctx, spec, emitterTop);
+  if (bladeOn && reveal > .01) drawDuelFlatBlade(ctx, spec, emitterTop, reveal);
 
   ctx.restore();
 }
-function drawDuelFlatBlade(ctx, spec, base) {
+function drawDuelFlatBlade(ctx, spec, base, reveal = 1) {
   const color = spec.crystal.color;
   const style = spec.blade.style;
-  const length = style === 'long' ? 4.08 : style === 'crossguard' ? 3.42 : style === 'fine' ? 3.62 : 3.56;
+  const fullLength = style === 'long' ? 4.08 : style === 'crossguard' ? 3.42 : style === 'fine' ? 3.62 : 3.56;
+  const length = fullLength * Math.max(0, Math.min(1, reveal));
   const widthFactor = Math.max(.72, Math.min(1.45, (spec.blade.width || .092) / .092));
   const tip = base + length;
   ctx.save();
@@ -4449,22 +4658,25 @@ function buildDuelPlayer() {
 }
 function buildDuelOpponent() {
   const record = duel.record;
-  const index = Math.min(DUEL_FOES.length - 1, Math.floor(record.wins / 2));
-  const foe = DUEL_FOES[index];
-  const artifact = { id: `foe-${index}`, name: foe.name, blade: true, parts: { ...foe.parts } };
+  const tier = Math.min(7, Math.floor(record.wins / 2));
+  const identity = makeDuelOpponentIdentity();
+  const stance = DUEL_STANCES[duelPick(Object.keys(DUEL_STANCES))];
+  const artifact = { id: `foe-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: identity.name, blade: true, parts: identity.parts };
   const spec = duelSpecFromArtifact(artifact);
-  const maxHp = Math.round(84 + record.level * 12 + Math.min(record.wins, 18) * 4 + index * 2);
-  duel.enemy = {
-    side: 'enemy', name: foe.name, title: foe.title, form: foe.form,
+  const maxHp = Math.round(84 + record.level * 12 + Math.min(record.wins, 18) * 4 + tier * 2);
+  const foe = {
+    side: 'enemy', name: identity.name, title: duelPick(DUEL_TITLES), form: `${stance.form} · ${stance.name.toUpperCase()}`,
     spec, hp: maxHp, maxHp, focus: 20,
     attack: 8.4 + record.level * 1.55 + Math.min(record.wins, 20) * .38,
     intent: 'attack', defeated: false
   };
+  duel.enemy = foe;
   return foe;
 }
 function startDuel() {
   if (!duel.selectedArtifact) return;
   if (!DUEL_STANCES[duel.stance]) duel.stance = 'shii';
+  clearDuelMatchTimers();
   duel.token++;
   duel.screen = 'arena';
   duel.round = 1;
@@ -4477,21 +4689,29 @@ function startDuel() {
   duel.fx.waves.length = 0; duel.fx.floaters.length = 0; duel.fx.sparks.length = 0;
   duel.log.length = 0;
   $('duelLobby').hidden = true;
+  $('duelMatch').hidden = true;
   $('duelArena').hidden = false;
   $('duelResult').classList.remove('is-open');
   $('duelResult').setAttribute('aria-hidden', 'true');
   buildDuelPlayer();
-  const foe = buildDuelOpponent();
+  const foe = duel.matchOpponent || buildDuelOpponent();
+  duel.enemy = foe;
+  duel.matchOpponent = null;
+  duel.introStart = performance.now() / 1000 + .12;
   duel.player.name = duel.selectedArtifact.name;
   rollDuelIntent();
   updateDuelBattleUI(true);
   renderDuelLog();
-  announceDuel('ROUND 01 · ENGAGE', '');
   addDuelLog(`You enter the ring against ${foe.name}.`);
-  playTone(560, .1);
   requestAnimationFrame(() => {
     resizeDuelCanvas();
-    requestAnimationFrame(() => { resizeDuelCanvas(); startDuelLoop(); });
+    requestAnimationFrame(() => {
+      resizeDuelCanvas();
+      startDuelLoop();
+      announceDuel('ROUND 01 · ENGAGE', '');
+      playTone(560, .1);
+      duelDelay(320, () => playTone(840, .13));
+    });
   });
 }
 function rollDuelIntent() {
@@ -4837,7 +5057,7 @@ function nextDuelFromResult() {
   if (!duel.open) return;
   $('duelResult').classList.remove('is-open');
   $('duelResult').setAttribute('aria-hidden', 'true');
-  startDuel();
+  beginDuelMatchmaking();
 }
 
 // ---------------------------------------------------------------------------
@@ -4924,12 +5144,46 @@ function buildDuelBackdrop(width, height, dpr, bladeColor) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
   }
   ctx.restore();
+  // Ring platform: a dark disc banded with faint concentric guide lines.
+  const ringCX = width * .5, ringCY = floorY + 6, ringRX = width * .29, ringRY = height * .045;
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(ringCX, ringCY, ringRX, ringRY, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(8,13,10,.52)'; ctx.fill();
+  ctx.clip();
+  for (let i = 1; i <= 3; i++) {
+    ctx.strokeStyle = `rgba(216,243,106,${.035 + i * .02})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(ringCX, ringCY, ringRX * i / 4, ringRY * i / 4, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+  // Rim ticks read as an engraved training ring rather than a plain outline.
+  for (let i = 0; i < 56; i++) {
+    const angle = i / 56 * Math.PI * 2;
+    const major = i % 7 === 0;
+    const inner = major ? .955 : .978;
+    ctx.strokeStyle = `rgba(216,243,106,${major ? .26 : .13})`;
+    ctx.lineWidth = major ? 1.3 : 1;
+    ctx.beginPath();
+    ctx.moveTo(ringCX + Math.cos(angle) * ringRX * inner, ringCY + Math.sin(angle) * ringRY * inner);
+    ctx.lineTo(ringCX + Math.cos(angle) * ringRX, ringCY + Math.sin(angle) * ringRY);
+    ctx.stroke();
+  }
   ctx.save();
   ctx.strokeStyle = 'rgba(216,243,106,.3)';
   ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.ellipse(width * .5, floorY + 6, width * .29, height * .045, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(ringCX, ringCY, ringRX, ringRY, 0, 0, Math.PI * 2); ctx.stroke();
   ctx.strokeStyle = 'rgba(216,243,106,.1)';
   ctx.beginPath(); ctx.ellipse(width * .5, floorY + 8, width * .23, height * .032, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  // Faded floor stencil at the front of the platform.
+  ctx.save();
+  ctx.translate(ringCX, ringCY + ringRY * .42);
+  ctx.scale(1, .42);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${Math.max(8, Math.round(width * .0082))}px "IBM Plex Mono", monospace`;
+  ctx.fillStyle = 'rgba(216,243,106,.15)';
+  ctx.fillText('RING 07 · ATELIER', 0, 0);
   ctx.restore();
   for (const x of [width * .18, width * .82]) {
     const beam = ctx.createLinearGradient(0, floorY - 150, 0, floorY);
@@ -4937,6 +5191,37 @@ function buildDuelBackdrop(width, height, dpr, bladeColor) {
     beam.addColorStop(1, 'rgba(120,170,140,.055)');
     ctx.fillStyle = beam;
     ctx.beginPath(); ctx.moveTo(x - 26, floorY); ctx.lineTo(x + 26, floorY); ctx.lineTo(x + 50, 0); ctx.lineTo(x - 50, 0); ctx.closePath(); ctx.fill();
+  }
+  // Low haze where the ring lights meet the floor.
+  const mist = ctx.createLinearGradient(0, floorY - height * .12, 0, floorY + height * .16);
+  mist.addColorStop(0, 'rgba(158,190,168,0)');
+  mist.addColorStop(.45, 'rgba(158,190,168,.028)');
+  mist.addColorStop(1, 'rgba(158,190,168,0)');
+  ctx.fillStyle = mist; ctx.fillRect(0, floorY - height * .12, width, height * .28);
+  // Freestanding work lights frame the ring without crowding the HUD.
+  for (const side of [-1, 1]) {
+    const lx = width * .5 + side * width * .375;
+    const baseY = floorY + 4;
+    const headY = floorY - height * .30;
+    ctx.strokeStyle = 'rgba(168,190,172,.17)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(lx, baseY); ctx.lineTo(lx, headY + 9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx - 9, baseY); ctx.lineTo(lx, baseY - 5); ctx.lineTo(lx + 9, baseY); ctx.stroke();
+    ctx.save();
+    ctx.translate(lx, headY);
+    ctx.rotate(side * .46);
+    ctx.fillStyle = '#131b16';
+    ctx.strokeStyle = 'rgba(170,196,176,.2)';
+    ctx.beginPath(); ctx.rect(-8, -8, 16, 16); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(236,255,180,.8)';
+    ctx.fillRect(-5, 2, 10, 2);
+    const headGlow = ctx.createRadialGradient(0, 4, 1, 0, 4, 34);
+    headGlow.addColorStop(0, 'rgba(232,250,170,.2)');
+    headGlow.addColorStop(.45, 'rgba(216,243,106,.07)');
+    headGlow.addColorStop(1, 'rgba(216,243,106,0)');
+    ctx.fillStyle = headGlow;
+    ctx.beginPath(); ctx.arc(0, 4, 34, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
   const glow = ctx.createRadialGradient(width * .5, floorY - 70, 8, width * .5, floorY - 70, width * .42);
   glow.addColorStop(0, `rgba(${hexToRgb(bladeColor)},.11)`);
@@ -4991,6 +5276,10 @@ function drawDuelFighter(side, now) {
   const defeated = fighter.hp <= 0;
   const hitStart = player ? duel.fx.hitPlayer : duel.fx.hitEnemy;
   const hit = Math.max(0, 1 - (now - hitStart) / .36);
+  const ignition = duel.introStart
+    ? duelEaseOut((now - duel.introStart - (player ? 0 : .16)) / .72)
+    : 1;
+  const bladeReveal = defeated ? 1 : ignition;
   const palette = player
     ? { robe: '#26332b', robeLight: '#3a4a3c', robeDark: '#17201a', pants: '#1b241e', glove: '#2f3b31', trim: spec.crystal.color, face: '#8f8474', visor: spec.crystal.color }
     : { robe: '#271b1e', robeLight: '#3c292d', robeDark: '#160f11', pants: '#1b1214', glove: '#322326', trim: '#ff5b6b', face: '#6f5551', visor: '#ff6b78' };
@@ -5072,7 +5361,7 @@ function drawDuelFighter(side, now) {
   const dirX = Math.cos(pose.angle), dirY = Math.sin(pose.angle);
   const pommelX = handX - dirX * .62 * scale;
   const pommelY = handY - dirY * .62 * scale;
-  drawDuelFlatSaber(ctx, spec, pommelX, pommelY, scale, pose.angle, !defeated, defeated ? .28 : 1);
+  drawDuelFlatSaber(ctx, spec, pommelX, pommelY, scale, pose.angle, !defeated, defeated ? .28 : 1, bladeReveal);
   ctx.fillStyle = palette.glove;
   ctx.beginPath(); ctx.arc(handX, handY, height * .026, 0, Math.PI * 2); ctx.fill();
   if (pose.shield > 0) {
@@ -5161,6 +5450,23 @@ function drawDuelFrame(now) {
   const ctx = duelCtx;
   ctx.clearRect(0, 0, duel.w, duel.h);
   if (duel.bg) ctx.drawImage(duel.bg, 0, 0, duel.w, duel.h);
+  // Motes drifting through the lamp light give the still frame some air.
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 30; i++) {
+    const speed = .011 + (i % 7) * .0026;
+    const drift = (now * speed + i * .137) % 1;
+    const x = ((i * 61) % 97) / 97 * duel.w + Math.sin(now * .35 + i * 1.7) * 11;
+    const y = duel.h * .1 + (1 - drift) * duel.h * .7;
+    const twinkle = .5 + .5 * Math.sin(now * 1.8 + i * 2.3);
+    ctx.fillStyle = `rgba(216,243,106,${.028 + twinkle * .058})`;
+    ctx.fillRect(x, y, 1.1, 1.1);
+  }
+  const rimPulse = .5 + .5 * Math.sin(now * 2.1);
+  ctx.strokeStyle = `rgba(216,243,106,${.035 + rimPulse * .045})`;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.ellipse(duel.w * .5, duel.h * .82 + 6, duel.w * .29, duel.h * .045, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
   const shakeAge = now - duel.fx.shake;
   ctx.save();
   if (shakeAge >= 0 && shakeAge < .22) {
@@ -5168,12 +5474,13 @@ function drawDuelFrame(now) {
     ctx.translate((Math.random() - .5) * strength, (Math.random() - .5) * strength);
   }
   const layout = duelLayout();
+  const floorPulse = .5 + .5 * Math.sin(now * 2.1);
   for (const side of ['player', 'enemy']) {
     const fighter = side === 'player' ? duel.player : duel.enemy;
     if (!fighter || fighter.hp <= 0) continue;
     const x = side === 'player' ? layout.playerX : layout.enemyX;
     const grd = ctx.createRadialGradient(x, layout.floorY + 2, 2, x, layout.floorY + 2, layout.charH * .34);
-    grd.addColorStop(0, `rgba(${hexToRgb(fighter.spec.crystal.color)},.10)`);
+    grd.addColorStop(0, `rgba(${hexToRgb(fighter.spec.crystal.color)},${.09 + floorPulse * .045})`);
     grd.addColorStop(1, `rgba(${hexToRgb(fighter.spec.crystal.color)},0)`);
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.ellipse(x, layout.floorY + 3, layout.charH * .35, layout.charH * .06, 0, 0, Math.PI * 2); ctx.fill();
@@ -5212,7 +5519,9 @@ function duelLoop(timestamp) {
 $('duelClose').addEventListener('click', closeDuel);
 $('duelArenaClose').addEventListener('click', backToDuelLobby);
 $('duelBack').addEventListener('click', closeDuel);
-$('duelStart').addEventListener('click', startDuel);
+$('duelStart').addEventListener('click', beginDuelMatchmaking);
+$('duelMatchClose').addEventListener('click', cancelDuelMatchmaking);
+$('duelMatchCancel').addEventListener('click', cancelDuelMatchmaking);
 $('duelNext').addEventListener('click', nextDuelFromResult);
 $('duelLeave').addEventListener('click', backToDuelLobby);
 $('duelEmptyBuild').addEventListener('click', () => {
@@ -5243,5 +5552,6 @@ new ResizeObserver(() => {
   else if (duel.open) resizeDuelPreview();
 }).observe($('duelStage'));
 new ResizeObserver(() => { if (duel.open && duel.screen === 'lobby') resizeDuelPreview(); }).observe($('duelSaberPreview'));
+new ResizeObserver(() => { if (duel.open && duel.screen === 'match') resizeDuelMatchSabers(); }).observe($('duelMatch'));
 
 animate();
