@@ -37,7 +37,7 @@ export class Game {
       staff: [], fronts: [], buff: null, pricing: 'standard',
       story: { idx: 0, seen: false, base: { harvests: 0, sold: 0, laundered: 0, refined: 0, qualitySold: 0 } },
       flags: {}, layLowUntil: 0,
-      settings: { sound: true, hints: true },
+      settings: { sound: true, hints: true, voice: true },
       stats: { harvests: 0, harvested: 0, plants: 0, sold: 0, earned: 0, laundered: 0, refined: 0, qualitySold: 0, sales: 0, raids: 0, played: 0, bestSale: 0 }
     };
   }
