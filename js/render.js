@@ -1450,28 +1450,38 @@ export class Renderer {
     g.propState.slots.forEach((slot, i) => {
       const pos = p.slots[i];
       if (!pos) return;
-      const top = this.toScreen(pos[0], pos[1], slot ? 44 + slot.progress * 45 : 58);
+      // Keep every pot indicator anchored to the pot's own screen position.
+      // Offsetting these in screen space made them drift to the right of the
+      // planters, especially on the apartment's angled row of pots.
+      const center = this.toScreen(pos[0], pos[1], 0);
+      const top = this.toScreen(pos[0], pos[1], slot ? 58 + slot.progress * 40 : 58);
       if (!slot) return;
       if (slot.progress >= 1) {
         const bob = Math.sin(this.time * 3 + i) * 2.5;
         const label = 'HARVEST';
         ctx.save();
-        ctx.font = '800 9px system-ui'; ctx.textAlign = 'center';
-        const w = 68, h = 20;
-        const x = top.x, y = top.y - 10 + bob;
+        ctx.font = '800 9px system-ui';
+        const textW = ctx.measureText(label).width;
+        const iconW = 12, gap = 5;
+        const contentW = iconW + gap + textW;
+        const w = Math.max(52, contentW + 20), h = 20;
+        const x = center.x, y = top.y - 12 + bob;
+        const start = x - contentW / 2;
         ctx.fillStyle = 'rgba(14,30,18,.92)'; ctx.beginPath(); ctx.roundRect(x - w / 2, y - h, w, h, 10); ctx.fill();
         ctx.strokeStyle = 'rgba(150,255,160,.6)'; ctx.lineWidth = 1; ctx.stroke();
         ctx.fillStyle = '#c7ff9d';
-        // leaf glyph
-        ctx.beginPath(); ctx.ellipse(x - 23, y - 10, 5, 2.8, -.5, 0, TAU); ctx.fill();
-        ctx.fillText(label, x + 3, y - 6.5);
+        // leaf glyph, measured with the label so the whole badge is centred
+        ctx.beginPath(); ctx.ellipse(start + 5, y - 10, 5, 2.8, -.5, 0, TAU); ctx.fill();
+        ctx.textAlign = 'left';
+        ctx.fillText(label, start + iconW + gap, y - 6.5);
         // pulse ring
         const pulse = (Math.sin(this.time * 3) + 1) / 2;
         ctx.strokeStyle = `rgba(180,255,170,${.35 * (1 - pulse)})`; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.roundRect(x - w / 2 - pulse * 5, y - h - pulse * 4, w + pulse * 10, h + pulse * 8, 10); ctx.stroke();
         ctx.restore();
       } else if (g.state.clock - (slot.lastTend || 0) > 4) {
-        const [sx, sy] = [top.x + 30, top.y + 6];
+        // Water droplet: directly over the pot, never off to one side.
+        const sx = center.x, sy = top.y - 2;
         ctx.save();
         ctx.fillStyle = 'rgba(14,28,34,.8)'; ctx.beginPath(); ctx.arc(sx, sy, 8, 0, TAU); ctx.fill();
         ctx.strokeStyle = 'rgba(130,235,255,.5)'; ctx.lineWidth = 1; ctx.stroke();
