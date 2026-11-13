@@ -15,7 +15,7 @@ const round = Math.round;
 export class Game {
   constructor() {
     this.listeners = new Map();
-    this.runtime = { customers: [], spawnTimer: 5, staffTimers: { bea: 0, tito: 0 }, eventTimer: 95, autosave: 0, launderAcc: 0, uiPaused: false, pendingEvent: null, raidCooldown: 0, lastFrame: 0 };
+    this.runtime = { customers: [], spawnTimer: 5, staffTimers: { bea: 0, tito: 0, mara: 0, eli: 0 }, eventTimer: 95, autosave: 0, launderAcc: 0, uiPaused: false, pendingEvent: null, raidCooldown: 0, lastFrame: 0 };
     this.state = this.newState();
   }
 
@@ -539,6 +539,45 @@ export class Game {
       st.tito = (st.tito || 0) + dt;
       if (st.tito >= 6) { st.tito = 0; this.autoServe(); }
     }
+    if (this.state.staff.includes('mara')) {
+      st.mara = (st.mara || 0) + dt;
+      if (st.mara >= 5) { st.mara = 0; this.autoWater(); }
+    }
+    if (this.state.staff.includes('eli')) {
+      st.eli = (st.eli || 0) + dt;
+      if (st.eli >= 8) { st.eli = 0; this.autoPlant(); }
+    }
+  }
+
+  autoWater() {
+    const propertyOrder = [this.state.activeProperty, ...PROPERTY_LIST.map(p => p.id).filter(id => id !== this.state.activeProperty)];
+    for (const propId of propertyOrder) {
+      const ps = this.state.properties[propId];
+      if (!ps?.owned) continue;
+      const candidates = ps.slots
+        .map((slot, index) => ({ slot, index }))
+        .filter(({ slot }) => slot && slot.progress < 1 && this.state.clock - (slot.lastTend ?? -99) >= 4)
+        .sort((a, b) => a.slot.progress - b.slot.progress);
+      if (!candidates.length) continue;
+      this.tend(propId, candidates[0].index);
+      return true;
+    }
+    return false;
+  }
+
+  autoPlant() {
+    const strainId = this.selectedStrainId();
+    const propertyOrder = [this.state.activeProperty, ...PROPERTY_LIST.map(p => p.id).filter(id => id !== this.state.activeProperty)];
+    for (const propId of propertyOrder) {
+      const ps = this.state.properties[propId];
+      if (!ps?.owned) continue;
+      const index = ps.slots.findIndex(slot => !slot);
+      if (index < 0) continue;
+      const result = this.plant(propId, index, strainId);
+      if (result.ok) return true;
+      if (result.msg?.startsWith('Need $')) return false;
+    }
+    return false;
   }
 
   updateFronts(dt) {
