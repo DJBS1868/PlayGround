@@ -678,7 +678,7 @@ export class UI {
       </div></div>
       <div class="sec-title">AVAILABLE CREW <em>${s.staff.length} hired</em></div>
       ${staff}
-      <div class="card"><div class="tiny muted">Wages are taken from dirty cash at daybreak. If you can't pay, they walk. Auto-harvest and auto-sell keep working while you're here — and plants keep growing while you're away.</div></div>
+      <div class="card"><div class="tiny muted">Wages are taken from dirty cash at daybreak. If you can't pay, they walk. Hired staff keep harvesting, serving, watering and planting while you're here — and plants keep growing while you're away.</div></div>
     `;
   }
 

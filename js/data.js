@@ -213,7 +213,11 @@ export const STAFF = [
   { id: 'priya', name: 'Priya', role: 'Chemist', cost: 1400, wage: 42, color: '#9ad1ff',
     desc: '+8 harvest quality. Unlocks instant batch stabilization.', power: '+8 quality' },
   { id: 'bruno', name: 'Bruno', role: 'Muscle', cost: 1000, wage: 36, color: '#d78b8b',
-    desc: '-25% heat gain and smaller losses when raided.', power: '-25% heat' }
+    desc: '-25% heat gain and smaller losses when raided.', power: '-25% heat' },
+  { id: 'mara', name: 'Mara', role: 'Gardener', cost: 700, wage: 30, color: '#7bdc85',
+    desc: 'Waters a growing plant every 5 seconds, speeding growth and improving quality.', power: 'Auto-water' },
+  { id: 'eli', name: 'Eli', role: 'Propagator', cost: 850, wage: 34, color: '#b8a0ff',
+    desc: 'Plants an empty pot every 8 seconds with your selected seed, if you can afford it.', power: 'Auto-plant' }
 ];
 export const STAFF_BY_ID = Object.fromEntries(STAFF.map(s => [s.id, s]));
 
