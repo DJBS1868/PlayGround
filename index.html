@@ -35,6 +35,8 @@
     <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M8.5 14.5A6 6 0 1 1 15.5 14.5c-.9.8-1.5 1.6-1.5 2.5h-4c0-.9-.6-1.7-1.5-2.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
     <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-7 7L3 12Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-siren" viewBox="0 0 24 24"><path d="M6 17v-3a6 6 0 0 1 12 0v3M4 20h16M9 5l-1.5-2M15 5l1.5-2M12 4V2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
@@ -93,6 +95,12 @@
     </button>
 
     <div class="scene-tip" id="sceneTip"></div>
+
+    <div class="camera-hud" id="cameraHud" aria-label="Camera controls">
+      <button class="cam-btn" id="camZoomIn" aria-label="Zoom in" title="Zoom in (+)"><svg><use href="#i-plus"/></svg></button>
+      <button class="cam-btn" id="camZoomOut" aria-label="Zoom out" title="Zoom out (−)"><svg><use href="#i-minus"/></svg></button>
+      <button class="cam-btn cam-fit" id="camReset" aria-label="Reset camera" title="Reset camera (0)"><svg><use href="#i-fit"/></svg></button>
+    </div>
 
     <div class="hint" id="hintBar">
       <span class="hint-dot"></span>

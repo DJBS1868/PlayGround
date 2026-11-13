@@ -33,6 +33,14 @@ export class Renderer {
     this.game = game;
     this.w = 0; this.h = 0; this.dpr = 1;
     this.zoom = 1; this.ox = 0; this.oy = 0;
+    // Fit-to-room camera plus a player-controlled zoom/pan layer.
+    this.baseZoom = 1;
+    this.zoomFactor = 1;
+    this.panX = 0; this.panY = 0;
+    this.sceneCenterX = 0; this.sceneCenterY = 0;
+    this.baseOx = 0; this.baseOy = 0;
+    this.minZoomFactor = .8;
+    this.maxZoomFactor = 3;
     this.time = 0;
     this.hotspots = [];
     this.hoverId = null;
@@ -113,11 +121,75 @@ export class Renderer {
     const bottom = mobile ? 148 : 126;
     const availH = Math.max(200, h - top - bottom);
     const z = Math.min((w - (mobile ? 20 : 60)) / roomW, availH / roomH, 1.28);
-    this.zoom = Math.max(.3, z);
+    this.baseZoom = Math.max(.3, z);
     const midX = (p.w - p.d) * TW / 4;
-    this.ox = w / 2 - midX * this.zoom;
-    this.oy = top + (availH - roomH * this.zoom) / 2 + WALL * this.zoom - (mobile ? 6 : 12);
+    this.sceneCenterX = w / 2;
+    this.sceneCenterY = top + availH / 2 - (mobile ? 6 : 12);
+    this.baseOx = w / 2 - midX * this.baseZoom;
+    this.baseOy = top + (availH - roomH * this.baseZoom) / 2 + WALL * this.baseZoom - (mobile ? 6 : 12);
+    this.applyCamera();
     this.palette = p.palette;
+  }
+
+  applyCamera() {
+    this.zoomFactor = clamp(this.zoomFactor, this.minZoomFactor, this.maxZoomFactor);
+    this.zoom = this.baseZoom * this.zoomFactor;
+    this.clampPan();
+    const f = this.zoomFactor;
+    this.ox = this.sceneCenterX - (this.sceneCenterX - this.baseOx) * f + this.panX;
+    this.oy = this.sceneCenterY - (this.sceneCenterY - this.baseOy) * f + this.panY;
+  }
+
+  clampPan() {
+    if (this.zoomFactor <= 1.001) { this.panX = 0; this.panY = 0; return; }
+    const p = this.game.propConfig;
+    const roomW = (p.w + p.d) * TW / 2;
+    const roomH = (p.w + p.d) * TH / 2 + WALL;
+    const z = this.baseZoom * this.zoomFactor;
+    const freeX = Math.max(0, (roomW * z - this.w) / 2) + this.w * .1;
+    const freeY = Math.max(0, (roomH * z - this.h) / 2) + this.h * .08;
+    this.panX = clamp(this.panX, -freeX, freeX);
+    this.panY = clamp(this.panY, -freeY, freeY);
+  }
+
+  canPan() {
+    return this.zoomFactor > 1.001;
+  }
+
+  zoomTo(factor, sx = this.w / 2, sy = this.sceneCenterY) {
+    const target = clamp(factor, this.minZoomFactor, this.maxZoomFactor);
+    if (Math.abs(target - this.zoomFactor) < .0005) return false;
+    const oldZoom = this.zoom, oldOx = this.ox, oldOy = this.oy;
+    const wx = (sx - oldOx) / oldZoom;
+    const wy = (sy - oldOy) / oldZoom;
+    this.zoomFactor = target;
+    this.applyCamera();
+    const f = this.zoomFactor;
+    const baseX = this.sceneCenterX - (this.sceneCenterX - this.baseOx) * f;
+    const baseY = this.sceneCenterY - (this.sceneCenterY - this.baseOy) * f;
+    this.panX = sx - wx * this.zoom - baseX;
+    this.panY = sy - wy * this.zoom - baseY;
+    this.applyCamera();
+    return true;
+  }
+
+  zoomBy(mult, sx, sy) {
+    return this.zoomTo(this.zoomFactor * mult, sx, sy);
+  }
+
+  panBy(dx, dy) {
+    if (!this.canPan()) return false;
+    this.panX += dx;
+    this.panY += dy;
+    this.applyCamera();
+    return true;
+  }
+
+  resetCamera() {
+    this.zoomFactor = 1;
+    this.panX = 0;
+    this.panY = 0;
+    this.applyCamera();
   }
 
   worldTransform(extraShake = true) {
@@ -139,7 +211,12 @@ export class Renderer {
     const ctx = this.ctx;
     const p = this.game.propConfig;
     // recompute layout if active property dimensions changed
-    if (!this.lastProp || this.lastProp !== p.id) { this.lastProp = p.id; this.resize(); }
+    if (!this.lastProp || this.lastProp !== p.id) {
+      this.lastProp = p.id;
+      this.zoomFactor = 1;
+      this.panX = 0; this.panY = 0;
+      this.resize();
+    }
     this.hotspots = [];
     this.screenTransform();
     ctx.clearRect(0, 0, this.w, this.h);
@@ -1587,10 +1664,11 @@ export class Renderer {
       }
     }
     for (const g of glows) {
-      const rg = ctx.createRadialGradient(g.x, g.y, 4, g.x, g.y, g.r * this.zoom);
+      const gr = g.r * this.zoom;
+      const rg = ctx.createRadialGradient(g.x, g.y, 4, g.x, g.y, gr);
       const glowCol = a => g.col.startsWith('#') ? rgba(g.col, a) : `rgba(${g.col},${a})`;
       rg.addColorStop(0, glowCol(.10 + nf * .12)); rg.addColorStop(.5, glowCol(.035)); rg.addColorStop(1, glowCol(0));
-      ctx.fillStyle = rg; ctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
+      ctx.fillStyle = rg; ctx.fillRect(g.x - gr, g.y - gr, gr * 2, gr * 2);
     }
     ctx.restore();
   }
