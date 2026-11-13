@@ -14,6 +14,57 @@ const TTS_PROFILES = {
   priya: { pitch: 1.08, rate: 1.05, names: ['google us english', 'aria', 'zira', 'samantha', 'female'] }
 };
 
+// Preview browsers often have no system speech voices installed. This compact
+// eSpeak-based engine (meSpeak, GPL-3.0-or-later) runs entirely client-side and
+// is loaded lazily from jsDelivr only when the device has no system voices.
+const FALLBACK_BASE = 'https://cdn.jsdelivr.net/npm/mespeak@2.0.2';
+const FALLBACK_CONFIG = FALLBACK_BASE + '/src/mespeak_config.json';
+const FALLBACK_PROFILES = {
+  narrator: { voice: 'en', pitch: 38, speed: 155 },
+  milo: { voice: 'en-us', pitch: 50, speed: 172 },
+  dex: { voice: 'en-us', pitch: 43, speed: 184 },
+  vera: { voice: 'en-rp', pitch: 62, speed: 164 },
+  marlow: { voice: 'en-rp', pitch: 54, speed: 178 },
+  lenny: { voice: 'en', pitch: 56, speed: 180 },
+  tess: { voice: 'en-sc', pitch: 58, speed: 166 },
+  ward: { voice: 'en-wm', pitch: 44, speed: 160 },
+  rook: { voice: 'en-sc', pitch: 34, speed: 148 },
+  nico: { voice: 'en-us', pitch: 62, speed: 188 },
+  bea: { voice: 'en-wm', pitch: 58, speed: 176 },
+  priya: { voice: 'en-rp', pitch: 61, speed: 180 }
+};
+const FALLBACK_WORKER_SRC = `
+let me = null;
+self.onmessage = async (event) => {
+  const msg = event.data || {};
+  try {
+    if (msg.type === 'init') {
+      const mod = await import('https://cdn.jsdelivr.net/npm/mespeak@2.0.2/+esm');
+      me = mod.default || mod;
+      me.loadConfig(msg.config);
+      self.postMessage({ type: 'ready', ok: me.isConfigLoaded() });
+    } else if (msg.type === 'voice') {
+      me.loadVoice(msg.voice, (ok, id) => {
+        self.postMessage({ type: 'voice', key: msg.key, ok: me.isVoiceLoaded(id), id });
+      });
+    } else if (msg.type === 'speak') {
+      const t0 = performance.now();
+      const wav = me.speak(msg.text, {
+        rawdata: 'array',
+        voice: msg.voiceId || undefined,
+        pitch: msg.pitch,
+        speed: msg.speed,
+        amplitude: 100
+      });
+      const bytes = new Uint8Array(wav);
+      self.postMessage({ type: 'audio', seq: msg.seq, bytes: bytes.buffer, ms: Math.round(performance.now() - t0) }, [bytes.buffer]);
+    }
+  } catch (err) {
+    self.postMessage({ type: 'error', seq: msg.seq, message: err && err.message ? err.message : String(err) });
+  }
+};
+`;
+
 export class Audio {
   constructor(game) {
     this.game = game;
@@ -22,6 +73,17 @@ export class Audio {
     this.enabled = game?.state?.settings?.sound !== false;
     this.ambientStarted = false;
     this.ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+    this.fallbackCapable = typeof window !== 'undefined' && typeof Worker !== 'undefined' && typeof fetch === 'function' && typeof Blob !== 'undefined' && typeof URL !== 'undefined';
+    this.fallback = null;
+    this.fallbackLoading = null;
+    this.fallbackFailed = false;
+    this.fallbackRetryAt = 0;
+    this.fallbackSource = null;
+    this.fallbackGain = null;
+    this.fallbackErrorNotified = false;
+    this.onFallbackError = null;
+    this.preparing = false;
+    this.lastFallback = null;
     this.voices = [];
     this.voiceSignature = '';
     this.voiceMap = {};
@@ -55,9 +117,17 @@ export class Audio {
     try { window.speechSynthesis.resume(); } catch {}
   }
 
+  systemVoicesAvailable() {
+    return this.ttsSupported && this.voices.length > 0;
+  }
+
+  voiceSupported() {
+    return this.ttsSupported || this.fallbackCapable;
+  }
+
   voiceEnabled() {
     const settings = this.game?.state?.settings;
-    return this.ttsSupported && settings?.sound !== false && settings?.voice !== false;
+    return this.voiceSupported() && settings?.sound !== false && settings?.voice !== false;
   }
 
   pickVoice(speakerId) {
@@ -84,6 +154,20 @@ export class Audio {
   }
 
   speakLine(speakerId, text) {
+    if (!this.voiceEnabled() || !text) return false;
+    this.loadVoices();
+    if (this.systemVoicesAvailable()) {
+      this.stopFallbackSource();
+      return this.speakSystem(speakerId, text);
+    }
+    if (this.fallbackCapable) {
+      this.speakFallback(speakerId, text);
+      return true;
+    }
+    return false;
+  }
+
+  speakSystem(speakerId, text) {
     if (!this.voiceEnabled() || !text) return false;
     this.loadVoices();
     const profile = TTS_PROFILES[speakerId] || TTS_PROFILES.narrator;
@@ -134,6 +218,272 @@ export class Audio {
     }
   }
 
+  // ---------- preview fallback voices (no system speech installed) ----------
+  fallbackVoiceUrl(name) {
+    return `${FALLBACK_BASE}/voices/en/${name}.json`;
+  }
+
+  initFallback() {
+    if (this.fallback && this.fallback.ready) return Promise.resolve(this.fallback);
+    if (this.fallbackLoading) return this.fallbackLoading;
+    if (this.fallbackFailed && Date.now() < this.fallbackRetryAt) {
+      return Promise.reject(new Error('Voice engine is cooling down.'));
+    }
+    this.fallbackFailed = false;
+    this.fallbackLoading = (async () => {
+      if (!this.fallbackCapable) throw new Error('Voice engine is not supported.');
+      const config = await fetch(FALLBACK_CONFIG, { cache: 'force-cache' }).then(res => {
+        if (!res.ok) throw new Error('Could not download the voice engine.');
+        return res.json();
+      });
+      const worker = new Worker(URL.createObjectURL(new Blob([FALLBACK_WORKER_SRC], { type: 'text/javascript' })), { type: 'module' });
+      const fb = {
+        worker, ready: false, readyResolve: null, readyReject: null, readyTimer: null,
+        seq: 0, voices: new Map(), voiceLoads: new Map(), pendingVoices: new Map(), pendingAudio: new Map()
+      };
+      this.fallback = fb;
+      worker.onmessage = event => this.onFallbackMessage(event.data);
+      worker.onerror = event => {
+        try { event.preventDefault(); } catch {}
+        this.failFallback(new Error(event.message || 'Voice engine crashed.'));
+      };
+      const ready = new Promise((resolve, reject) => {
+        fb.readyResolve = resolve;
+        fb.readyReject = reject;
+        fb.readyTimer = setTimeout(() => reject(new Error('Voice engine timed out.')), 20000);
+      });
+      worker.postMessage({ type: 'init', config });
+      await ready;
+      fb.ready = true;
+      return fb;
+    })().catch(err => {
+      this.failFallback(err);
+      throw err;
+    }).finally(() => {
+      this.fallbackLoading = null;
+    });
+    return this.fallbackLoading;
+  }
+
+  onFallbackMessage(msg) {
+    const fb = this.fallback;
+    if (!fb || !msg) return;
+    if (msg.type === 'ready') {
+      if (fb.readyTimer) { clearTimeout(fb.readyTimer); fb.readyTimer = null; }
+      const resolve = fb.readyResolve;
+      const reject = fb.readyReject;
+      fb.readyResolve = fb.readyReject = null;
+      if (msg.ok === false) {
+        if (reject) reject(new Error('Voice engine failed to initialize.'));
+        return;
+      }
+      if (resolve) resolve(true);
+      return;
+    }
+    if (msg.type === 'voice') {
+      const pending = fb.pendingVoices.get(msg.key);
+      if (!pending) return;
+      fb.pendingVoices.delete(msg.key);
+      clearTimeout(pending.timer);
+      if (msg.ok && msg.id) pending.resolve(msg.id);
+      else pending.reject(new Error('Voice module failed to load.'));
+      return;
+    }
+    if (msg.type === 'audio') {
+      const pending = fb.pendingAudio.get(msg.seq);
+      if (!pending) return;
+      fb.pendingAudio.delete(msg.seq);
+      clearTimeout(pending.timer);
+      pending.resolve(msg);
+      return;
+    }
+    if (msg.type === 'error') {
+      const pending = msg.seq ? fb.pendingAudio.get(msg.seq) : null;
+      if (pending) {
+        fb.pendingAudio.delete(msg.seq);
+        clearTimeout(pending.timer);
+        pending.reject(new Error(msg.message || 'Voice synthesis failed.'));
+        return;
+      }
+      if (fb.readyReject) {
+        const reject = fb.readyReject;
+        if (fb.readyTimer) { clearTimeout(fb.readyTimer); fb.readyTimer = null; }
+        fb.readyResolve = fb.readyReject = null;
+        reject(new Error(msg.message || 'Voice engine failed.'));
+      }
+    }
+  }
+
+  async loadFallbackVoice(name) {
+    const fb = await this.initFallback();
+    if (fb.voices.has(name)) return fb.voices.get(name);
+    if (fb.voiceLoads.has(name)) return fb.voiceLoads.get(name);
+    const load = (async () => {
+      const voice = await fetch(this.fallbackVoiceUrl(name), { cache: 'force-cache' }).then(res => {
+        if (!res.ok) throw new Error('Could not load voice ' + name + '.');
+        return res.json();
+      });
+      const id = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          fb.pendingVoices.delete(name);
+          reject(new Error('Voice module timed out.'));
+        }, 15000);
+        fb.pendingVoices.set(name, { resolve, reject, timer });
+        fb.worker.postMessage({ type: 'voice', key: name, voice });
+      });
+      fb.pendingVoices.delete(name);
+      fb.voices.set(name, id);
+      return id;
+    })().catch(err => {
+      fb.pendingVoices.delete(name);
+      throw err;
+    }).finally(() => {
+      fb.voiceLoads.delete(name);
+    });
+    fb.voiceLoads.set(name, load);
+    return load;
+  }
+
+  async speakFallback(speakerId, text) {
+    const token = ++this.speechToken;
+    this.stopFallbackSource();
+    try { window.speechSynthesis?.cancel(); } catch {}
+    this.preparing = true;
+    try {
+      const fb = await this.initFallback();
+      if (token !== this.speechToken || !this.voiceEnabled()) return false;
+      const profile = FALLBACK_PROFILES[speakerId] || FALLBACK_PROFILES.narrator;
+      let voiceId = null;
+      try { voiceId = await this.loadFallbackVoice(profile.voice); }
+      catch (err) { console.warn('Fallback voice module failed:', err?.message || err); }
+      if (token !== this.speechToken || !this.voiceEnabled()) return false;
+      const seq = ++fb.seq;
+      const msg = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          fb.pendingAudio.delete(seq);
+          reject(new Error('Voice synthesis timed out.'));
+        }, 20000);
+        fb.pendingAudio.set(seq, { resolve, reject, timer });
+        fb.worker.postMessage({
+          type: 'speak', seq, text, voiceId,
+          pitch: profile.pitch, speed: profile.speed
+        });
+      });
+      if (token !== this.speechToken || !this.voiceEnabled()) return false;
+      const duration = await this.playFallbackAudio(msg.bytes, token);
+      if (duration > 0) {
+        const entry = {
+          speaker: speakerId, text,
+          voice: 'meSpeak ' + profile.voice,
+          lang: 'en', pitch: profile.pitch / 50, rate: profile.speed / 175
+        };
+        this.lastSpeech = entry;
+        this.lastFallback = {
+          ...entry, voiceId, duration: +duration.toFixed(2),
+          bytes: msg.bytes?.byteLength || 0, synthMs: msg.ms, at: Date.now()
+        };
+        this.speechLog.push({ ...entry, at: Date.now() });
+        if (this.speechLog.length > 16) this.speechLog.shift();
+      }
+      return duration > 0;
+    } catch (err) {
+      console.warn('Character voice fallback failed:', err?.message || err);
+      this.notifyFallbackError(err);
+      return false;
+    } finally {
+      if (token === this.speechToken) this.preparing = false;
+    }
+  }
+
+  async playFallbackAudio(data, token) {
+    this.init();
+    if (!this.ctx) return 0;
+    if (this.ctx.state === 'suspended') {
+      try { await this.ctx.resume(); } catch {}
+    }
+    if (token !== this.speechToken || !this.voiceEnabled()) return 0;
+    let buffer;
+    try { buffer = await this.ctx.decodeAudioData(data); }
+    catch { return 0; }
+    if (token !== this.speechToken || !this.voiceEnabled()) return 0;
+    this.stopFallbackSource();
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const gain = this.ctx.createGain();
+    gain.gain.value = .9;
+    src.connect(gain);
+    gain.connect(this.ctx.destination);
+    this.fallbackSource = src;
+    this.fallbackGain = gain;
+    src.onended = () => {
+      if (this.fallbackSource !== src) return;
+      this.fallbackSource = null;
+      this.fallbackGain = null;
+      this.speaking = false;
+      try { src.disconnect(); gain.disconnect(); } catch {}
+    };
+    this.preparing = false;
+    this.speaking = true;
+    try { src.start(); }
+    catch {
+      this.fallbackSource = null;
+      this.speaking = false;
+      return 0;
+    }
+    return buffer.duration;
+  }
+
+  stopFallbackSource() {
+    const src = this.fallbackSource;
+    this.fallbackSource = null;
+    if (src) {
+      src.onended = null;
+      try { src.stop(); } catch {}
+      try { src.disconnect(); } catch {}
+    }
+    if (this.fallbackGain) {
+      try { this.fallbackGain.disconnect(); } catch {}
+      this.fallbackGain = null;
+    }
+    this.speaking = false;
+  }
+
+  failFallback(err) {
+    this.fallbackFailed = true;
+    this.fallbackRetryAt = Date.now() + 8000;
+    this.preparing = false;
+    const fb = this.fallback;
+    this.fallback = null;
+    if (fb) {
+      if (fb.readyTimer) { clearTimeout(fb.readyTimer); fb.readyTimer = null; }
+      if (fb.readyReject) {
+        const reject = fb.readyReject;
+        fb.readyResolve = fb.readyReject = null;
+        try { reject(err); } catch {}
+      }
+      for (const pending of fb.pendingVoices.values()) {
+        clearTimeout(pending.timer);
+        try { pending.reject(err); } catch {}
+      }
+      for (const pending of fb.pendingAudio.values()) {
+        clearTimeout(pending.timer);
+        try { pending.reject(err); } catch {}
+      }
+      fb.pendingVoices.clear();
+      fb.pendingAudio.clear();
+      try { fb.worker.terminate(); } catch {}
+    }
+    this.notifyFallbackError(err);
+  }
+
+  notifyFallbackError(err) {
+    if (this.fallbackErrorNotified) return;
+    this.fallbackErrorNotified = true;
+    if (this.onFallbackError) {
+      try { this.onFallbackError(err); } catch {}
+    }
+  }
+
   voiceName(speakerId) {
     const v = this.voiceMap[speakerId];
     return v?.name || null;
@@ -142,7 +492,9 @@ export class Audio {
   stopSpeaking() {
     this.speechToken++;
     this.speaking = false;
+    this.preparing = false;
     if (this.speechTimer) { clearTimeout(this.speechTimer); this.speechTimer = null; }
+    this.stopFallbackSource();
     if (this.ttsSupported) {
       try { window.speechSynthesis.cancel(); } catch {}
     }
