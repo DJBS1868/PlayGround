@@ -1259,15 +1259,16 @@ export class Renderer {
       ctx.restore();
     }
     if (!slot) {
-      // dashed ring + plus
+      // Keep the add control tucked just above the pot rim instead of floating high above it.
+      const bob = Math.sin(this.time * 2.4 + index) * 2;
+      const addY = py - potH - 12 + bob;
       ctx.save();
       ctx.strokeStyle = 'rgba(180,255,190,.28)'; ctx.lineWidth = 1.3; ctx.setLineDash([3, 4]);
-      ctx.beginPath(); ctx.ellipse(px, py - 46, 20, 9, 0, 0, TAU); ctx.stroke(); ctx.restore();
-      const bob = Math.sin(this.time * 2.4 + index) * 2;
+      ctx.beginPath(); ctx.ellipse(px, addY + 8, 20, 9, 0, 0, TAU); ctx.stroke(); ctx.restore();
       ctx.save();
       ctx.fillStyle = 'rgba(20,40,26,.85)'; ctx.strokeStyle = 'rgba(160,255,175,.5)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.roundRect(px - 10, py - 64 + bob, 20, 20, 6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#b6ff9e'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText('+', px, py - 49.5 + bob);
+      ctx.beginPath(); ctx.roundRect(px - 10, addY - 10, 20, 20, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#b6ff9e'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText('+', px, addY + 4.5);
       ctx.restore();
     } else {
       this.drawPlant(px, py - potH, slot, strain, p, index);
@@ -1281,7 +1282,7 @@ export class Renderer {
         ctx.restore();
       }
     }
-    const hot = this.toScreen(x, y, 32);
+    const hot = this.toScreen(x, y, slot ? 32 : potH + 12);
     this.hotspots.push({ x: hot.x, y: hot.y, r: 34 * this.zoom + 10, kind: 'slot', propId: p.id, index, id: `slot:${p.id}:${index}` });
   }
 
