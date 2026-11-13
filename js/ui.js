@@ -353,6 +353,7 @@ export class UI {
     $('soundIcon').setAttribute('href', s.sound ? '#i-sound-on' : '#i-sound-off');
     this.game.save();
     if (s.sound) this.audio?.init();
+    this.syncStoryVoiceButton();
   }
 
   // ---------- periodic sync ----------
@@ -364,6 +365,8 @@ export class UI {
       this.syncMission();
       this.syncHint();
       this.syncCameraUi();
+      const voiceBtn = $('storyVoice');
+      if (voiceBtn) voiceBtn.classList.toggle('speaking', !!this.audio?.speaking);
       $('storyBadge').classList.toggle('show', !this.game.mission?.seen || this.game.missionProgress()?.complete);
       if (this.activePanel === 'laundry' || this.activePanel === 'heat') {
         this.panelRefresh += .22;
@@ -559,6 +562,14 @@ export class UI {
       this.refreshPanel();
     }
     else if (act === 'settingsSound') { this.toggleSound(); this.refreshPanel(); }
+    else if (act === 'settingsVoice') {
+      const s = g.state.settings;
+      s.voice = s.voice === false;
+      if (!s.voice) this.audio?.stopSpeaking();
+      else this.audio?.primeSpeech();
+      g.save(); this.refreshPanel();
+      this.syncStoryVoiceButton();
+    }
     else if (act === 'settingsHints') { g.state.settings.hints = !g.state.settings.hints; g.save(); this.refreshPanel(); }
     else if (act === 'save') { g.save(); this.toast('Empire saved locally.', 'good'); this.audio?.success(); }
     else if (act === 'reset1') { this.confirmReset = true; this.refreshPanel(); }
@@ -797,6 +808,7 @@ export class UI {
     return `
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Manual save</div><div class="tiny muted">Autosaves every 12 seconds.</div></div><button class="btn small" data-act="save">SAVE NOW</button></div></div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Sound</div><div class="tiny muted">Synth clicks, cash and sirens.</div></div><button class="toggle ${s.settings.sound ? 'on' : ''}" data-act="settingsSound" aria-label="Toggle sound"></button></div></div>
+      <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Character voices</div><div class="tiny muted">${this.audio?.ttsSupported ? 'Browser speech reads story dialogue. Uses the sound setting.' : 'Speech is not supported in this browser.'}</div></div>${this.audio?.ttsSupported ? `<button class="toggle ${s.settings.voice !== false ? 'on' : ''}" data-act="settingsVoice" aria-label="Toggle character voices"></button>` : `<span class="chip">UNAVAILABLE</span>`}</div></div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Hints</div><div class="tiny muted">Contextual tips above the dock.</div></div><button class="toggle ${s.settings.hints ? 'on' : ''}" data-act="settingsHints" aria-label="Toggle hints"></button></div></div>
       <div class="card"><div><div class="small" style="font-weight:800">Camera</div><div class="tiny muted">Scroll or pinch to zoom. Drag the room to pan. Press 0 or use the corner button to reset.</div></div></div>
       <div class="sec-title">EMPIRE RECORD</div>
@@ -835,6 +847,7 @@ export class UI {
     $('modalRoot').classList.remove('open');
     this.modalType = null;
     this.storyView = null;
+    this.audio?.stopSpeaking();
     if (!this.activePanel) this.game.setPaused(false);
     this.syncHint();
   }
@@ -843,6 +856,7 @@ export class UI {
     const act = btn.dataset.act;
     if (act === 'storyClose') { this.closeModal(); return; }
     if (act === 'storyAdvance') { this.advanceStory(); return; }
+    if (act === 'storyReplayLine') { this.replayStoryLine(); return; }
     if (act === 'storyChoice') { this.chooseStory(Number(btn.dataset.index)); return; }
     if (act === 'storyClaim') { this.claimMission(); return; }
     if (act === 'storyReplay') { this.startStoryDialogue(this.game.mission, true); return; }
@@ -887,7 +901,10 @@ export class UI {
         </div>
         <div class="story-foot">
           <div class="story-dots" id="storyDots"></div>
-          <div class="story-next" id="storyNext">TAP TO CONTINUE ${ico('arrow')}</div>
+          <div class="story-foot-end">
+            <button class="story-voice" id="storyVoice" data-act="storyReplayLine" aria-label="Replay voice line" title="Replay voice line">${ico('sound-on')}</button>
+            <div class="story-next" id="storyNext">TAP TO CONTINUE ${ico('arrow')}</div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -917,6 +934,8 @@ export class UI {
     $('storyDots').innerHTML = v.mission.lines.map((_, i) => `<i class="${i === v.line ? 'on' : ''}"></i>`).join('');
     if (line.s !== v.lastSpeaker) { this.drawPortrait($('storyPortrait'), line.s); v.lastSpeaker = line.s; }
     v.text = line.t; v.typed = 0; v.typing = true;
+    this.syncStoryVoiceButton();
+    this.audio?.speakLine(line.s, line.t);
     $('storyText').textContent = '';
     clearInterval(this.typeTimer);
     this.typeTimer = setInterval(() => {
@@ -950,6 +969,25 @@ export class UI {
     else { this.audio?.click(); this.renderStoryLine(); }
   }
 
+  replayStoryLine() {
+    const v = this.storyView;
+    if (!v) return;
+    if (v.mode === 'dialogue') {
+      const line = v.mission.lines[v.line];
+      if (line) this.audio?.speakLine(line.s, line.t);
+    } else if (v.mode === 'choice') {
+      const prompt = v.mission.choice?.prompt;
+      if (prompt) this.audio?.speakLine('narrator', prompt);
+    } else if (v.mode === 'reply' && v.text) {
+      this.audio?.speakLine('narrator', v.text);
+    }
+  }
+
+  syncStoryVoiceButton() {
+    const b = $('storyVoice');
+    if (b) b.style.display = this.audio?.voiceEnabled() ? '' : 'none';
+  }
+
   afterDialogue() {
     const v = this.storyView;
     if (!v) return;
@@ -967,6 +1005,7 @@ export class UI {
     $('storyDots').innerHTML = '';
     $('storyNext').style.visibility = 'hidden';
     $('storyChoices').innerHTML = `<div class="choice-prompt">${choice.prompt}</div><div class="story-choice">${choice.options.map((o, i) => `<button class="choice-btn" data-act="storyChoice" data-index="${i}"><b>${o.label}</b><span>${o.sub || ''}</span></button>`).join('')}</div>`;
+    if (choice.prompt) this.audio?.speakLine('narrator', choice.prompt);
   }
 
   applyChoiceEffects(effects = {}) {
@@ -998,6 +1037,7 @@ export class UI {
     $('storyNext').style.visibility = 'visible';
     $('storyNext').innerHTML = `CONTINUE ${ico('arrow')}`;
     clearInterval(this.typeTimer);
+    if (v.text) this.audio?.speakLine('narrator', v.text);
     this.typeTimer = setInterval(() => {
       if (!this.storyView || this.storyView.mode !== 'reply') { clearInterval(this.typeTimer); return; }
       v.typed += 2;
@@ -1028,6 +1068,7 @@ export class UI {
 
   showStorySummary(m) {
     if (!m) return;
+    this.audio?.stopSpeaking();
     const g = this.game, p = g.missionProgress();
     const lastSpeaker = [...m.lines].reverse().find(l => l.s !== 'narrator')?.s || 'milo';
     this.storyView = { mode: 'summary', mission: m };
