@@ -27,7 +27,7 @@ svg { display: block; }
 .icon { width: 18px; height: 18px; }
 
 #app { position: fixed; inset: 0; overflow: hidden; }
-#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .screen-grain {
   position: absolute; inset: 0; pointer-events: none; z-index: 2; opacity: .16;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E");
@@ -146,6 +146,29 @@ svg { display: block; }
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
 }
 .scene-tip.show { opacity: 1; }
+
+/* ---------------- CAMERA HUD ---------------- */
+.camera-hud {
+  position: absolute; right: 16px; bottom: 108px; z-index: 18;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 4px; border-radius: 12px;
+  background: rgba(7,13,10,.72); border: 1px solid rgba(210,255,220,.1);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+}
+.cam-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center; color: var(--muted);
+  border: 1px solid transparent; transition: background .15s, color .15s, border-color .15s, transform .1s;
+}
+.cam-btn svg { width: 15px; height: 15px; }
+.cam-btn:hover { color: var(--text); background: rgba(190,255,190,.08); border-color: rgba(210,255,220,.12); }
+.cam-btn:active { transform: scale(.92); }
+.cam-btn:disabled { opacity: .28; cursor: default; }
+.cam-btn:disabled:hover { color: var(--muted); background: none; border-color: transparent; }
+.cam-btn.cam-fit { color: var(--green); }
+.cam-btn.cam-fit:disabled { color: var(--muted); }
+.cam-fit.active { background: rgba(150,255,150,.08); }
 
 /* ---------------- TOASTS ---------------- */
 .toasts { position: absolute; top: 84px; right: 16px; z-index: 50; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: none; max-width: min(340px, calc(100vw - 24px)); }
@@ -480,6 +503,9 @@ svg { display: block; }
   .dock-ico svg { width: 18px; height: 18px; }
   .dock-label { font-size: 6.5px; letter-spacing: .6px; }
   .dock-key { display: none; }
+  .camera-hud { right: 8px; bottom: 142px; padding: 3px; gap: 2px; border-radius: 10px; }
+  .cam-btn { width: 28px; height: 28px; border-radius: 7px; }
+  .cam-btn svg { width: 13px; height: 13px; }
   .panel { top: auto; left: 7px; right: 7px; bottom: 70px; width: auto; max-height: 74vh; border-radius: 18px; transform: translateY(calc(100% + 30px)); }
   .panel.open { transform: translateY(0); }
   .panel-head { padding: 14px 15px 11px; }

@@ -36,6 +36,10 @@ export class UI {
     this.splashDone = false;
     this.lastHoverId = null;
     this.pendingRaid = null;
+    this.pointers = new Map();
+    this.drag = null;
+    this.pinch = null;
+    this.cameraTipShown = false;
     this.bindBase();
     this.bindGame();
   }
@@ -68,6 +72,21 @@ export class UI {
     $('statRep').addEventListener('click', () => this.openPanel('crew'));
     $('statDay').addEventListener('click', () => this.openPanel('settings'));
     $('missionStrip').addEventListener('click', () => this.openStory());
+    $('camZoomIn').addEventListener('click', () => {
+      this.audio?.click();
+      this.renderer.zoomBy(1.22);
+      this.syncCameraUi();
+    });
+    $('camZoomOut').addEventListener('click', () => {
+      this.audio?.click();
+      this.renderer.zoomBy(1 / 1.22);
+      this.syncCameraUi();
+    });
+    $('camReset').addEventListener('click', () => {
+      this.audio?.click();
+      this.renderer.resetCamera();
+      this.syncCameraUi();
+    });
     this.bindCanvas();
     window.addEventListener('keydown', e => this.onKey(e));
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.game.save(); });
@@ -104,25 +123,57 @@ export class UI {
 
   bindCanvas() {
     const c = $('scene'), tip = $('sceneTip');
+    const active = () => this.splashDone && !this.modalType && !this.activePanel;
+
     c.addEventListener('pointerdown', e => {
-      if (!this.splashDone || this.modalType || this.activePanel) return;
-      const hit = this.renderer.pick(e.clientX, e.clientY);
-      if (!hit) return;
-      this.renderer.hoverId = hit.id;
-      const before = hit.kind === 'slot' ? this.game.state.properties[hit.propId]?.slots[hit.index] : null;
-      const res = this.game.interact(hit);
-      if (hit.kind === 'customer') this.audio?.cash();
-      else if (hit.kind === 'slot') {
-        if (!before) this.audio?.plant();
-        else if (before.progress >= 1) this.audio?.harvest();
-        else this.audio?.water();
+      if (!active()) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      try { c.setPointerCapture(e.pointerId); } catch {}
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.clearHover();
+      if (this.pointers.size >= 2) {
+        this.beginPinch();
+        return;
       }
-      if (res && res.ok === false && res.msg) this.audio?.error();
-      this.syncStats();
+      this.drag = {
+        id: e.pointerId, startX: e.clientX, startY: e.clientY,
+        lastX: e.clientX, lastY: e.clientY, moved: false, panning: false
+      };
+      c.style.cursor = this.renderer.pick(e.clientX, e.clientY) ? 'pointer' : (this.renderer.canPan() ? 'grab' : 'default');
     });
+
     c.addEventListener('pointermove', e => {
+      const tracked = this.pointers.get(e.pointerId);
+      if (tracked) { tracked.x = e.clientX; tracked.y = e.clientY; }
+      if (this.pointers.size >= 2) { this.updatePinch(); return; }
+
+      if (this.drag && this.drag.id === e.pointerId) {
+        const dx = e.clientX - this.drag.lastX;
+        const dy = e.clientY - this.drag.lastY;
+        this.drag.lastX = e.clientX; this.drag.lastY = e.clientY;
+        const dist = Math.hypot(e.clientX - this.drag.startX, e.clientY - this.drag.startY);
+        if (!this.drag.moved && dist > 7) {
+          this.drag.moved = true;
+          this.drag.panning = this.renderer.canPan();
+          if (this.drag.panning) this.renderer.panBy(e.clientX - this.drag.startX, e.clientY - this.drag.startY);
+          this.clearHover();
+          c.style.cursor = this.drag.panning ? 'grabbing' : 'default';
+          if (this.drag.panning) this.syncCameraUi();
+          return;
+        }
+        if (this.drag.moved) {
+          if (this.drag.panning) {
+            this.renderer.panBy(dx, dy);
+            this.syncCameraUi();
+          }
+          this.clearHover();
+          c.style.cursor = this.drag.panning ? 'grabbing' : 'default';
+          return;
+        }
+      }
+
       if (e.pointerType === 'touch') return;
-      if (this.modalType || this.activePanel || !this.splashDone) { this.clearHover(); return; }
+      if (!active()) { this.clearHover(); return; }
       const hit = this.renderer.pick(e.clientX, e.clientY);
       if (hit) {
         this.renderer.hoverId = hit.id;
@@ -132,9 +183,117 @@ export class UI {
         tip.style.left = e.clientX + 'px';
         tip.style.top = e.clientY + 'px';
         tip.classList.add('show');
-      } else this.clearHover();
+      } else {
+        this.clearHover();
+        c.style.cursor = this.renderer.canPan() ? 'grab' : 'default';
+      }
     });
-    c.addEventListener('pointerleave', () => this.clearHover());
+
+    c.addEventListener('pointerup', e => {
+      const wasPinch = !!this.pinch;
+      const drag = this.drag && this.drag.id === e.pointerId ? this.drag : null;
+      this.pointers.delete(e.pointerId);
+      try { c.releasePointerCapture(e.pointerId); } catch {}
+      if (wasPinch) {
+        if (this.pointers.size < 2) this.pinch = null;
+        if (this.pointers.size === 0) {
+          this.drag = null;
+          c.style.cursor = this.renderer.canPan() ? 'grab' : 'default';
+        }
+        this.syncCameraUi();
+        return;
+      }
+      if (drag) {
+        this.drag = null;
+        if (!drag.moved && this.pointers.size === 0) this.handleCanvasTap(e);
+        c.style.cursor = this.renderer.canPan() ? 'grab' : 'default';
+        this.syncCameraUi();
+      }
+    });
+
+    c.addEventListener('pointercancel', e => {
+      this.pointers.delete(e.pointerId);
+      if (this.pointers.size < 2) this.pinch = null;
+      if (this.pointers.size === 0) {
+        this.drag = null;
+        this.clearHover();
+      }
+      this.syncCameraUi();
+    });
+
+    c.addEventListener('pointerleave', () => {
+      if (!this.pointers.size) this.clearHover();
+    });
+
+    c.addEventListener('wheel', e => {
+      if (!active()) return;
+      e.preventDefault();
+      const factor = Math.exp(-e.deltaY * .0014);
+      if (this.renderer.zoomBy(factor, e.clientX, e.clientY)) {
+        c.style.cursor = this.renderer.canPan() ? 'grab' : 'default';
+        this.syncCameraUi();
+      }
+    }, { passive: false });
+  }
+
+  beginPinch() {
+    const pts = [...this.pointers.values()];
+    if (pts.length < 2) return;
+    const a = pts[0], b = pts[1];
+    this.pinch = {
+      dist: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+      zoom: this.renderer.zoomFactor,
+      midX: (a.x + b.x) / 2,
+      midY: (a.y + b.y) / 2
+    };
+    this.drag = null;
+    this.clearHover();
+    $('scene').style.cursor = 'grabbing';
+  }
+
+  updatePinch() {
+    const pts = [...this.pointers.values()];
+    if (pts.length < 2) return;
+    if (!this.pinch) { this.beginPinch(); return; }
+    const a = pts[0], b = pts[1];
+    const dist = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
+    const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+    this.renderer.zoomTo(this.pinch.zoom * dist / this.pinch.dist, midX, midY);
+    this.renderer.panBy(midX - this.pinch.midX, midY - this.pinch.midY);
+    this.pinch.midX = midX;
+    this.pinch.midY = midY;
+    this.syncCameraUi();
+  }
+
+  handleCanvasTap(e) {
+    const hit = this.renderer.pick(e.clientX, e.clientY);
+    if (!hit) return;
+    this.renderer.hoverId = hit.id;
+    const before = hit.kind === 'slot' ? this.game.state.properties[hit.propId]?.slots[hit.index] : null;
+    const res = this.game.interact(hit);
+    if (hit.kind === 'customer') this.audio?.cash();
+    else if (hit.kind === 'slot') {
+      if (!before) this.audio?.plant();
+      else if (before.progress >= 1) this.audio?.harvest();
+      else this.audio?.water();
+    }
+    if (res && res.ok === false && res.msg) this.audio?.error();
+    this.syncStats();
+  }
+
+  syncCameraUi() {
+    const r = this.renderer;
+    const zin = $('camZoomIn'), zout = $('camZoomOut'), fit = $('camReset');
+    if (!zin || !zout || !fit) return;
+    zin.disabled = r.zoomFactor >= r.maxZoomFactor - .001;
+    zout.disabled = r.zoomFactor <= r.minZoomFactor + .001;
+    const fitted = Math.abs(r.zoomFactor - 1) < .001 && Math.abs(r.panX) < .5 && Math.abs(r.panY) < .5;
+    fit.disabled = fitted;
+    fit.classList.toggle('active', !fitted);
+    if (!fitted && r.canPan() && !this.cameraTipShown && this.splashDone) {
+      this.cameraTipShown = true;
+      this.toast('Drag the room to move the camera.', 'info');
+    }
   }
 
   clearHover() {
@@ -155,6 +314,32 @@ export class UI {
       else if (this.storyView?.mode === 'reply') { e.preventDefault(); this.finishReply(); }
     }
     if (this.activePanel || this.modalType || !this.splashDone) return;
+    if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      this.renderer.zoomBy(1.18);
+      this.syncCameraUi();
+      return;
+    }
+    if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      this.renderer.zoomBy(1 / 1.18);
+      this.syncCameraUi();
+      return;
+    }
+    if (e.key === '0') {
+      e.preventDefault();
+      this.renderer.resetCamera();
+      this.syncCameraUi();
+      return;
+    }
+    const panKeys = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (panKeys[e.key] && this.renderer.canPan()) {
+      e.preventDefault();
+      const [dx, dy] = panKeys[e.key];
+      this.renderer.panBy(dx * 52, dy * 52);
+      this.syncCameraUi();
+      return;
+    }
     const map = { '1': 'grow', '2': 'crew', '3': 'upgrades', '4': 'properties', '5': 'laundry', '6': 'story' };
     if (map[e.key]) {
       if (map[e.key] === 'story') this.openStory(); else this.togglePanel(map[e.key]);
@@ -178,13 +363,14 @@ export class UI {
       this.syncStats();
       this.syncMission();
       this.syncHint();
+      this.syncCameraUi();
       $('storyBadge').classList.toggle('show', !this.game.mission?.seen || this.game.missionProgress()?.complete);
       if (this.activePanel === 'laundry' || this.activePanel === 'heat') {
         this.panelRefresh += .22;
         if (this.panelRefresh > 1.1) { this.panelRefresh = 0; this.refreshPanel(true); }
       }
     }
-    if (force) { this.syncStats(); this.syncMission(); this.syncHint(); }
+    if (force) { this.syncStats(); this.syncMission(); this.syncHint(); this.syncCameraUi(); }
     $('soundIcon').setAttribute('href', this.game.state.settings.sound ? '#i-sound-on' : '#i-sound-off');
   }
 
@@ -612,6 +798,7 @@ export class UI {
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Manual save</div><div class="tiny muted">Autosaves every 12 seconds.</div></div><button class="btn small" data-act="save">SAVE NOW</button></div></div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Sound</div><div class="tiny muted">Synth clicks, cash and sirens.</div></div><button class="toggle ${s.settings.sound ? 'on' : ''}" data-act="settingsSound" aria-label="Toggle sound"></button></div></div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Hints</div><div class="tiny muted">Contextual tips above the dock.</div></div><button class="toggle ${s.settings.hints ? 'on' : ''}" data-act="settingsHints" aria-label="Toggle hints"></button></div></div>
+      <div class="card"><div><div class="small" style="font-weight:800">Camera</div><div class="tiny muted">Scroll or pinch to zoom. Drag the room to pan. Press 0 or use the corner button to reset.</div></div></div>
       <div class="sec-title">EMPIRE RECORD</div>
       <div class="card">
         <div class="between"><span class="tiny muted">Net worth</span><span class="small green">${money(g.netWorth())}</span></div>
