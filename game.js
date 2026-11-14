@@ -502,25 +502,7 @@ function activityPreviewArtifact() {
   return selectedActivityArtifact() || { name: 'Workbench saber', parts: { ...selected } };
 }
 function drawActivitySaberPreview(canvas, artifact) {
-  const context = canvas.getContext('2d');
-  const width = Math.max(1, canvas.clientWidth);
-  const height = Math.max(1, canvas.clientHeight);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  context.setTransform(dpr, 0, 0, dpr, 0, 0);
-  context.clearRect(0, 0, width, height);
-  const spec = duelSpecFromArtifact(artifact);
-  context.save();
-  context.globalCompositeOperation = 'lighter';
-  context.strokeStyle = `rgba(${hexToRgb(spec.crystal.color)},.3)`;
-  context.lineWidth = 2;
-  context.beginPath();
-  context.ellipse(width * .5, height * .78, width * .32, 3, 0, 0, Math.PI * 2);
-  context.stroke();
-  context.restore();
-  const scale = Math.min(width / 5.35, height / 5.35);
-  drawDuelFlatSaber(context, spec, width * .5, height - 4, scale, -Math.PI / 2 + .035, true, 1);
+  drawDuelThumb(canvas, artifact, Math.max(1, canvas.clientWidth || 30), Math.max(1, canvas.clientHeight || 48));
 }
 function updateActivitySaberSelectors() {
   activitySaberSelection = collection.length ? Math.max(0, Math.min(activitySaberSelection, collection.length - 1)) : 0;
@@ -4534,12 +4516,16 @@ function resizeDuelPreview() {
   context.stroke();
   context.restore();
 }
-function drawDuelThumb(canvas, artifact) {
+function drawDuelThumb(canvas, artifact, width = 30, height = 48) {
   const context = canvas.getContext('2d');
-  context.setTransform(2, 0, 0, 2, 0, 0);
-  context.clearRect(0, 0, 30, 48);
+  const dpr = 2;
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.clearRect(0, 0, width, height);
   const spec = duelSpecFromArtifact(artifact);
-  drawDuelFlatSaber(context, spec, 15.2, 45, 8.9, -Math.PI / 2 + .05, true, 1);
+  // Same normalized framing as the duel loadout cards, at any canvas size.
+  drawDuelFlatSaber(context, spec, width * (15.2 / 30), height * (45 / 48), height * (8.9 / 48), -Math.PI / 2 + .05, true, 1);
 }
 updateActivitySaberSelectors();
 
