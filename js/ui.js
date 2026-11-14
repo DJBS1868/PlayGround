@@ -506,11 +506,18 @@ export class UI {
   }
 
   bindPanelBody() {
-    $('panelBody').addEventListener('click', e => {
+    const body = $('panelBody');
+    body.onclick = e => {
       const el = e.target.closest('[data-act]');
       if (!el) return;
       this.panelAction(el.dataset.act, el.dataset, el);
-    }, { once: true });
+    };
+    body.onsubmit = e => {
+      const form = e.target.closest('[data-form="redeem-code"]');
+      if (!form) return;
+      e.preventDefault();
+      this.panelAction('redeemCode', {}, form);
+    };
   }
 
   panelAction(act, data, el) {
@@ -572,6 +579,13 @@ export class UI {
     }
     else if (act === 'settingsHints') { g.state.settings.hints = !g.state.settings.hints; g.save(); this.refreshPanel(); }
     else if (act === 'save') { g.save(); this.toast('Empire saved locally.', 'good'); this.audio?.success(); }
+    else if (act === 'redeemCode') {
+      const input = el.querySelector('input[name="redeemCode"]');
+      const result = g.redeemCode(input?.value);
+      if (!result.ok) { this.toast(result.msg, 'warn'); this.audio?.error(); }
+      else { this.toast(result.msg, 'good'); this.audio?.success(); }
+      this.refreshPanel();
+    }
     else if (act === 'reset1') { this.confirmReset = true; this.refreshPanel(); }
     else if (act === 'reset2') {
       g.save();
@@ -910,6 +924,14 @@ export class UI {
     const played = Math.floor(s.stats.played / 60);
     return `
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Manual save</div><div class="tiny muted">Autosaves every 12 seconds.</div></div><button class="btn small" data-act="save">SAVE NOW</button></div></div>
+      <div class="card">
+        <div class="small" style="font-weight:800">Redeem a code</div>
+        <div class="tiny muted" style="margin-top:3px">Enter a code for a one-time cash reward or developer unlock.</div>
+        <form data-form="redeem-code" class="row" style="margin-top:9px">
+          <input class="code-input" type="text" name="redeemCode" placeholder="ENTER CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Redeem code" required>
+          <button class="btn small" type="submit">REDEEM</button>
+        </form>
+      </div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Sound</div><div class="tiny muted">Synth clicks, cash and sirens.</div></div><button class="toggle ${s.settings.sound ? 'on' : ''}" data-act="settingsSound" aria-label="Toggle sound"></button></div></div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Character voices</div><div class="tiny muted">${this.audio?.voiceSupported?.() ? 'Reads story dialogue aloud with a distinct voice per character. Uses the sound setting.' : 'Speech is not supported in this browser.'}</div></div>${this.audio?.voiceSupported?.() ? `<button class="toggle ${s.settings.voice !== false ? 'on' : ''}" data-act="settingsVoice" aria-label="Toggle character voices"></button>` : `<span class="chip">UNAVAILABLE</span>`}</div></div>
       <div class="card"><div class="between"><div><div class="small" style="font-weight:800">Hints</div><div class="tiny muted">Contextual tips above the dock.</div></div><button class="toggle ${s.settings.hints ? 'on' : ''}" data-act="settingsHints" aria-label="Toggle hints"></button></div></div>

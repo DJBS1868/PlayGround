@@ -11,6 +11,14 @@ export const MISSIONS = [...MISSIONS_1, ...MISSIONS_2];
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const rnd = (a, b) => a + Math.random() * (b - a);
 const round = Math.round;
+const REDEEM_CODES = {
+  GREEN1000: { dirty: 1000 },
+  FIRSTHARVEST: { dirty: 2500 },
+  ASHGROVE: { clean: 5000 },
+  EMPIREBUILDER: { dirty: 10000, clean: 10000 },
+  DEVUNLOCK: { developer: true }
+};
+const INFINITE_FUNDS = 1e15;
 
 export class Game {
   constructor() {
@@ -36,7 +44,7 @@ export class Game {
       activeProperty: 'apartment', properties,
       staff: [], fronts: [], buff: null, pricing: 'standard',
       story: { idx: 0, seen: false, base: { harvests: 0, sold: 0, laundered: 0, refined: 0, qualitySold: 0 } },
-      flags: {}, layLowUntil: 0,
+      flags: { redeemedCodes: {} }, layLowUntil: 0,
       settings: { sound: true, hints: true, voice: true },
       stats: { harvests: 0, harvested: 0, plants: 0, sold: 0, earned: 0, laundered: 0, refined: 0, qualitySold: 0, sales: 0, raids: 0, played: 0, bestSale: 0 }
     };
@@ -69,7 +77,7 @@ export class Game {
         while (ps.slots.length < p.slots.length) ps.slots.push(null);
       }
       this.state.inventory = data.inventory || {};
-      this.state.flags = data.flags || {};
+      this.state.flags = { ...base.flags, ...data.flags, redeemedCodes: { ...base.flags.redeemedCodes, ...(data.flags?.redeemedCodes || {}) } };
       const away = Math.max(0, (Date.now() - (data.lastSave || Date.now())) / 1000);
       const summary = this.simulateOffline(away);
       this.runtime.lastLoadSummary = summary;
@@ -80,9 +88,57 @@ export class Game {
     }
   }
 
+  maintainInfiniteFunds() {
+    if (!this.state.flags?.infiniteMoney) return;
+    this.state.dirty = INFINITE_FUNDS;
+    this.state.clean = INFINITE_FUNDS;
+  }
+
   save() {
+    this.maintainInfiniteFunds();
     this.state.lastSave = Date.now();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.state)); } catch {}
+  }
+
+  redeemCode(input) {
+    const code = String(input || '').trim().toUpperCase().replace(/\s+/g, '');
+    const reward = REDEEM_CODES[code];
+    if (!reward) return { ok: false, msg: 'That code is not recognized.' };
+    if (this.state.flags.redeemedCodes[code]) return { ok: false, msg: 'That code has already been redeemed.' };
+
+    this.state.flags.redeemedCodes[code] = true;
+    if (reward.developer) {
+      this.state.flags.infiniteMoney = true;
+      this.state.flags.ending = true;
+      this.state.dirty = INFINITE_FUNDS;
+      this.state.clean = INFINITE_FUNDS;
+      this.state.rep = 100;
+      this.state.heat = 0;
+      this.state.story.idx = MISSIONS.length;
+      this.state.story.completed = MISSIONS.length;
+      this.state.story.seen = true;
+      this.state.story.base = this.missionBase();
+      this.state.staff = STAFF.map(member => member.id);
+      this.state.fronts = FRONTS.map(front => front.id);
+      this.state.selectedStrain = 'purity';
+      for (const property of PROPERTY_LIST) {
+        const ps = this.state.properties[property.id];
+        ps.owned = true;
+        for (const upgrade of UPGRADES) ps.upgrades[upgrade.id] = upgrade.max;
+      }
+      this.state.activeProperty = PROPERTY_LIST[PROPERTY_LIST.length - 1].id;
+      this.emit('developerUnlock');
+      this.save();
+      return { ok: true, msg: 'Developer unlock active: infinite funds, full story, and every unlock.' };
+    }
+
+    this.state.dirty += reward.dirty || 0;
+    this.state.clean += reward.clean || 0;
+    this.save();
+    const cashRewards = [];
+    if (reward.dirty) cashRewards.push(`+$${reward.dirty.toLocaleString('en-US')} dirty cash`);
+    if (reward.clean) cashRewards.push(`+$${reward.clean.toLocaleString('en-US')} clean cash`);
+    return { ok: true, msg: `Code redeemed: ${cashRewards.join(' and ')}.` };
   }
 
   simulateOffline(seconds) {
@@ -121,7 +177,13 @@ export class Game {
       this.state.stats.laundered += amount;
       washed += amount * f.conv;
     }
-    return { seconds: sec, ready, grown, washed: Math.floor(washed), dirtyDelta: Math.floor(this.state.dirty - before.dirty), cleanDelta: Math.floor(this.state.clean - before.clean) };
+    const infiniteFunds = !!this.state.flags.infiniteMoney;
+    this.maintainInfiniteFunds();
+    return {
+      seconds: sec, ready, grown, washed: Math.floor(washed),
+      dirtyDelta: infiniteFunds ? 0 : Math.floor(this.state.dirty - before.dirty),
+      cleanDelta: infiniteFunds ? 0 : Math.floor(this.state.clean - before.clean)
+    };
   }
 
   // ---------- events ----------
@@ -214,13 +276,19 @@ export class Game {
     return true;
   }
   spendDirty(n) {
-    if (n <= 0) return true;
+    if (n <= 0 || this.state.flags.infiniteMoney) { this.maintainInfiniteFunds(); return true; }
     if (this.state.dirty < n) return false;
     this.state.dirty -= n;
     return true;
   }
-  addDirty(n) { this.state.dirty += n; }
-  addClean(n) { this.state.clean += n; }
+  spendClean(n) {
+    if (n <= 0 || this.state.flags.infiniteMoney) { this.maintainInfiniteFunds(); return true; }
+    if (this.state.clean < n) return false;
+    this.state.clean -= n;
+    return true;
+  }
+  addDirty(n) { if (this.state.flags.infiniteMoney) this.maintainInfiniteFunds(); else this.state.dirty += n; }
+  addClean(n) { if (this.state.flags.infiniteMoney) this.maintainInfiniteFunds(); else this.state.clean += n; }
 
   addBuff(id, charges = 3) {
     const b = BUFFS.find(x => x.id === id);
@@ -519,6 +587,7 @@ export class Game {
     // autosave
     this.runtime.autosave += dt;
     if (this.runtime.autosave > 12) { this.runtime.autosave = 0; this.save(); }
+    this.maintainInfiniteFunds();
   }
 
   updateStaff(dt) {
@@ -638,8 +707,7 @@ export class Game {
     if (!p || !ps) return { ok: false };
     if (ps.owned) { this.moveProperty(id); return { ok: true, moved: true }; }
     if (this.state.story.idx < p.reqMission) return { ok: false, msg: 'Keep working the story to unlock this property.' };
-    if (this.state.clean < p.cost) return { ok: false, msg: `Need $${p.cost.toLocaleString()} clean cash.` };
-    this.state.clean -= p.cost;
+    if (!this.spendClean(p.cost)) return { ok: false, msg: `Need $${p.cost.toLocaleString()} clean cash.` };
     ps.owned = true;
     this.state.activeProperty = id;
     this.runtime.customers = [];
@@ -676,8 +744,7 @@ export class Game {
     if (!this.frontsUnlocked()) return { ok: false, msg: 'Lenny introduces fronts later in the story.' };
     if (this.state.story.idx < f.req) return { ok: false, msg: 'Not available yet.' };
     if (this.state.fronts.includes(id)) return { ok: false, msg: 'Already owned.' };
-    if (this.state.clean < f.cost) return { ok: false, msg: `Need $${f.cost.toLocaleString()} clean cash.` };
-    this.state.clean -= f.cost;
+    if (!this.spendClean(f.cost)) return { ok: false, msg: `Need $${f.cost.toLocaleString()} clean cash.` };
     this.state.fronts.push(id);
     if (f.rep) this.state.rep = clamp(this.state.rep + f.rep, 0, 100);
     this.emit('frontBought', { f });
