@@ -218,6 +218,7 @@ export class Renderer {
       this.resize();
     }
     this.hotspots = [];
+    this.staffTags = [];
     this.screenTransform();
     ctx.clearRect(0, 0, this.w, this.h);
     this.drawBackdrop();
@@ -1441,38 +1442,150 @@ export class Renderer {
     ctx.beginPath(); ctx.arc(0, hy + 4.5, 3.2, .15, Math.PI - .15); ctx.stroke();
     if (opt.lips) { ctx.fillStyle = '#b4485d'; ctx.beginPath(); ctx.roundRect(-2.5, hy + 4, 5, 1.8, 1); ctx.fill(); }
     if (opt.tattoo) { ctx.strokeStyle = 'rgba(40,65,60,.6)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-9, -40); ctx.lineTo(-11, -34); ctx.lineTo(-8, -32); ctx.stroke(); }
+    // held tools make each crew member readable at a glance
+    if (opt.held) {
+      const hx = 13, hy2 = -27 + bob - armSwing;
+      ctx.save();
+      ctx.translate(hx, hy2);
+      if (opt.held === 'can') {
+        ctx.fillStyle = '#8fa7a1';
+        ctx.beginPath(); ctx.roundRect(-4, -4, 9, 9, 2); ctx.fill();
+        ctx.strokeStyle = '#c4d8d2'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(5, -2); ctx.lineTo(12, -7); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-.5, -6, 3.8, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
+        ctx.fillStyle = 'rgba(146,234,255,.9)';
+        ctx.beginPath(); ctx.arc(12, -8, 1.5, 0, TAU); ctx.fill();
+      } else if (opt.held === 'pot') {
+        ctx.fillStyle = '#b06a46';
+        ctx.beginPath(); ctx.roundRect(-4, -2, 8, 6, 1.5); ctx.fill();
+        ctx.fillStyle = '#d18a60'; ctx.fillRect(-4.6, -2.8, 9.2, 1.8);
+        ctx.strokeStyle = '#6fcf72'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, -2.8); ctx.lineTo(0, -7); ctx.stroke();
+        ctx.fillStyle = '#7bdc85';
+        ctx.beginPath(); ctx.ellipse(-2, -7, 3, 1.6, -.4, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(2.2, -6.2, 2.6, 1.5, .4, 0, TAU); ctx.fill();
+      } else if (opt.held === 'shears') {
+        ctx.strokeStyle = '#cfd8d8'; ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(5, -7); ctx.moveTo(-6, -7); ctx.lineTo(5, -1); ctx.stroke();
+        ctx.strokeStyle = '#c05a3c'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(-4, 2); ctx.moveTo(-6, -7); ctx.lineTo(-4, -10); ctx.stroke();
+      } else if (opt.held === 'tray') {
+        ctx.fillStyle = '#3c3a38';
+        ctx.beginPath(); ctx.roundRect(-5, -2, 11, 5, 1.5); ctx.fill();
+        ctx.fillStyle = '#6fcf72';
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-3 + i * 3.4, -3.4, 1.4, 0, TAU); ctx.fill(); }
+      } else if (opt.held === 'flask') {
+        ctx.strokeStyle = 'rgba(200,240,255,.85)'; ctx.lineWidth = .9;
+        ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(-2, -7); ctx.lineTo(3, -7); ctx.lineTo(3, -2); ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = 'rgba(110,231,255,.75)';
+        ctx.beginPath(); ctx.moveTo(-2.6, -2); ctx.lineTo(3.6, -2); ctx.lineTo(3.6, -4.5); ctx.lineTo(-2.6, -4.5); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
     ctx.restore();
   }
 
   staffSpots(p) {
     const slots = p.slots;
     const avgX = slots.reduce((n, s) => n + s[0], 0) / slots.length;
+    const maxX = Math.max(...slots.map(s => s[0]));
     const maxY = Math.max(...slots.map(s => s[1]));
-    return {
-      bea: [avgX + 1.9, maxY + 1.1],
+    // Defaults keep every crew member in the walkable aisles beside the pots,
+    // the counter and the door. Per-room overrides clear the larger props.
+    const spots = {
+      bea: [maxX + .8, maxY + .75],
       tito: [p.counter[0] + 1.75, p.counter[1] + .05],
-      priya: p.id === 'lab' ? [5.1, 4.25] : [p.w * .28, p.d * .7],
-      bruno: [p.door[0] - 1.35, p.door[1] - 1.1]
+      priya: [avgX + .8, maxY + 1.3],
+      bruno: [p.door[0] - 1.35, p.door[1] - 1.1],
+      mara: [slots[0][0] - .55, maxY + 1.35],
+      eli: [maxX + 1.9, maxY + 1.55]
     };
+    const overrides = {
+      apartment: {
+        bea: [4.75, 2.05], tito: [7.6, 4.7], priya: [5.2, 3.35],
+        bruno: [7.0, 5.25], mara: [2.0, 2.2], eli: [6.7, 3.0]
+      },
+      garage: {
+        bea: [5.1, 3.6], tito: [7.75, 4.9], priya: [2.4, 3.9],
+        bruno: [7.0, 5.25], mara: [1.15, 3.6], eli: [3.8, 4.4]
+      },
+      lab: {
+        bea: [4.65, 4.1], tito: [9.1, 5.55], priya: [5.95, 4.2],
+        bruno: [8.05, 6.35], mara: [1.2, 3.8], eli: [2.6, 3.9]
+      },
+      warehouse: {
+        bea: [4.65, 4.9], tito: [9.2, 5.4], priya: [3.08, 5.6],
+        bruno: [9.1, 6.35], mara: [1.25, 5.1], eli: [5.2, 5.4]
+      },
+      empire: {
+        bea: [6.15, 4.55], tito: [9.9, 5.3], priya: [2.7, 4.65],
+        bruno: [9.0, 6.05], mara: [1.1, 4.25], eli: [4.6, 4.7]
+      }
+    };
+    return { ...spots, ...(overrides[p.id] || {}) };
   }
 
   drawStaff(id, x, y, st) {
     const looks = {
-      bea: { skin: '#e0b08a', hair: '#6a3f28', shirt: '#b9643b', style: 'bob', apron: true, phase: .6, flip: 1 },
-      tito: { skin: '#8f5e40', hair: '#191512', shirt: '#3e7f5d', style: 'short', phase: 2.1, flip: -1 },
-      priya: { skin: '#b97f5e', hair: '#171311', shirt: '#4e739c', style: 'bob', glasses: true, phase: 4.2, flip: 1 },
-      bruno: { skin: '#a87352', hair: '#25201c', shirt: '#38383f', style: 'bald', scale: 1.16, phase: 1.4, flip: -1, tattoo: true }
+      bea: { skin: '#e0b08a', hair: '#6a3f28', shirt: '#b9643b', style: 'bob', apron: true, held: 'shears', phase: .6, flip: 1 },
+      tito: { skin: '#8f5e40', hair: '#191512', shirt: '#3e7f5d', style: 'short', held: 'tray', phase: 2.1, flip: -1 },
+      priya: { skin: '#b97f5e', hair: '#171311', shirt: '#4e739c', style: 'bob', glasses: true, held: 'flask', phase: 4.2, flip: 1 },
+      bruno: { skin: '#a87352', hair: '#25201c', shirt: '#38383f', style: 'bald', scale: 1.16, phase: 1.4, flip: -1, tattoo: true },
+      mara: { skin: '#c88f62', hair: '#3a2618', shirt: '#4f8a5c', style: 'curly', apron: true, held: 'can', phase: .9, flip: -1 },
+      eli: { skin: '#8b6448', hair: '#221a16', shirt: '#6a5fa8', style: 'messy', held: 'pot', phase: 3.3, flip: 1 }
     };
     const look = looks[id] || {};
-    this.drawPerson(x, y, { ...look, walk: 0, held: true });
-    // name badge
-    const s = this.toScreen(x, y, 76);
+    this.drawPerson(x, y, { ...look, walk: 0 });
+    // Collect the badge here, but paint it later in screen space. Drawing screen
+    // coordinates inside the world transform pushed every tag far off the body.
+    const tagZ = 80 + Math.max(0, (look.scale || 1) - 1) * 62;
+    this.staffTags.push({ s: this.toScreen(x, y, tagZ), name: st.name, color: st.color });
+  }
+
+  drawStaffTags() {
     const ctx = this.ctx;
     ctx.save();
-    ctx.font = '700 8px system-ui'; ctx.textAlign = 'center';
-    const w = ctx.measureText(st.name.toUpperCase()).width + 10;
-    ctx.fillStyle = 'rgba(10,16,13,.7)'; ctx.beginPath(); ctx.roundRect(s.x - w / 2, s.y - 8, w, 13, 6); ctx.fill();
-    ctx.fillStyle = rgba(st.color, .9); ctx.fillText(st.name.toUpperCase(), s.x, s.y + 1);
+    ctx.font = '800 9px system-ui';
+    const labels = this.staffTags.map(tag => {
+      const label = tag.name.toUpperCase();
+      const textW = ctx.measureText(label).width;
+      const pad = 7, dot = 5, gap = 4;
+      const w = pad * 2 + dot + gap + textW;
+      const h = 16;
+      return { tag, label, w, h, x: tag.s.x - w / 2, y: tag.s.y - h };
+    });
+    // Stack labels upward when the room is viewed small enough that two badges
+    // would otherwise cover each other (phones, zoomed-out camera).
+    labels.sort((a, b) => a.y - b.y || a.x - b.x);
+    const placed = [];
+    const overlaps = (a, b) => a.x < b.x + b.w + 3 && a.x + a.w + 3 > b.x && a.y < b.y + b.h + 2 && a.y + a.h + 2 > b.y;
+    for (const box of labels) {
+      let guard = 0;
+      while (placed.some(other => overlaps(box, other)) && guard++ < 16) box.y -= box.h + 3;
+      placed.push(box);
+    }
+    for (const box of placed) {
+      const { tag, label, w, h, x, y } = box;
+      const anchorX = tag.s.x, anchorY = tag.s.y;
+      if (y + h < anchorY - 1) {
+        // leader line keeps a lifted badge tied to its owner
+        ctx.strokeStyle = rgba(tag.color, .35); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(anchorX, anchorY); ctx.lineTo(x + w / 2, y + h); ctx.stroke();
+        ctx.fillStyle = rgba(tag.color, .75);
+        ctx.beginPath(); ctx.arc(anchorX, anchorY, 1.6, 0, TAU); ctx.fill();
+      }
+      // soft shadow anchors the tag above the head without hiding the face
+      ctx.fillStyle = 'rgba(0,0,0,.32)';
+      ctx.beginPath(); ctx.roundRect(x + 1, y + 2, w, h, 8); ctx.fill();
+      ctx.fillStyle = 'rgba(9,15,12,.9)';
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+      ctx.strokeStyle = rgba(tag.color, .45); ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = tag.color;
+      ctx.beginPath(); ctx.arc(x + 7 + 2.5, y + h / 2, 2.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(244,250,244,.95)';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, x + 7 + 5 + 4, y + h / 2 + 3.2);
+    }
     ctx.restore();
   }
 
@@ -1621,6 +1734,8 @@ export class Renderer {
         if (!c.served) this.hotspots.push({ x: head.x, y: head.y - 8, r: 14, kind: 'none', id: 'angry' });
       }
     }
+    // Crew badges sit above every scene bubble so names stay legible.
+    this.drawStaffTags();
   }
 
   drawHover() {
