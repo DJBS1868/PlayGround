@@ -2118,11 +2118,19 @@ export class Renderer {
   }
 
   drawBoxes(prop) {
+    const ctx = this.ctx;
     this.box(prop.x + .1, prop.y + .1, .7, .55, 24, 0, '#b58c56', '#98703f', '#6f502c');
     this.box(prop.x + .18, prop.y + .15, .5, .4, 20, 24, '#c19760', '#a17846', '#775531');
     this.box(prop.x + .75, prop.y + .4, .55, .5, 18, 0, '#a87f4a', '#8d6638', '#63482a');
-    this.ctx.strokeStyle = 'rgba(255,235,190,.25)'; this.ctx.lineWidth = 2;
-    this.ctx.beginPath(); this.ctx.moveTo(...this.P(prop.x + .45, prop.y + .1, 20)); this.ctx.lineTo(...this.P(prop.x + .45, prop.y + .65, 20)); this.ctx.stroke();
+    // Tape follows the top planes, with a folded end catching the light.
+    ctx.strokeStyle = 'rgba(235,211,157,.68)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(...this.P(prop.x + .45, prop.y + .1, 24)); ctx.lineTo(...this.P(prop.x + .45, prop.y + .65, 24)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(...this.P(prop.x + .95, prop.y + .42, 18)); ctx.lineTo(...this.P(prop.x + 1.3, prop.y + .82, 18)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,235,190,.34)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(...this.P(prop.x + .2, prop.y + .65, 7)); ctx.lineTo(...this.P(prop.x + .68, prop.y + .65, 7)); ctx.stroke();
+    const [labelX, labelY] = this.P(prop.x + .42, prop.y + .66, 12);
+    this.roundScreen(labelX - 6, labelY - 5, 12, 8, 1, '#d8cfb3', 'rgba(48,38,25,.35)');
+    ctx.fillStyle = '#6f5740'; ctx.fillRect(labelX - 4, labelY - 2, 7, 1);
   }
 
   drawCar(prop) {
@@ -2197,19 +2205,42 @@ export class Renderer {
   }
 
   drawToolbox(prop) {
+    const ctx = this.ctx;
     this.box(prop.x, prop.y, .55, .38, 13, 0, '#b84d3e', '#94382d', '#64251d');
-    this.ctx.strokeStyle = '#2e2a25'; this.ctx.lineWidth = 1;
-    this.ctx.beginPath(); this.ctx.arc(...this.P(prop.x + .27, prop.y + .05, 16), 6, Math.PI, 0); this.ctx.stroke();
+    // Rolled lid edge, hinged carry handle, and a bright latch make the small chest legible.
+    ctx.strokeStyle = 'rgba(255,205,170,.48)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(...this.P(prop.x + .04, prop.y + .04, 13.5));
+    ctx.lineTo(...this.P(prop.x + .51, prop.y + .04, 13.5)); ctx.stroke();
+    ctx.strokeStyle = '#2e2a25'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(...this.P(prop.x + .27, prop.y + .05, 16), 6, Math.PI, 0); ctx.stroke();
+    const [lx, ly] = this.P(prop.x + .28, prop.y + .38, 8);
+    this.roundScreen(lx - 3, ly - 2, 6, 4, 1, '#d6ad61', 'rgba(45,30,20,.55)');
+    ctx.fillStyle = '#542b21'; ctx.fillRect(lx - .6, ly - 1, 1.2, 2);
   }
 
   drawCrate(prop) {
     const w = prop.w || .8, d = prop.d || .7;
     this.box(prop.x, prop.y, w, d, 22, 0, '#87673f', '#6d5030', '#4a351f');
     const ctx = this.ctx;
-    ctx.strokeStyle = 'rgba(40,28,15,.5)'; ctx.lineWidth = 1.2;
-    const [x1, y1] = this.P(prop.x, prop.y + d, 0), [x2, y2] = this.P(prop.x + w, prop.y + d, 22);
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x1, y2); ctx.lineTo(x2, y1); ctx.stroke();
+    // Plank seams follow the lid plane; the front-facing X brace is projected in world space.
+    ctx.strokeStyle = 'rgba(44,30,16,.48)'; ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      const x = prop.x + w * i / 4;
+      ctx.beginPath(); ctx.moveTo(...this.P(x, prop.y + .04, 22.2));
+      ctx.lineTo(...this.P(x, prop.y + d - .04, 22.2)); ctx.stroke();
+    }
+    const faceY = prop.y + d;
+    const [fl, fr, tl, tr] = [
+      this.P(prop.x + .04, faceY, 2), this.P(prop.x + w - .04, faceY, 2),
+      this.P(prop.x + .04, faceY, 20), this.P(prop.x + w - .04, faceY, 20)
+    ];
+    ctx.strokeStyle = 'rgba(40,28,15,.58)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(...fl); ctx.lineTo(...tr); ctx.moveTo(...fr); ctx.lineTo(...tl); ctx.stroke();
+    ctx.fillStyle = 'rgba(225,190,130,.72)';
+    for (const [nx, nz] of [[.08, 4], [w - .08, 4], [.08, 18], [w - .08, 18]]) {
+      const [px, py] = this.P(prop.x + nx, faceY, nz);
+      ctx.beginPath(); ctx.arc(px, py, 1, 0, TAU); ctx.fill();
+    }
   }
 
   drawBarrels(prop) {
@@ -2225,9 +2256,17 @@ export class Renderer {
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(px - rw, py - h); ctx.lineTo(px - rw, py - 2); ctx.quadraticCurveTo(px, py + 8, px + rw, py - 2); ctx.lineTo(px + rw, py - h); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#83947f'; ctx.beginPath(); ctx.ellipse(px, py - h, rw, 6, 0, 0, TAU); ctx.fill();
+      // Rolled steel hoops, shallow stave seams and a stamped bung make each drum feel handled.
       ctx.strokeStyle = 'rgba(25,35,28,.55)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(px, py - h * .65, rw, 4.5, 0, 0, TAU); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(px, py - h * .28, rw, 4.5, 0, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = 'rgba(205,220,207,.24)'; ctx.lineWidth = .8;
+      for (const side of [-.58, .58]) {
+        ctx.beginPath(); ctx.moveTo(px + side * rw, py - h + 5); ctx.lineTo(px + side * rw, py - 5); ctx.stroke();
+      }
+      ctx.fillStyle = '#43534a'; ctx.beginPath(); ctx.arc(px + 5, py - h - 1, 2.2, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(210,222,208,.42)'; ctx.lineWidth = .7;
+      ctx.beginPath(); ctx.arc(px + 5, py - h - 1, 1.2, 0, TAU); ctx.stroke();
       if (many) { ctx.fillStyle = 'rgba(220,210,120,.45)'; ctx.fillRect(px - 4, py - h + 1, 8, 5); }
     }
   }
