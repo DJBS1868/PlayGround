@@ -1959,7 +1959,17 @@ export class Renderer {
     this.box(prop.x + prop.w - .18, prop.y, .18, prop.d, 20, 16, light, mid, dark);
     const n = 3, gap = .06, cw = (prop.w - .36 - gap * (n - 1)) / n;
     for (let i = 0; i < n; i++) {
-      this.box(prop.x + .18 + i * (cw + gap), prop.y + prop.d * .18, cw, prop.d * .72, 6, 16, shade(hue, 20), shade(hue, 2), dark);
+      const cx = prop.x + .18 + i * (cw + gap);
+      this.box(cx, prop.y + prop.d * .18, cw, prop.d * .72, 6, 16, shade(hue, 20), shade(hue, 2), dark);
+      // Tailored cushion piping and a pair of soft tuft dimples.
+      const seamY = prop.y + prop.d * .84;
+      const [sl, sy] = this.P(cx + .07, seamY, 22.2), [sr, sry] = this.P(cx + cw - .07, seamY, 22.2);
+      this.ctx.strokeStyle = 'rgba(255,255,255,.2)'; this.ctx.lineWidth = .75;
+      this.ctx.beginPath(); this.ctx.moveTo(sl, sy); this.ctx.lineTo(sr, sry); this.ctx.stroke();
+      for (const tx of [cx + cw * .35, cx + cw * .7]) {
+        const [px, py] = this.P(tx, prop.y + prop.d * .52, 22.3);
+        this.ctx.fillStyle = 'rgba(22,35,27,.28)'; this.ctx.beginPath(); this.ctx.arc(px, py, 1.15, 0, TAU); this.ctx.fill();
+      }
     }
     // throw pillow
     const [px, py] = this.P(prop.x + .35, prop.y + .37, 30);
@@ -1980,9 +1990,23 @@ export class Renderer {
       this.roundScreen(px - 8, py - 2.5, 16, 5, 1.5, '#e2b45f');
       for (let i = 0; i < 3; i++) { this.ctx.fillStyle = '#a52f2f'; this.ctx.beginPath(); this.ctx.arc(px - 5 + i * 5, py - 1, 1.3, 0, TAU); this.ctx.fill(); }
     }
+    // Fine grain and a beveled inlay make the tabletop read as finished wood.
+    const ctx = this.ctx;
+    ctx.strokeStyle = 'rgba(255,235,195,.22)'; ctx.lineWidth = .8;
+    for (let i = 0; i < 3; i++) {
+      const [ax, ay] = this.P(prop.x + .22, prop.y + .16 + i * .045, 22.4);
+      const [bx, by] = this.P(prop.x + prop.w - .2, prop.y + .16 + i * .045, 22.4);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(25,18,14,.32)'; ctx.lineWidth = .7;
+    const [ia, iay] = this.P(prop.x + .12, prop.y + .12, 22.4);
+    const [ib, iby] = this.P(prop.x + prop.w - .12, prop.y + .12, 22.4);
+    ctx.beginPath(); ctx.moveTo(ia, iay); ctx.lineTo(ib, iby); ctx.stroke();
     if (prop.cup) {
       const [px, py] = this.P(prop.x + .95, prop.y + .55, 22.5);
       this.roundScreen(px - 3, py - 7, 6, 8, 1.5, '#d8d6cc');
+      this.ctx.strokeStyle = 'rgba(255,255,255,.55)'; this.ctx.lineWidth = .8;
+      this.ctx.beginPath(); this.ctx.ellipse(px + 1, py - 3, 2, 2.5, 0, -Math.PI / 2, Math.PI / 2); this.ctx.stroke();
     }
   }
 
@@ -2022,6 +2046,19 @@ export class Renderer {
     // pillow
     this.box(prop.x + .18, prop.y + .12, .65, .38, 7, 21, '#ece7d8', '#d6d0bf', '#b3ad9e');
     this.box(prop.x + .95, prop.y + .12, .65, .38, 7, 21, '#ece7d8', '#d6d0bf', '#b3ad9e');
+    // Crisp blanket piping and short quilt seams keep the bedding from reading as a flat block.
+    const ctx = this.ctx, quiltZ = 26.4;
+    ctx.strokeStyle = 'rgba(235,245,240,.34)'; ctx.lineWidth = 1;
+    const [qa, qay] = this.P(prop.x + .18, prop.y + prop.d - .2, quiltZ);
+    const [qb, qby] = this.P(prop.x + prop.w - .18, prop.y + prop.d - .2, quiltZ);
+    ctx.beginPath(); ctx.moveTo(qa, qay); ctx.lineTo(qb, qby); ctx.stroke();
+    ctx.strokeStyle = 'rgba(20,35,42,.22)'; ctx.lineWidth = .75;
+    for (let i = 1; i < 5; i++) {
+      const x = prop.x + .12 + i * (prop.w - .24) / 5;
+      const [sx, sy] = this.P(x, prop.y + .72, quiltZ);
+      const [ex, ey] = this.P(x + .22, prop.y + prop.d - .28, quiltZ);
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    }
   }
 
   drawFridge(prop) {
@@ -2038,6 +2075,18 @@ export class Renderer {
       const [mx, my] = this.P(prop.x + .2 + i * .16, prop.y + .73, 26 + i * 6);
       ctx.fillStyle = ['#cf5d5d', '#d9b154', '#5d91cf'][i];
       ctx.beginPath(); ctx.arc(mx, my, 1.8, 0, TAU); ctx.fill();
+    }
+    // Recessed freezer split, maker plate and lower air slots add appliance-scale detail.
+    ctx.strokeStyle = 'rgba(38,49,43,.48)'; ctx.lineWidth = .8;
+    const [sx, sy] = this.P(prop.x + .08, prop.y + .72, 30);
+    const [ex, ey] = this.P(prop.x + .68, prop.y + .72, 30);
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    const [plateX, plateY] = this.P(prop.x + .17, prop.y + .72, 39);
+    this.roundScreen(plateX - 4, plateY - 2, 8, 4, 1, '#c4cec5', 'rgba(45,58,50,.35)');
+    ctx.strokeStyle = 'rgba(35,44,40,.35)'; ctx.lineWidth = .65;
+    for (let i = 0; i < 3; i++) {
+      const [vx, vy] = this.P(prop.x + .16, prop.y + .72, 8 + i * 3);
+      ctx.beginPath(); ctx.moveTo(vx, vy); ctx.lineTo(vx + 9, vy + 4.5); ctx.stroke();
     }
   }
 
@@ -2109,10 +2158,32 @@ export class Renderer {
     this.box(prop.x, prop.y, prop.w, prop.d, 5, 26, '#6d5c46', '#544430', '#382d20');
     this.box(prop.x, prop.y, .1, prop.d, 26, 0, '#3a342c', '#2b261f', '#1d1915');
     this.box(prop.x + prop.w - .1, prop.y, .1, prop.d, 26, 0, '#3a342c', '#2b261f', '#1d1915');
-    // tools on top
-    this.ctx.strokeStyle = '#aeb5b3'; this.ctx.lineWidth = 1.2;
-    this.ctx.beginPath(); this.ctx.moveTo(...this.P(prop.x + .35, prop.y + .3, 32)); this.ctx.lineTo(...this.P(prop.x + .75, prop.y + .3, 32)); this.ctx.stroke();
-    this.ctx.fillStyle = '#b45b3f'; this.box(prop.x + .95, prop.y + .15, .3, .25, 6, 31, '#d27652', '#a94f34', '#713421');
+    // Drawer faces, pulls and a clean front edge make the bench feel built rather than blocky.
+    const ctx = this.ctx;
+    ctx.strokeStyle = 'rgba(24,22,18,.62)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const y = prop.y + prop.d;
+      const [lx, ly] = this.P(prop.x + .16 + i * .43, y, 18);
+      const [rx, ry] = this.P(prop.x + .52 + i * .43, y, 18);
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
+      const [hx, hy] = this.P(prop.x + .34 + i * .43, y + .01, 11);
+      ctx.fillStyle = '#b1aaa0'; ctx.fillRect(hx - 2, hy - 1, 4, 1.6);
+    }
+    ctx.strokeStyle = 'rgba(255,235,195,.25)'; ctx.lineWidth = 1;
+    const [ea, eay] = this.P(prop.x + .08, prop.y + .08, 31);
+    const [eb, eby] = this.P(prop.x + prop.w - .08, prop.y + .08, 31);
+    ctx.beginPath(); ctx.moveTo(ea, eay); ctx.lineTo(eb, eby); ctx.stroke();
+    // Tools on top: a metal wrench, mallet and a compact parts tray.
+    ctx.strokeStyle = '#bfc6c3'; ctx.lineWidth = 1.5;
+    const [wa, way] = this.P(prop.x + .35, prop.y + .3, 32);
+    const [wb, wby] = this.P(prop.x + .78, prop.y + .3, 32);
+    ctx.beginPath(); ctx.moveTo(wa, way); ctx.lineTo(wb, wby); ctx.stroke();
+    ctx.beginPath(); ctx.arc(wa, way, 3, Math.PI * .15, Math.PI * 1.85); ctx.stroke();
+    ctx.strokeStyle = '#8d4a36'; ctx.lineWidth = 2.4;
+    const [ma, may] = this.P(prop.x + 1.05, prop.y + .21, 33);
+    const [mb, mby] = this.P(prop.x + 1.28, prop.y + .34, 33);
+    ctx.beginPath(); ctx.moveTo(ma, may); ctx.lineTo(mb, mby); ctx.stroke();
+    ctx.fillStyle = '#d27652'; this.box(prop.x + .95, prop.y + .15, .3, .25, 6, 31, '#d27652', '#a94f34', '#713421');
   }
 
   drawTires(prop) {
@@ -2201,9 +2272,21 @@ export class Renderer {
     for (const [lx, ly] of [[.12, .12], [prop.w - .2, .12], [.12, prop.d - .2], [prop.w - .2, prop.d - .2]]) {
       this.box(prop.x + lx, prop.y + ly, .08, .08, 28, 0, '#7b8e8c', '#5e7271', '#3e4f4f');
     }
-    // sink
+    // Inset sink with a gooseneck tap and compact instrument controls.
+    const ctx = this.ctx;
     const [sx, sy] = this.P(prop.x + .3, prop.y + .3, 34);
-    this.roundScreen(sx - 9, sy - 4, 18, 8, 3, '#536765');
+    this.roundScreen(sx - 9, sy - 4, 18, 8, 3, '#536765', 'rgba(190,220,220,.35)');
+    ctx.strokeStyle = '#b7ccca'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(sx + 2, sy - 4); ctx.lineTo(sx + 2, sy - 10); ctx.quadraticCurveTo(sx + 2, sy - 14, sx + 7, sy - 14); ctx.lineTo(sx + 7, sy - 10); ctx.stroke();
+    ctx.strokeStyle = 'rgba(225,250,250,.24)'; ctx.lineWidth = .8;
+    const [ea, eay] = this.P(prop.x + .12, prop.y + .1, 33);
+    const [eb, eby] = this.P(prop.x + prop.w - .12, prop.y + .1, 33);
+    ctx.beginPath(); ctx.moveTo(ea, eay); ctx.lineTo(eb, eby); ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const [kx, ky] = this.P(prop.x + prop.w - .25, prop.y + .18 + i * .12, 34);
+      ctx.fillStyle = ['#d46d62', '#e4c15f', '#62bfd0'][i];
+      ctx.beginPath(); ctx.arc(kx, ky, 1.6, 0, TAU); ctx.fill();
+    }
   }
 
   drawFlasks(prop) {
@@ -2263,6 +2346,11 @@ export class Renderer {
         const bw = .5 + seeded(i + lvl) * .15;
         this.box(prop.x + .16 + i * .65, prop.y + .1, bw, .42, 16, z + 3, '#b18b55', '#94703f', '#6b502b');
       }
+      // Safety-yellow beam caps and small upright footplates.
+      this.ctx.strokeStyle = 'rgba(230,177,70,.6)'; this.ctx.lineWidth = 1.2;
+      const [ba, bay] = this.P(prop.x + .08, prop.y + (prop.d || .65), z + 3);
+      const [bb, bby] = this.P(prop.x + w - .08, prop.y + (prop.d || .65), z + 3);
+      this.ctx.beginPath(); this.ctx.moveTo(ba, bay); this.ctx.lineTo(bb, bby); this.ctx.stroke();
     }
   }
 
@@ -2274,6 +2362,16 @@ export class Renderer {
       this.box(prop.x + .15, prop.y + .12, w - .3, d - .24, 10, 15, '#b78e59', '#96703f', '#6c4f2b');
       this.ctx.strokeStyle = 'rgba(245,225,180,.25)'; this.ctx.lineWidth = 1.5;
       this.ctx.beginPath(); this.ctx.moveTo(...this.P(prop.x + w / 2, prop.y + .06, 15)); this.ctx.lineTo(...this.P(prop.x + w / 2, prop.y + d - .06, 15)); this.ctx.stroke();
+      // Stretch-film bands and a small freight label give the stack a packed, handled finish.
+      this.ctx.strokeStyle = 'rgba(220,245,238,.48)'; this.ctx.lineWidth = 1.2;
+      for (const x of [prop.x + .22, prop.x + w - .22]) {
+        const [ta, tay] = this.P(x, prop.y + .12, 26);
+        const [tb, tby] = this.P(x, prop.y + d - .12, 26);
+        this.ctx.beginPath(); this.ctx.moveTo(ta, tay); this.ctx.lineTo(tb, tby); this.ctx.stroke();
+      }
+      const [lx, ly] = this.P(prop.x + .16, prop.y + d - .08, 20);
+      this.roundScreen(lx - 5, ly - 3, 10, 6, 1, '#d6d1bc', 'rgba(55,50,40,.35)');
+      this.ctx.fillStyle = '#556a76'; this.ctx.fillRect(lx - 3, ly - 1, 5, 1);
     }
   }
 
@@ -2289,9 +2387,22 @@ export class Renderer {
     // mast
     this.box(prop.x + 1.13, prop.y + .1, .1, .1, 76, 5, '#4a4c4c', '#363838', '#222424');
     this.box(prop.x + 1.03, prop.y + .1, .08, .8, 4, 40, '#686b6a', '#4c4f4f', '#2f3131');
-    // forks
+    // Operator seat, handrail and amber warning beacon.
+    this.box(prop.x + .28, prop.y + .2, .28, .3, 5, 23, '#383b39', '#252827', '#181a19');
+    ctx.strokeStyle = '#4d5050'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(...this.P(prop.x + .16, prop.y + .08, 31));
+    ctx.lineTo(...this.P(prop.x + .16, prop.y + .08, 68));
+    ctx.lineTo(...this.P(prop.x + .82, prop.y + .08, 68));
+    ctx.lineTo(...this.P(prop.x + .82, prop.y + .08, 31)); ctx.stroke();
+    const [beaconX, beaconY] = this.P(prop.x + .68, prop.y + .12, 49);
+    ctx.fillStyle = '#ffc54d'; ctx.beginPath(); ctx.arc(beaconX, beaconY, 3.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,195,70,.18)'; ctx.beginPath(); ctx.arc(beaconX, beaconY, 9, 0, TAU); ctx.fill();
+    // Forks and a contrasting pair of fork tips.
     this.box(prop.x + .65, prop.y + .22, .7, .08, 2, 6, '#767978', '#5a5d5c', '#3a3c3c');
     this.box(prop.x + .65, prop.y + .52, .7, .08, 2, 6, '#767978', '#5a5d5c', '#3a3c3c');
+    ctx.strokeStyle = '#a9adaa'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(...this.P(prop.x + 1.32, prop.y + .26, 8)); ctx.lineTo(...this.P(prop.x + 1.42, prop.y + .26, 8));
+    ctx.moveTo(...this.P(prop.x + 1.32, prop.y + .56, 8)); ctx.lineTo(...this.P(prop.x + 1.42, prop.y + .56, 8)); ctx.stroke();
   }
 
   drawAquarium(prop) {
@@ -2352,31 +2463,95 @@ export class Renderer {
     const ctx = this.ctx;
     const pal = p.palette;
     const x = cx - 1.0, y = cy - .42, w = 2.0, d = .84;
-    this.box(x, y, w, d, 32, 0, shade(pal.floorB, 25), shade(pal.floorB, -5), shade(pal.floorB, -28));
-    this.box(x - .05, y - .05, w + .1, d + .1, 3, 32, shade(pal.trim, 18), shade(pal.trim, 0), shade(pal.trim, -28));
-    // register
-    this.box(cx + .15, y + .1, .45, .35, 12, 35, '#4b5a58', '#364440', '#222c2a');
-    const [rx, ry] = this.P(cx + .37, y + .28, 48);
-    ctx.fillStyle = 'rgba(150,240,200,.7)'; ctx.fillRect(rx - 5, ry - 4, 10, 4);
-    // scale
-    const [sx, sy] = this.P(cx - .45, y + .35, 35);
-    this.roundScreen(sx - 8, sy - 2, 16, 3, 1.5, '#8c9894');
-    ctx.fillStyle = '#5e6a66'; ctx.fillRect(sx - 3, sy - 5, 6, 3);
-    // cash jar
-    const [jx, jy] = this.P(cx - .85, y + .55, 35);
-    ctx.fillStyle = 'rgba(200,230,220,.25)'; ctx.beginPath(); ctx.roundRect(jx - 6, jy - 12, 12, 13, 3); ctx.fill();
-    ctx.fillStyle = '#7ddc8a'; ctx.fillRect(jx - 4, jy - 4, 8, 4);
-    ctx.strokeStyle = 'rgba(220,255,235,.4)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.roundRect(jx - 6, jy - 12, 12, 13, 3); ctx.stroke();
-    // little bags
-    for (let i = 0; i < 2; i++) {
-      const [bx, by] = this.P(cx + .7 + i * .12, y + .2 + i * .12, 36);
-      ctx.fillStyle = 'rgba(120,240,160,.5)'; ctx.beginPath(); ctx.roundRect(bx - 3, by - 6, 6, 7, 2); ctx.fill();
+    const finishes = {
+      apartment: ['#694735', '#8e6344', '#b88b5d'],
+      garage: ['#343b3e', '#565e61', '#f0a94f'],
+      lab: ['#43565d', '#758b8e', '#70e5f4'],
+      warehouse: ['#42433e', '#696a61', '#e4b85d'],
+      empire: ['#49313a', '#78505a', '#e1c17d']
+    };
+    const [caseColor, topColor, metal] = finishes[p.id] || finishes.apartment;
+    const dark = shade(caseColor, -25), mid = shade(caseColor, 3), light = shade(caseColor, 25);
+    const accent = pal.accent;
+    const line = (points, color, width = 1) => {
+      ctx.beginPath(); ctx.moveTo(...points[0]);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(...points[i]);
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+    };
+
+    // Grounding shadow and a recessed, finished toe-kick.
+    const [shadowX, shadowY] = this.P(cx, cy, 0);
+    ctx.fillStyle = 'rgba(0,0,0,.24)';
+    ctx.beginPath(); ctx.ellipse(shadowX, shadowY + 4, 66, 24, 0, 0, TAU); ctx.fill();
+    this.box(x + .08, y + .08, w - .16, d - .16, 5, 0, shade(caseColor, -8), '#211c19', '#171513');
+    this.box(x + .035, y + .035, w - .07, d - .07, 25, 5, light, mid, dark);
+
+    // Framed cabinet panels across the customer-facing apron.
+    const frontY = y + d - .035;
+    for (let i = 0; i < 3; i++) {
+      const px = x + .13 + i * .61;
+      const left = this.P(px, frontY, 9), right = this.P(px + .48, frontY, 9);
+      const rightTop = this.P(px + .48, frontY, 25), leftTop = this.P(px, frontY, 25);
+      ctx.beginPath(); ctx.moveTo(...left); ctx.lineTo(...right); ctx.lineTo(...rightTop); ctx.lineTo(...leftTop); ctx.closePath();
+      ctx.fillStyle = 'rgba(8,12,12,.16)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,235,195,.24)'; ctx.lineWidth = .8; ctx.stroke();
+      // Small satin-metal pull, centered on each inset panel.
+      const [hx, hy] = this.P(px + .24, frontY + .008, 17);
+      ctx.fillStyle = metal; ctx.beginPath(); ctx.roundRect(hx - 2, hy - 1.5, 4, 3, 1); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.32)'; ctx.fillRect(hx - 1.4, hy - 1, 2.8, .6);
     }
-    // sign hanging
-    const [nx, ny] = this.P(cx, y + .05, 64);
-    ctx.save(); ctx.fillStyle = pal.accent;
-    ctx.font = '800 7px "Arial Black", Impact, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('COUNTER', nx, ny); ctx.restore();
+    // Continuous kick strip and fine accent pinstripe along the fascia.
+    line([this.P(x + .08, frontY + .012, 5), this.P(x + w - .08, frontY + .012, 5)], 'rgba(255,255,255,.17)', 1);
+    line([this.P(x + .04, frontY + .012, 27), this.P(x + w - .04, frontY + .012, 27)], metal, 1.3);
+    // Solid countertop with a slim polished bullnose lip.
+    this.box(x - .055, y - .055, w + .11, d + .11, 4, 30, shade(topColor, 28), shade(topColor, 5), shade(topColor, -20));
+    this.box(x - .075, y - .07, w + .15, .045, 1.4, 32.6, metal, shade(metal, -12), shade(metal, -25));
+    line([this.P(x + .16, y + .1, 34.2), this.P(x + w - .16, y + .1, 34.2)], 'rgba(255,255,255,.2)', .8);
+    // Discreet edge-lit service mark on the front apron.
+    const [markX, markY] = this.P(cx, frontY + .016, 22);
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 5px system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.fillText('GREEN  •  SUPPLY', markX, markY); ctx.restore();
+
+    // Contactless point-of-sale terminal: pedestal, housing, glass and status light.
+    this.box(cx + .25, y + .1, .38, .32, 3, 34, '#283235', '#20292b', '#151c1e');
+    this.box(cx + .19, y + .08, .5, .37, 10, 37, '#394649', '#283335', '#1b2426');
+    const [rx, ry] = this.P(cx + .44, y + .15, 48);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(rx - 8, ry - 8, 16, 9, 2); ctx.clip();
+    const screen = ctx.createLinearGradient(rx - 8, ry - 8, rx + 8, ry + 1);
+    screen.addColorStop(0, '#a8fff0'); screen.addColorStop(.42, '#49cbb9'); screen.addColorStop(1, '#176f72');
+    ctx.fillStyle = screen; ctx.fillRect(rx - 8, ry - 8, 16, 9); ctx.restore();
+    ctx.strokeStyle = 'rgba(230,255,248,.58)'; ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.roundRect(rx - 8, ry - 8, 16, 9, 2); ctx.stroke();
+    ctx.fillStyle = '#c9ffe8'; ctx.beginPath(); ctx.arc(rx + 5, ry - 2, 1, 0, TAU); ctx.fill();
+
+    // Compact precision scale with a glass platter and a bright readout.
+    const [sx, sy] = this.P(cx - .38, y + .34, 34);
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(sx, sy + 2, 13, 5, 0, 0, TAU); ctx.fill();
+    this.roundScreen(sx - 12, sy - 5, 24, 7, 2, '#485451', 'rgba(220,240,225,.46)');
+    this.roundScreen(sx - 8, sy - 4, 16, 3, 1.5, '#bfd5c9');
+    ctx.fillStyle = '#35433d'; ctx.font = '600 3.5px ui-monospace, monospace'; ctx.textAlign = 'center';
+    ctx.fillText('00.0', sx, sy - 1.5);
+
+    // Glass tip jar, paper currency and a simple metal lid.
+    const [jx, jy] = this.P(cx - .79, y + .55, 34);
+    ctx.fillStyle = 'rgba(8,14,12,.22)'; ctx.beginPath(); ctx.ellipse(jx, jy + 1, 8, 3, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(197,235,220,.24)'; ctx.beginPath(); ctx.roundRect(jx - 6, jy - 13, 12, 13, [2, 2, 3, 3]); ctx.fill();
+    ctx.fillStyle = 'rgba(123,220,138,.72)'; ctx.fillRect(jx - 4, jy - 5, 8, 4);
+    ctx.strokeStyle = 'rgba(230,255,240,.72)'; ctx.lineWidth = .85; ctx.beginPath(); ctx.roundRect(jx - 6, jy - 13, 12, 13, [2, 2, 3, 3]); ctx.stroke();
+    this.roundScreen(jx - 7, jy - 14, 14, 2, 1, metal);
+    ctx.fillStyle = 'rgba(245,255,246,.56)'; ctx.fillRect(jx - 3, jy - 3, 6, 1);
+
+    // Two folded, branded take-away bags with handles and soft contact shadows.
+    for (let i = 0; i < 2; i++) {
+      const [bx, by] = this.P(cx + .73 + i * .16, y + .18 + i * .13, 34);
+      ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.beginPath(); ctx.ellipse(bx, by + 1, 5, 2, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = i ? '#d9c6a0' : '#e8dcc5';
+      ctx.beginPath(); ctx.moveTo(bx - 4, by - 9); ctx.lineTo(bx + 4, by - 9); ctx.lineTo(bx + 3.5, by); ctx.lineTo(bx - 3.5, by); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(80,60,42,.75)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(bx, by - 9, 2.4, Math.PI, TAU); ctx.stroke();
+      ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(bx, by - 4.5, 1, 0, TAU); ctx.fill();
+    }
+
     this.hotspots.push({ x: this.toScreen(cx, cy, 30).x, y: this.toScreen(cx, cy, 30).y, r: 46 * this.zoom + 12, kind: 'counter', id: 'counter' });
   }
 
