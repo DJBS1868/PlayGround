@@ -646,7 +646,7 @@ $('auctionCollected').addEventListener('click', () => {
   if (!artifact) return;
   loadArtifact(artifact);
   closeCollection();
-  openSale(artifact.name);
+  openSale(artifact.name, artifact.id);
 });
 
 let audioContext = null;
@@ -672,13 +672,24 @@ $('soundToggle').addEventListener('click', () => {
 });
 let auctionTimerId = null, auctionBidId = null, auctionEndsAt = 0;
 let auctionBid = 0, auctionCount = 0, lastBidder = -1;
+let auctionSourceArtifactId = null;
 const bidderNames = ['VEX-9', 'MASTER SOL', 'NYX KORR', 'DR. LUMA', 'JAX RENN', 'THE CURATOR'];
 function stopAuction() {
   clearInterval(auctionTimerId); clearTimeout(auctionBidId);
   auctionTimerId = null; auctionBidId = null;
 }
+function hideAuctionResult() {
+  $('auctionResult').classList.remove('visible');
+  $('auctionResult').setAttribute('aria-hidden', 'true');
+  $('auctionRoom').classList.remove('finished');
+}
 function closeSale() {
   stopAuction();
+  // The result card forces its own visibility, so it must be reset here too.
+  // Otherwise the closed auction leaves an invisible full-screen layer over the page
+  // and every button behind it stops receiving clicks.
+  hideAuctionResult();
+  auctionSourceArtifactId = null;
   $('saleOverlay').classList.remove('open'); $('saleOverlay').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('sale-active');
   document.body.style.removeProperty('overflow');
@@ -696,6 +707,16 @@ function finishAuction() {
   breakdown.push(`<div><span>Craftsmanship bonus</span><b>${money(bonus)}</b></div>`);
   breakdown.push(`<div><span>Auction premium</span><b>${money(auctionBid - totalValue())}</b></div>`);
   $('saleBreakdown').innerHTML = breakdown.join('');
+  if (auctionSourceArtifactId) {
+    const soldIndex = collection.findIndex(item => item.id === auctionSourceArtifactId);
+    if (soldIndex !== -1) {
+      collection.splice(soldIndex, 1);
+      collectionSelection = collection.length ? Math.min(collectionSelection, collection.length - 1) : 0;
+      activitySaberSelection = collection.length ? Math.min(activitySaberSelection, collection.length - 1) : 0;
+      saveCollection();
+    }
+    auctionSourceArtifactId = null;
+  }
   playTone(820, .24);
 }
 function placeBid() {
@@ -722,16 +743,16 @@ function placeBid() {
     else placeBid();
   }, 1450 + Math.random() * 700);
 }
-function openSale(lotName = buildName()) {
+function openSale(lotName = buildName(), sourceArtifactId = null) {
   const total = totalValue();
+  auctionSourceArtifactId = sourceArtifactId;
   auctionBid = Math.ceil((total * .72) / 10) * 10;
   auctionCount = 0; lastBidder = -1;
   stopAuction();
   document.querySelectorAll('.bidder').forEach(bidder => {
     bidder.classList.remove('bidding'); bidder.querySelector('.bid-tag').textContent = '—';
   });
-  $('auctionRoom').classList.remove('finished');
-  $('auctionResult').classList.remove('visible'); $('auctionResult').setAttribute('aria-hidden', 'true');
+  hideAuctionResult();
   $('auctionBuildName').textContent = lotName.toUpperCase();
   $('stageBuildName').textContent = lotName.toUpperCase();
   $('auctionPrice').textContent = money(auctionBid);
@@ -766,7 +787,10 @@ $('auctionRun').addEventListener('click', () => {
   setTimeout(() => { $('auctionRun').textContent = 'LET BIDS ROLL ↗'; $('auctionRun').disabled = false; }, 1800);
 });
 $('buildAnother').addEventListener('click', () => {
-  closeSale(); Object.keys(selected).forEach(key => { selected[key] = 0; }); setStep(0); updateUI(); rebuildSaber();
+  closeSale();
+  Object.keys(selected).forEach(key => { selected[key] = 0; });
+  bladeIgnited = false; bladeUserChoice = null; syncBladeToggle();
+  setStep(0); updateUI(); rebuildSaber();
   $('toast').textContent = 'A fresh workbench. A new story.'; $('toast').classList.add('show'); setTimeout(() => $('toast').classList.remove('show'), 2200);
 });
 document.addEventListener('keydown', event => {
