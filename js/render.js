@@ -49,6 +49,11 @@ export class Renderer {
     this.flash = 0;
     this.city = [];
     this.ambient = { catX: 7.2, catY: 5.7, catTarget: 7.2, catTimer: 0 };
+    // Visual crew jobs: walk to a pot, perform the role animation, then drift home.
+    this.crewStates = new Map();
+    this.crewPropId = null;
+    this.hiddenPlants = new Set();
+    this.trimGhosts = new Map();
     this.bindEvents();
     this.makeCity();
     this.resize();
@@ -62,21 +67,48 @@ export class Renderer {
       if (c) this.burstCash(c.x, c.y - 1.2, '+' + e.payout);
       else this.burstCash(5, 4, '+' + e.payout);
       if (c) this.particles.push({ type: 'heart', wx: c.x, wy: c.y, z: 70, vx: .15, vy: -.15, vz: 20, life: 1.4, max: 1.4, color: '#ff8fa3' });
+      const tito = this.crewStates.get('tito');
+      if (tito) tito.serve = 1;
     });
     g.on('harvest', e => {
+      if (e.propId !== g.state.activeProperty) return;
       const pos = this.slotPos(e.propId, e.index);
-      if (pos) {
-        this.particles.push({ type: 'leaf', wx: pos[0], wy: pos[1], z: 34, vx: 0, vy: 0, vz: 60, life: 1.1, max: 1.1, color: STRAIN_BY_ID[e.strain]?.color || '#7bf58a' });
-        this.burstCash(pos[0], pos[1] - .4, `+${e.grams}g`);
+      if (!pos) return;
+      const crewDriven = e.auto && g.state.staff.includes('bea');
+      if (crewDriven) {
+        // Keep the ripe plant visible until Bea reaches it and trims it.
+        this.trimGhosts.set(this.slotKey(e.propId, e.index), { strain: e.strain, progress: 1, tendQ: 0 });
+        if (!this.enqueueCrewJob('bea', e.propId, e.index, 'trim', { grams: e.grams, strain: e.strain })) {
+          this.trimGhosts.delete(this.slotKey(e.propId, e.index));
+          this.burstTrim(pos, e.strain, e.grams);
+        }
+      } else {
+        this.burstTrim(pos, e.strain, e.grams);
       }
     });
     g.on('tend', e => {
+      if (e.propId !== g.state.activeProperty) return;
       const pos = this.slotPos(e.propId, e.index);
-      if (pos) for (let i = 0; i < 4; i++) this.particles.push({ type: 'drop', wx: pos[0] + (Math.random() - .5) * .3, wy: pos[1] + (Math.random() - .5) * .3, z: 70, vx: (Math.random() - .5) * 10, vy: (Math.random() - .5) * 10, vz: -40, life: .8, max: .8, color: '#8fe7ff' });
+      if (!pos) return;
+      if (!(e.auto && g.state.staff.includes('mara') && this.enqueueCrewJob('mara', e.propId, e.index, 'water'))) {
+        this.burstWater(pos);
+      }
     });
     g.on('plant', e => {
+      if (e.propId !== g.state.activeProperty) return;
       const pos = this.slotPos(e.propId, e.index);
-      if (pos) for (let i = 0; i < 7; i++) this.particles.push({ type: 'spark', wx: pos[0], wy: pos[1], z: 22, vx: (Math.random() - .5) * 40, vy: (Math.random() - .5) * 40, vz: 35, life: .8, max: .8, color: '#b8ff9a' });
+      if (!pos) return;
+      const crewDriven = e.auto && g.state.staff.includes('eli');
+      if (crewDriven) {
+        // Show an empty pot until Eli has walked over and planted the seed.
+        this.hiddenPlants.add(this.slotKey(e.propId, e.index));
+        if (!this.enqueueCrewJob('eli', e.propId, e.index, 'plant', { strain: e.strain })) {
+          this.hiddenPlants.delete(this.slotKey(e.propId, e.index));
+          this.burstPlant(pos);
+        }
+      } else {
+        this.burstPlant(pos);
+      }
     });
     g.on('refine', () => this.sparkleScreen());
     g.on('raid', () => { this.shake = 1; this.flash = 1; });
@@ -92,6 +124,22 @@ export class Renderer {
   slotPos(propId, index) {
     const p = PROPERTIES[propId];
     return p?.slots[index] || null;
+  }
+
+  slotKey(propId, index) { return `${propId}:${index}`; }
+
+  burstPlant(pos) {
+    for (let i = 0; i < 7; i++) this.particles.push({ type: 'spark', wx: pos[0], wy: pos[1], z: 22, vx: (Math.random() - .5) * 40, vy: (Math.random() - .5) * 40, vz: 35, life: .8, max: .8, color: '#b8ff9a' });
+  }
+
+  burstWater(pos) {
+    for (let i = 0; i < 5; i++) this.particles.push({ type: 'drop', wx: pos[0] + (Math.random() - .5) * .35, wy: pos[1] + (Math.random() - .5) * .35, z: 58, vx: (Math.random() - .5) * 10, vy: (Math.random() - .5) * 10, vz: -45, life: .8, max: .8, color: '#8fe7ff' });
+  }
+
+  burstTrim(pos, strain, grams = 0) {
+    const color = STRAIN_BY_ID[strain]?.color || '#7bf58a';
+    for (let i = 0; i < 7; i++) this.particles.push({ type: 'leaf', wx: pos[0], wy: pos[1], z: 36 + Math.random() * 18, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, vz: 20 + Math.random() * 35, life: 1.2, max: 1.2, color });
+    if (grams) this.burstCash(pos[0], pos[1] - .4, `+${grams}g`);
   }
 
   makeCity() {
@@ -219,6 +267,7 @@ export class Renderer {
     }
     this.hotspots = [];
     this.staffTags = [];
+    this.updateCrew(dt, p);
     this.screenTransform();
     ctx.clearRect(0, 0, this.w, this.h);
     this.drawBackdrop();
@@ -249,7 +298,9 @@ export class Renderer {
       const st = STAFF_BY_ID[id];
       const spot = staffSpots[id];
       if (!st || !spot) continue;
-      draws.push({ depth: spot[0] + spot[1] + .3, draw: () => this.drawStaff(id, spot[0], spot[1], st) });
+      const crew = this.crewStates.get(id);
+      const x = crew ? crew.x : spot[0], y = crew ? crew.y : spot[1];
+      draws.push({ depth: x + y + .3, draw: () => this.drawStaff(id, x, y, st, crew) });
     }
     // customers
     for (const c of this.game.runtime.customers) {
@@ -1235,7 +1286,13 @@ export class Renderer {
     const ctx = this.ctx;
     const pal = p.palette;
     const [px, py] = this.P(x, y, 0);
-    const strain = slot ? STRAIN_BY_ID[slot.strain] : null;
+    const key = this.slotKey(p.id, index);
+    // A queued crew job can briefly lead the simulation: keep the old ripe
+    // plant on screen until Bea cuts it, and keep a new seed hidden until Eli
+    // has actually worked the pot.
+    const ghost = this.trimGhosts.get(key);
+    const visual = ghost || (this.hiddenPlants.has(key) ? null : slot);
+    const strain = visual ? STRAIN_BY_ID[visual.strain] : null;
     // tray
     ctx.fillStyle = 'rgba(20,24,20,.34)';
     ctx.beginPath(); ctx.ellipse(px, py + 2, 36, 15, 0, 0, TAU); ctx.fill();
@@ -1259,7 +1316,7 @@ export class Renderer {
       ctx.fillStyle = strain.color; ctx.fillRect(0, 0, 9, 5);
       ctx.restore();
     }
-    if (!slot) {
+    if (!visual) {
       // Keep the add control tucked just above the pot rim instead of floating high above it.
       const bob = Math.sin(this.time * 2.4 + index) * 2;
       const addY = py - potH - 12 + bob;
@@ -1272,18 +1329,18 @@ export class Renderer {
       ctx.fillStyle = '#b6ff9e'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'center'; ctx.fillText('+', px, addY + 4.5);
       ctx.restore();
     } else {
-      this.drawPlant(px, py - potH, slot, strain, p, index);
+      this.drawPlant(px, py - potH, visual, strain, p, index);
       // progress arc
-      if (slot.progress < 1) {
+      if (visual.progress < 1) {
         ctx.save();
         ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 2.6;
         ctx.beginPath(); ctx.ellipse(px, py, 35, 14, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
         ctx.strokeStyle = strain.color;
-        ctx.beginPath(); ctx.ellipse(px, py, 35, 14, 0, Math.PI * 1.08, Math.PI * 1.08 + Math.PI * .84 * slot.progress); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(px, py, 35, 14, 0, Math.PI * 1.08, Math.PI * 1.08 + Math.PI * .84 * visual.progress); ctx.stroke();
         ctx.restore();
       }
     }
-    const hot = this.toScreen(x, y, slot ? 32 : potH + 12);
+    const hot = this.toScreen(x, y, visual ? 32 : potH + 12);
     this.hotspots.push({ x: hot.x, y: hot.y, r: 34 * this.zoom + 10, kind: 'slot', propId: p.id, index, id: `slot:${p.id}:${index}` });
   }
 
@@ -1357,7 +1414,11 @@ export class Renderer {
     const t = this.time;
     const phase = opt.phase || 0;
     const walk = opt.walk || 0;
-    const bob = Math.sin(t * 2.4 + phase) * 1.1 + (walk > .01 ? Math.abs(Math.sin(walk)) * -1.5 : 0);
+    const workT = opt.workT || 0;
+    const workWave = Math.sin(workT * 9 + phase);
+    let bob = Math.sin(t * 2.4 + phase) * 1.1 + (walk > .01 ? Math.abs(Math.sin(walk)) * -1.5 : 0);
+    if (opt.workPose === 'plant') bob += 3.2 + workWave * .7;
+    else if (opt.workPose === 'water') bob += .8 + workWave * .4;
     const swing = Math.sin(walk) * 5;
     const skin = opt.skin || '#c58c63';
     const shirt = opt.shirt || '#4f6f5e';
@@ -1378,15 +1439,29 @@ export class Renderer {
     ctx.strokeStyle = '#191a1a'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(-4 - swing * .5, -3); ctx.lineTo(-6 - swing * .5, -1); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(4 + swing * .5, -3); ctx.lineTo(6 + swing * .5, -1); ctx.stroke();
-    // arms
+    // arms — the working hand reaches for the pot while the pose loops
     ctx.strokeStyle = shirt; ctx.lineWidth = 5.5;
     const armSwing = walk > .01 ? -swing * .6 : Math.sin(t * 1.6 + phase) * 1.4;
-    ctx.beginPath(); ctx.moveTo(-9, -42 + bob); ctx.lineTo(-13, -27 + bob + armSwing); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(9, -42 + bob); ctx.lineTo(13, -27 + bob - armSwing); ctx.stroke();
+    let leftHandX = -13, leftHandY = -27 + bob + armSwing;
+    let rightHandX = 13, rightHandY = -27 + bob - armSwing;
+    if (opt.workPose === 'water') { rightHandX = 14.5 + workWave * .7; rightHandY = -23 + bob + workWave * .8; }
+    else if (opt.workPose === 'trim') { rightHandX = 14 + workWave * .9; rightHandY = -28 + bob + workWave * .35; }
+    else if (opt.workPose === 'plant') { rightHandX = 12 + workWave * .7; rightHandY = -17 + bob; leftHandX = -8 + workWave * .4; leftHandY = -23 + bob; }
+    else if (opt.workPose === 'inspect') { rightHandX = 8 + workWave * .5; rightHandY = -45 + bob; }
+    if (opt.serving) { rightHandX = 11; rightHandY = -36 + bob; }
+    if (opt.crossed) {
+      ctx.beginPath(); ctx.moveTo(-9, -42 + bob); ctx.lineTo(6, -31 + bob); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(9, -42 + bob); ctx.lineTo(-6, -31 + bob); ctx.stroke();
+      leftHandX = -6; leftHandY = -31 + bob;
+      rightHandX = 6; rightHandY = -31 + bob;
+    } else {
+      ctx.beginPath(); ctx.moveTo(-9, -42 + bob); ctx.lineTo(leftHandX, leftHandY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(9, -42 + bob); ctx.lineTo(rightHandX, rightHandY); ctx.stroke();
+    }
     // hands
     ctx.fillStyle = skin;
-    ctx.beginPath(); ctx.arc(-13, -26 + bob + armSwing, 2.6, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(13, -26 + bob - armSwing, 2.6, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(leftHandX, leftHandY + 1, 2.6, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(rightHandX, rightHandY + 1, 2.6, 0, TAU); ctx.fill();
     // torso
     ctx.save();
     ctx.translate(0, -35 + bob);
@@ -1397,6 +1472,15 @@ export class Renderer {
     if (opt.apron) { ctx.fillStyle = 'rgba(240,235,220,.85)'; ctx.beginPath(); ctx.roundRect(-7, -6, 14, 19, 3); ctx.fill(); }
     if (opt.chain) { ctx.strokeStyle = '#e1bf6d'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, -8, 5, .15, Math.PI - .15); ctx.stroke(); }
     ctx.restore();
+    if (opt.crossed) {
+      // Folded forearms sit over the shirt so the muscle's stance reads clearly.
+      ctx.strokeStyle = shade(shirt, 10); ctx.lineWidth = 5.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-10, -40 + bob); ctx.quadraticCurveTo(-2, -29 + bob, 9, -35 + bob); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10, -40 + bob); ctx.quadraticCurveTo(2, -29 + bob, -9, -35 + bob); ctx.stroke();
+      ctx.fillStyle = skin;
+      ctx.beginPath(); ctx.arc(9, -35 + bob, 2.6, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(-9, -35 + bob, 2.6, 0, TAU); ctx.fill();
+    }
     // neck
     ctx.fillStyle = skin; ctx.fillRect(-2.5, -47 + bob, 5, 5);
     // head
@@ -1444,9 +1528,12 @@ export class Renderer {
     if (opt.tattoo) { ctx.strokeStyle = 'rgba(40,65,60,.6)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-9, -40); ctx.lineTo(-11, -34); ctx.lineTo(-8, -32); ctx.stroke(); }
     // held tools make each crew member readable at a glance
     if (opt.held) {
-      const hx = 13, hy2 = -27 + bob - armSwing;
       ctx.save();
-      ctx.translate(hx, hy2);
+      ctx.translate(rightHandX, rightHandY + 1);
+      if (opt.workPose === 'water') ctx.rotate(.58 + workWave * .16);
+      else if (opt.workPose === 'trim') ctx.rotate(workWave * .24);
+      else if (opt.workPose === 'plant') ctx.rotate(.55 + workWave * .12);
+      else if (opt.workPose === 'inspect') ctx.rotate(-.24);
       if (opt.held === 'can') {
         ctx.fillStyle = '#8fa7a1';
         ctx.beginPath(); ctx.roundRect(-4, -4, 9, 9, 2); ctx.fill();
@@ -1455,6 +1542,13 @@ export class Renderer {
         ctx.beginPath(); ctx.arc(-.5, -6, 3.8, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
         ctx.fillStyle = 'rgba(146,234,255,.9)';
         ctx.beginPath(); ctx.arc(12, -8, 1.5, 0, TAU); ctx.fill();
+        if (opt.workPose === 'water') {
+          ctx.fillStyle = 'rgba(150,235,255,.55)';
+          for (let i = 0; i < 3; i++) {
+            const fall = ((workT * 26 + i * 3.6) % 10);
+            ctx.beginPath(); ctx.arc(13.5, -8 + fall, 1 + i * .25, 0, TAU); ctx.fill();
+          }
+        }
       } else if (opt.held === 'pot') {
         ctx.fillStyle = '#b06a46';
         ctx.beginPath(); ctx.roundRect(-4, -2, 8, 6, 1.5); ctx.fill();
@@ -1464,6 +1558,13 @@ export class Renderer {
         ctx.fillStyle = '#7bdc85';
         ctx.beginPath(); ctx.ellipse(-2, -7, 3, 1.6, -.4, 0, TAU); ctx.fill();
         ctx.beginPath(); ctx.ellipse(2.2, -6.2, 2.6, 1.5, .4, 0, TAU); ctx.fill();
+        if (opt.workPose === 'plant') {
+          ctx.fillStyle = '#e6d39b';
+          for (let i = 0; i < 3; i++) {
+            const fall = (workT * 34 + i * 3) % 7;
+            ctx.beginPath(); ctx.arc(2 + i * 1.5, 2 + fall, .9, 0, TAU); ctx.fill();
+          }
+        }
       } else if (opt.held === 'shears') {
         ctx.strokeStyle = '#cfd8d8'; ctx.lineWidth = 1.3;
         ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(5, -7); ctx.moveTo(-6, -7); ctx.lineTo(5, -1); ctx.stroke();
@@ -1522,10 +1623,276 @@ export class Renderer {
         bruno: [9.0, 6.05], mara: [1.1, 4.25], eli: [4.6, 4.7]
       }
     };
-    return { ...spots, ...(overrides[p.id] || {}) };
+    const merged = { ...spots, ...(overrides[p.id] || {}) };
+    // Tito works the far side of the counter; Bruno holds the door.
+    const behindCounter = {
+      apartment: [5.2, 4.0], garage: [5.35, 4.2], lab: [6.7, 4.85],
+      warehouse: [6.8, 4.8], empire: [8.35, 4.68]
+    };
+    const doorGuard = {
+      apartment: [7.55, 5.55], garage: [7.55, 5.55], lab: [8.6, 6.65],
+      warehouse: [9.55, 6.25], empire: [9.55, 6.35]
+    };
+    merged.tito = behindCounter[p.id] || [p.counter[0] - .68, p.counter[1] - .62];
+    merged.bruno = doorGuard[p.id] || [p.door[0] - .8, p.door[1] - .8];
+    return merged;
   }
 
-  drawStaff(id, x, y, st) {
+  ensureCrew(p) {
+    if (this.crewPropId !== p.id) {
+      this.crewPropId = p.id;
+      this.crewStates.clear();
+      this.hiddenPlants.clear();
+      this.trimGhosts.clear();
+    }
+    const hired = this.game.state.staff;
+    for (const id of [...this.crewStates.keys()]) {
+      if (!hired.includes(id)) this.crewStates.delete(id);
+    }
+    const spots = this.staffSpots(p);
+    for (const id of hired) {
+      if (!STAFF_BY_ID[id] || !spots[id]) continue;
+      const state = this.crewStates.get(id);
+      if (state) state.home = spots[id];
+      else this.crewStates.set(id, this.makeCrewState(id, spots[id]));
+    }
+  }
+
+  makeCrewState(id, home) {
+    const facing = { tito: -1, bruno: -1, mara: -1 };
+    return {
+      id, x: home[0], y: home[1], home,
+      phase: 'idle', timer: .5 + Math.random() * 2, target: null,
+      walking: false, walkPhase: 0, face: facing[id] || 1,
+      job: null, queue: [], workT: 0, particleT: 0,
+      inspectIndex: -1, serve: 0
+    };
+  }
+
+  enqueueCrewJob(id, propId, index, kind, extra = {}) {
+    const g = this.game;
+    if (!g.state.staff.includes(id) || propId !== g.state.activeProperty) return false;
+    this.ensureCrew(g.propConfig);
+    const state = this.crewStates.get(id);
+    if (!state) return false;
+    if (state.job?.kind === kind && state.job.index === index) return true;
+    if (state.queue.some(job => job.kind === kind && job.index === index)) return true;
+    state.queue.push({ propId, index, kind, ...extra });
+    return true;
+  }
+
+  updateCrew(dt, p) {
+    this.ensureCrew(p);
+    // Crew animation follows the simulation: freeze it while the game is paused
+    // for the splash, a panel or an event dialog.
+    if (this.game.runtime.uiPaused || this.game.runtime.pendingEvent) return;
+    for (const state of this.crewStates.values()) this.stepWorker(state, p, dt);
+    this.cleanupCrewArtifacts(p);
+  }
+
+  stepWorker(state, p, dt) {
+    state.serve = Math.max(0, state.serve - dt * 2.2);
+    if (state.id === 'tito') return;
+    if (state.id === 'bruno') return;
+    if (state.id === 'priya') { this.stepInspector(state, p, dt); return; }
+
+    if (state.phase === 'walk') {
+      const arrived = this.stepTo(state, state.target, 2.15, dt);
+      if (arrived) {
+        state.phase = 'work';
+        state.workT = 0;
+        state.particleT = .12;
+        state.timer = state.job?.kind === 'trim' ? 1.9 : state.job?.kind === 'water' ? 1.45 : 1.6;
+        const pos = state.job ? (p.slots[state.job.index] || this.slotPos(state.job.propId, state.job.index)) : null;
+        if (pos) state.face = (pos[0] - pos[1]) < (state.x - state.y) ? -1 : 1;
+      }
+    } else if (state.phase === 'work') {
+      state.workT += dt;
+      state.timer -= dt;
+      state.particleT -= dt;
+      if (state.particleT <= 0) {
+        this.emitCrewWorkParticles(state, p);
+        state.particleT = state.job?.kind === 'water' ? .2 : .34;
+      }
+      if (state.timer <= 0) this.finishCrewJob(state, p);
+    } else if (state.phase === 'rest') {
+      state.timer -= dt;
+      if (state.timer <= 0) {
+        if (state.queue.length) this.startCrewJob(state, p);
+        else { state.phase = 'return'; state.target = state.home; }
+      }
+    } else if (state.phase === 'return') {
+      if (this.stepTo(state, state.home, 1.65, dt)) {
+        state.phase = 'idle';
+        state.timer = 1.2 + Math.random() * 2.2;
+      }
+    } else {
+      state.walking = false;
+      state.timer -= dt;
+      if (state.queue.length) this.startCrewJob(state, p);
+    }
+  }
+
+  startCrewJob(state, p) {
+    while (state.queue.length) {
+      const job = state.queue.shift();
+      const key = this.slotKey(job.propId, job.index);
+      const hasTarget = p.slots[job.index] || (job.kind === 'trim' && this.trimGhosts.has(key));
+      if (!hasTarget) continue;
+      job.approach = this.crewApproach(p, job.index, state.id);
+      state.job = job;
+      state.target = job.approach;
+      state.phase = 'walk';
+      return true;
+    }
+    state.job = null;
+    state.phase = 'return';
+    state.target = state.home;
+    return false;
+  }
+
+  finishCrewJob(state, p) {
+    const job = state.job;
+    state.job = null;
+    state.walking = false;
+    if (job) {
+      const key = this.slotKey(job.propId, job.index);
+      const pos = p.slots[job.index] || this.slotPos(job.propId, job.index);
+      if (job.kind === 'plant') {
+        this.hiddenPlants.delete(key);
+        if (pos) this.burstPlant(pos);
+      } else if (job.kind === 'water') {
+        if (pos) this.burstWater(pos);
+      } else if (job.kind === 'trim') {
+        this.trimGhosts.delete(key);
+        if (pos) this.burstTrim(pos, job.strain, job.grams);
+      }
+    }
+    if (state.queue.length) this.startCrewJob(state, p);
+    else { state.phase = 'rest'; state.timer = .9 + Math.random() * 1.2; state.target = null; }
+  }
+
+  cleanupCrewArtifacts(p) {
+    const busy = new Set();
+    for (const state of this.crewStates.values()) {
+      if (state.job) busy.add(this.slotKey(state.job.propId, state.job.index));
+      for (const job of state.queue) busy.add(this.slotKey(job.propId, job.index));
+    }
+    for (const key of [...this.hiddenPlants]) {
+      const [propId, idx] = key.split(':');
+      if (propId !== p.id || !this.game.propState.slots[Number(idx)] || !busy.has(key)) this.hiddenPlants.delete(key);
+    }
+    for (const key of [...this.trimGhosts.keys()]) {
+      const [propId] = key.split(':');
+      if (propId !== p.id || !busy.has(key)) this.trimGhosts.delete(key);
+    }
+  }
+
+  stepTo(state, target, speed, dt) {
+    if (!target) return true;
+    const dx = target[0] - state.x, dy = target[1] - state.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < .035) {
+      state.x = target[0]; state.y = target[1];
+      state.walking = false;
+      return true;
+    }
+    const step = Math.min(dist, speed * dt);
+    state.x += dx / dist * step;
+    state.y += dy / dist * step;
+    state.walking = true;
+    state.walkPhase += dt * 9;
+    const screenDx = dx - dy;
+    if (Math.abs(screenDx) > .001) state.face = screenDx > 0 ? 1 : -1;
+    return false;
+  }
+
+  crewApproach(p, index, id) {
+    const [x, y] = p.slots[index];
+    const sets = {
+      eli: [[-.55, .62], [.6, .58], [.62, -.15], [-.62, .05], [0, .86]],
+      mara: [[.58, .6], [-.58, .6], [.72, .12], [-.7, .12], [.15, .88]],
+      bea: [[.64, .42], [-.64, .42], [.6, -.28], [-.6, -.22], [.15, .8]],
+      priya: [[.78, .36], [-.78, .36], [.52, .92], [-.52, .92], [.82, -.1]]
+    };
+    for (const [ox, oy] of sets[id] || sets.priya) {
+      const spot = [clamp(x + ox, .45, p.w - .45), clamp(y + oy, .45, p.d - .45)];
+      if (this.crewSpotClear(p, spot, index)) return spot;
+    }
+    return [clamp(x + .55, .45, p.w - .45), clamp(y + .7, .45, p.d - .45)];
+  }
+
+  crewSpotClear(p, [x, y], ownIndex) {
+    if (x < .35 || y < .35 || x > p.w - .35 || y > p.d - .35) return false;
+    for (let i = 0; i < p.slots.length; i++) {
+      if (i === ownIndex) continue;
+      const [sx, sy] = p.slots[i];
+      if (Math.hypot(sx - x, sy - y) < .55) return false;
+    }
+    const [cx, cy] = p.counter;
+    if (x > cx - 1.12 && x < cx + 1.12 && y > cy - .55 && y < cy + .55) return false;
+    for (const prop of p.props) {
+      if (!prop.w || !prop.d || ['rug', 'oil', 'pizza', 'cat'].includes(prop.type)) continue;
+      if (x > prop.x - .12 && x < prop.x + prop.w + .12 && y > prop.y - .12 && y < prop.y + prop.d + .12) return false;
+    }
+    return true;
+  }
+
+  stepInspector(state, p, dt) {
+    if (state.phase === 'walk') {
+      if (this.stepTo(state, state.target, 1.15, dt)) {
+        state.phase = 'inspect';
+        state.timer = 2.3 + Math.random() * 1.6;
+        state.workT = 0;
+        state.particleT = .35;
+        const pos = p.slots[state.inspectIndex];
+        if (pos) state.face = (pos[0] - pos[1]) < (state.x - state.y) ? -1 : 1;
+      }
+    } else if (state.phase === 'inspect') {
+      state.workT += dt;
+      state.timer -= dt;
+      state.particleT -= dt;
+      if (state.particleT <= 0) {
+        state.particleT = .55;
+        const pos = p.slots[state.inspectIndex];
+        if (pos) for (let i = 0; i < 2; i++) this.particles.push({ type: 'spark', wx: pos[0] + (Math.random() - .5) * .3, wy: pos[1] + (Math.random() - .5) * .3, z: 52 + Math.random() * 16, vx: (Math.random() - .5) * .1, vy: (Math.random() - .5) * .1, vz: 18, life: .9, max: .9, color: '#9ad1ff' });
+      }
+      if (state.timer <= 0) {
+        state.phase = 'idle';
+        state.timer = 1.1 + Math.random() * 2.1;
+      }
+    } else {
+      state.walking = false;
+      state.timer -= dt;
+      if (state.timer <= 0) {
+        const occupied = [];
+        this.game.propState.slots.forEach((slot, i) => { if (slot) occupied.push(i); });
+        const pool = occupied.length ? occupied : p.slots.map((_, i) => i);
+        let index = pool[Math.floor(Math.random() * pool.length)];
+        if (pool.length > 1 && index === state.inspectIndex) index = pool[(pool.indexOf(index) + 1) % pool.length];
+        state.inspectIndex = index;
+        state.target = this.crewApproach(p, index, 'priya');
+        state.phase = 'walk';
+      }
+    }
+  }
+
+  emitCrewWorkParticles(state, p) {
+    if (!state.job) return;
+    // Trim jobs run after the game has cleared the pot, so fall back to the
+    // property layout for the effect position.
+    const pos = p.slots[state.job.index] || this.slotPos(state.job.propId, state.job.index);
+    if (!pos) return;
+    if (state.job.kind === 'plant') {
+      for (let i = 0; i < 2; i++) this.particles.push({ type: 'spark', wx: pos[0] + (Math.random() - .5) * .2, wy: pos[1] + (Math.random() - .5) * .2, z: 20, vx: (Math.random() - .5) * 8, vy: (Math.random() - .5) * 8, vz: 20, life: .6, max: .6, color: '#c9ff9a' });
+    } else if (state.job.kind === 'water') {
+      this.particles.push({ type: 'drop', wx: pos[0] + (Math.random() - .5) * .3, wy: pos[1] + (Math.random() - .5) * .3, z: 58 + Math.random() * 8, vx: 0, vy: 0, vz: -35, life: .7, max: .7, color: '#8fe7ff' });
+    } else if (state.job.kind === 'trim') {
+      this.particles.push({ type: 'leaf', wx: pos[0] + (Math.random() - .5) * .35, wy: pos[1] + (Math.random() - .5) * .35, z: 40 + Math.random() * 16, vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .2, vz: 22, life: .9, max: .9, color: STRAIN_BY_ID[state.job.strain]?.color || '#7bf58a' });
+    }
+  }
+
+  drawStaff(id, x, y, st, state) {
     const looks = {
       bea: { skin: '#e0b08a', hair: '#6a3f28', shirt: '#b9643b', style: 'bob', apron: true, held: 'shears', phase: .6, flip: 1 },
       tito: { skin: '#8f5e40', hair: '#191512', shirt: '#3e7f5d', style: 'short', held: 'tray', phase: 2.1, flip: -1 },
@@ -1535,7 +1902,17 @@ export class Renderer {
       eli: { skin: '#8b6448', hair: '#221a16', shirt: '#6a5fa8', style: 'messy', held: 'pot', phase: 3.3, flip: 1 }
     };
     const look = looks[id] || {};
-    this.drawPerson(x, y, { ...look, walk: 0 });
+    const working = state && (state.phase === 'work' || state.phase === 'inspect');
+    const workPose = working ? (id === 'bea' ? 'trim' : id === 'mara' ? 'water' : id === 'eli' ? 'plant' : 'inspect') : null;
+    this.drawPerson(x, y, {
+      ...look,
+      flip: state?.face ?? look.flip,
+      walk: state?.walking ? state.walkPhase : 0,
+      workPose,
+      workT: state?.workT || 0,
+      serving: id === 'tito' && (state?.serve || 0) > .05,
+      crossed: id === 'bruno'
+    });
     // Collect the badge here, but paint it later in screen space. Drawing screen
     // coordinates inside the world transform pushed every tag far off the body.
     const tagZ = 80 + Math.max(0, (look.scale || 1) - 1) * 62;
