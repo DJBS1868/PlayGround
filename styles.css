@@ -292,6 +292,7 @@ svg { display: block; }
 
 .prop-card { position: relative; overflow: hidden; padding: 0; }
 .prop-visual { height: 70px; display: flex; align-items: flex-end; padding: 10px 12px; position: relative; }
+.prop-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: .9; }
 .prop-visual::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,16,13,.9), transparent); }
 .prop-visual .tags { position: relative; z-index: 1; display: flex; gap: 4px; }
 .prop-body { padding: 9px 12px 11px; }

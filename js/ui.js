@@ -709,6 +709,108 @@ export class UI {
     `;
   }
 
+  propertyScene(p) {
+    const pal = p.palette;
+    const common = `
+      <rect width="320" height="70" fill="${pal.wallL}"/>
+      <path d="M0 47 L160 27 L320 47 L320 70 L0 70Z" fill="${pal.floorA}"/>
+      <path d="M0 47 L160 27 L320 47" fill="none" stroke="${pal.trim}" stroke-opacity=".45"/>
+    `;
+    const windowFrame = (x, y, w, h, glass, label) => `
+      <rect x="${x - 3}" y="${y - 3}" width="${w + 6}" height="${h + 6}" fill="#181e1c" stroke="${pal.trim}" stroke-opacity=".8"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${glass}"/>
+      <path d="M${x + w * .5} ${y} V${y + h} M${x} ${y + h * .53} H${x + w}" stroke="#17201e" stroke-width="2" opacity=".9"/>
+      ${label || ''}
+    `;
+    let details = '';
+    if (p.id === 'apartment') {
+      details = `
+        ${windowFrame(202, 8, 96, 38, '#6d9f94', `
+          <g fill="#2b504b" opacity=".8"><rect x="204" y="27" width="12" height="17"/><rect x="220" y="23" width="8" height="21"/><rect x="232" y="31" width="14" height="13"/><rect x="252" y="21" width="10" height="23"/><rect x="266" y="29" width="12" height="15"/><rect x="282" y="24" width="9" height="20"/></g>
+          <circle cx="285" cy="16" r="4" fill="#fff1c4" opacity=".85"/>`)}
+        <path d="M198 8 Q206 13 202 46" fill="#6f4737"/><path d="M302 8 Q294 13 298 46" fill="#6f4737"/>
+        <path d="M64 12 Q90 21 118 12 Q148 21 176 12" fill="none" stroke="#29261f" stroke-width="1"/>
+        ${[70,88,106,124,142,160].map((x, i) => `<circle cx="${x}" cy="${12 + Math.sin((i / 5) * Math.PI) * 5}" r="2.2" fill="#ffd58a"/><circle cx="${x}" cy="${12 + Math.sin((i / 5) * Math.PI) * 5}" r="5" fill="#ffd58a" opacity=".12"/>`).join('')}
+        <rect x="28" y="10" width="30" height="36" fill="#18261e" stroke="#c8ff6a" stroke-opacity=".55"/>
+        <path d="M41 39 Q45 26 55 22" stroke="#c8ff6a" stroke-width="1.5" fill="none" opacity=".75"/>
+        <text x="33" y="20" font-size="6" font-weight="900" fill="#c8ff6a" font-family="system-ui">GROW</text>
+        <text x="33" y="27" font-size="4" font-weight="700" fill="#e6f3d0" opacity=".65" font-family="system-ui">OR DIE</text>
+        <rect x="69" y="33" width="66" height="2" fill="${pal.trim}"/><rect x="69" y="35" width="66" height="1" fill="#000" opacity=".3"/>
+        ${[72,77,82,88,94,99,105].map((x, i) => `<rect x="${x}" y="${25 - (i % 3) * 3}" width="3" height="${8 + (i % 3) * 3}" fill="${['#b98b56', '#7fa16d', '#b06a60', '#5f8fa3'][i % 4]}"/>`).join('')}
+        <rect x="146" y="21" width="20" height="16" fill="#d7c8a6" stroke="#6e5337" stroke-width="2"/>
+        <rect x="149" y="24" width="14" height="10" fill="#385349"/><circle cx="154" cy="29" r="2" fill="#e4d4ad" opacity=".7"/><circle cx="160" cy="30" r="1.8" fill="#e4d4ad" opacity=".6"/>
+      `;
+    } else if (p.id === 'garage') {
+      details = `
+        <rect x="188" y="4" width="112" height="59" fill="#1e2426" stroke="#596164"/>
+        <g fill="#353d40">
+          ${Array.from({ length: 9 }, (_, i) => `<rect x="191" y="${8 + i * 6}" width="106" height="5" fill="${i % 2 ? '#333b3e' : '#3d4548'}"/>`).join('')}
+        </g>
+        ${[0, 1, 2, 3].map(i => `<rect x="${203 + i * 24}" y="18" width="14" height="8" fill="#5c7c80" stroke="#141a1b"/>`).join('')}
+        <rect x="26" y="9" width="60" height="24" fill="#1b211f" stroke="#9c7a43" stroke-width="2"/>
+        <rect x="29" y="12" width="54" height="18" fill="none" stroke="#ffbd69" stroke-opacity=".35"/>
+        <text x="33" y="22" font-size="6.5" font-weight="900" fill="#ffbd69" font-family="system-ui">ROURKE'S</text>
+        <text x="33" y="28" font-size="3.5" fill="#e8ddc5" opacity=".55" font-family="system-ui">AUTO BODY</text>
+        <path d="M78 20 a3 3 0 1 0 2 5 l5 5" stroke="#ffbd69" stroke-width="2" fill="none"/>
+        <rect x="98" y="24" width="46" height="30" fill="#5d4933" stroke="#33261a"/>
+        <g fill="#24180f" opacity=".65">${Array.from({ length: 24 }, (_, i) => `<circle cx="${102 + (i % 6) * 7}" cy="${28 + Math.floor(i / 6) * 6}" r=".7"/>`).join('')}</g>
+        <path d="M108 33 v13 M117 31 v17 M127 34 v12" stroke="#c0c7c3" stroke-width="2"/>
+        <rect x="136" y="43" width="5" height="9" fill="#c99136"/><rect x="142" y="45" width="4" height="7" fill="#7b9b72"/>
+        <path d="M157 5 V57" stroke="#778789" stroke-width="4"/><circle cx="157" cy="30" r="5" fill="none" stroke="#b8c1bc" stroke-width="1.5"/>
+        <circle cx="147" cy="16" r="7" fill="#e6dfc9" stroke="#4d5552" stroke-width="2"/><path d="M147 16 v-4 M147 16 l3 2" stroke="#2d332f" stroke-width="1"/>
+        <rect x="98" y="55" width="77" height="4" fill="#c9a93b"/><g fill="#171a18">${Array.from({ length: 5 }, (_, i) => `<path d="M${102 + i * 16} 55 l5 0 -4 4 -5 0z"/>`).join('')}</g>
+      `;
+    } else if (p.id === 'lab') {
+      details = `
+        <rect x="20" y="5" width="280" height="3" fill="#2f3c3e"/><rect x="22" y="6" width="276" height="1" fill="#6fe7ff" opacity=".75"/>
+        <rect x="28" y="12" width="150" height="11" fill="#6e7a7d" stroke="#3b4649"/><path d="M50 12 v11 M75 12 v11 M100 12 v11 M125 12 v11 M150 12 v11" stroke="#323c3f" stroke-width="1"/>
+        <rect x="26" y="31" width="46" height="26" fill="#20231f" stroke="#d8b33c" stroke-width="3"/>
+        <path d="M49 36 l7 12 h-14z" fill="#d8b33c"/><rect x="48" y="39" width="2" height="5" fill="#20231f"/>
+        <text x="32" y="53" font-size="4" fill="#d8b33c" font-family="system-ui">CAUTION</text>
+        <rect x="82" y="28" width="48" height="30" fill="#8f6740" stroke="#4a3827"/>
+        ${[[86, 33], [98, 31], [110, 35], [92, 44], [108, 45]].map(([x, y]) => `<rect x="${x}" y="${y}" width="10" height="8" fill="#e3ddc7" opacity=".85"/><rect x="${x + 1}" y="${y + 2}" width="8" height=".7" fill="#5b574b"/>`).join('')}
+        <path d="M106 45 l12 9 M118 40 l-8 12" stroke="#b3382e" stroke-width=".8"/>
+        <rect x="190" y="14" width="104" height="42" fill="#173d48" stroke="#59696c" stroke-width="3"/>
+        <rect x="193" y="17" width="98" height="36" fill="#0b2e3a"/>
+        <g fill="#061f27" opacity=".8"><ellipse cx="214" cy="38" rx="4" ry="10"/><ellipse cx="238" cy="36" rx="4" ry="11"/><ellipse cx="263" cy="39" rx="4" ry="9"/><ellipse cx="283" cy="37" rx="3" ry="10"/></g>
+        <path d="M192 34 H296" stroke="#6fe7ff" stroke-opacity=".2"/>
+        <circle cx="218" cy="26" r="1.2" fill="#bff7ff" opacity=".6"/><circle cx="247" cy="30" r="1.6" fill="#bff7ff" opacity=".5"/>
+        <path d="M169 4 V58" stroke="#6c8f96" stroke-width="4"/><circle cx="169" cy="31" r="5" fill="none" stroke="#b4c4c2" stroke-width="1.2"/>
+        <rect x="18" y="58" width="135" height="4" fill="#c9a93b"/><g fill="#171a18">${Array.from({ length: 9 }, (_, i) => `<path d="M${22 + i * 15} 58 l5 0 -4 4 -5 0z"/>`).join('')}</g>
+      `;
+    } else if (p.id === 'warehouse') {
+      details = `
+        <g stroke="#ffffff" stroke-opacity=".045">${Array.from({ length: 25 }, (_, i) => `<path d="M${8 + i * 13} 0 V62" stroke-width="2"/>`).join('')}</g>
+        <rect x="200" y="9" width="98" height="27" fill="#1d211f" stroke="#9b7a45" stroke-width="2"/>
+        <text x="217" y="22" font-size="8" font-weight="900" fill="#ffcf6b" font-family="system-ui">PIER 9</text>
+        <text x="218" y="30" font-size="3.6" fill="#e8ddc5" opacity=".55" font-family="system-ui">DISTRIBUTION</text>
+        <path d="M285 14 v11 M280 18 h10 M280 22 q5 7 10 0" stroke="#ffcf6b" stroke-width="1.4" fill="none"/>
+        <g stroke="#bfc9c3" stroke-opacity=".38" stroke-width=".65">${Array.from({ length: 15 }, (_, i) => `<path d="M${26 + i * 5} 20 L${26 + i * 5 + 34} 54"/><path d="M${26 + i * 5} 54 L${26 + i * 5 + 34} 20"/>`).join('')}</g>
+        <path d="M26 20 H118 M26 54 H118" stroke="#788884" stroke-width="2"/><rect x="25" y="16" width="3" height="42" fill="#8b9893"/><rect x="117" y="16" width="3" height="42" fill="#8b9893"/>
+        <path d="M24 9 Q70 15 120 9" stroke="#aeb7b1" stroke-opacity=".4" fill="none"/>
+        <rect x="126" y="30" width="38" height="24" fill="#20231f" stroke="#d8b33c" stroke-width="3"/><path d="M145 35 l6 10 h-12z" fill="#d8b33c"/>
+        <rect x="176" y="32" width="9" height="26" rx="3" fill="#b7352c"/><rect x="178" y="30" width="5" height="3" fill="#262623"/><path d="M184 36 q6 6 1 13" stroke="#1c1b18" fill="none"/>
+        <rect x="18" y="57" width="116" height="4" fill="#c9a93b"/><g fill="#171a18">${Array.from({ length: 8 }, (_, i) => `<path d="M${22 + i * 15} 57 l5 0 -4 4 -5 0z"/>`).join('')}</g>
+      `;
+    } else {
+      details = `
+        <rect x="110" y="5" width="202" height="55" fill="#0a1522" stroke="#b2955e" stroke-width="3"/>
+        <rect x="113" y="8" width="196" height="49" fill="#0e2233"/>
+        <g fill="#06111b" opacity=".9">${[[0, 23], [16, 16], [34, 28], [54, 13], [76, 25], [100, 19], [126, 30], [148, 16], [172, 27]].map(([x, h]) => `<rect x="${116 + x}" y="${57 - h}" width="${11 + (x % 7)}" height="${h}"/>`).join('')}</g>
+        <g fill="#ffd28c" opacity=".66">${[[120, 41], [126, 33], [140, 37], [153, 45], [164, 28], [180, 38], [199, 33], [218, 44], [238, 36], [259, 42], [281, 30], [296, 39]].map(([x, y]) => `<rect x="${x}" y="${y}" width="1.3" height="1.8"/>`).join('')}</g>
+        <circle cx="286" cy="18" r="5" fill="#f2f4dc"/><circle cx="286" cy="18" r="13" fill="#f2f4dc" opacity=".08"/>
+        <path d="M110 5 V60 M159 5 V60 M208 5 V60 M257 5 V60" stroke="#7a6039" stroke-width="2"/>
+        <rect x="24" y="18" width="52" height="30" fill="#201a1d" stroke="#d7b46a" stroke-width="3"/>
+        <rect x="28" y="22" width="44" height="22" fill="#6d3b45"/><path d="M30 40 Q44 22 60 12 L70 18 Q50 28 42 44Z" fill="#d49a65" opacity=".75"/><circle cx="35" cy="27" r="4" fill="#e6c47d" opacity=".8"/>
+        <rect x="84" y="23" width="40" height="18" fill="#151c1b" stroke="#ffd98a" stroke-opacity=".4"/><text x="88" y="34" font-size="7" font-weight="900" fill="#ffd98a" font-family="system-ui">EMPIRE</text>
+        <path d="M88 37 q16 3 32 0" stroke="#ffd98a" stroke-opacity=".3" fill="none"/>
+        <rect x="24" y="50" width="48" height="9" fill="#4c3524" stroke="#8d6b45"/>${[0, 1, 2, 3].map(i => `<rect x="${29 + i * 10}" y="47" width="4" height="11" rx="1.5" fill="${['#4e1f2c', '#30513a', '#5c3d22', '#3a2b47'][i]}"/>`).join('')}
+        <path d="M82 6 q-2 14 4 24 M85 6 q5 10 1 21" stroke="#4f8f58" stroke-width="1.5" fill="none"/><g fill="#4f8f58"><ellipse cx="80" cy="12" rx="4" ry="2" transform="rotate(-.6 80 12)"/><ellipse cx="90" cy="18" rx="4" ry="2" transform="rotate(.4 90 18)"/><ellipse cx="85" cy="27" rx="4" ry="2" transform="rotate(-.3 85 27)"/></g>
+      `;
+    }
+    return `<svg class="prop-scene" viewBox="0 0 320 70" preserveAspectRatio="none" aria-hidden="true">${common}${details}</svg>`;
+  }
+
   propertiesHTML() {
     const g = this.game, s = g.state;
     const cards = PROPERTY_LIST.map((p, i) => {
@@ -720,6 +822,7 @@ export class UI {
       const pal = p.palette;
       return `<div class="card prop-card" style="${active ? 'border-color:rgba(200,255,110,.45)' : ''}">
         <div class="prop-visual" style="background:linear-gradient(135deg, ${pal.wallR} 0%, ${pal.floorA} 55%, #0a100d 100%)">
+          ${this.propertyScene(p)}
           <div class="tags">${active ? '<span class="chip green">YOU ARE HERE</span>' : owned ? '<span class="chip">OWNED</span>' : available ? `<span class="chip gold">$${num(p.cost)} CLEAN</span>` : `<span class="chip red"><svg style="width:9px;height:9px"><use href="#i-lock"/></svg> STORY LOCKED</span>`}</div>
         </div>
         <div class="prop-body">

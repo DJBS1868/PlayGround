@@ -78,10 +78,11 @@ export const PROPERTIES = {
       trim: '#8d7658', accent: '#7bf58a', glow: 'rgba(255, 190, 120, .22)'
     },
     decor: [
-      { type: 'window', wall: 'back', u1: 4.3, u2: 7.2, z1: 52, z2: 138 },
-      { type: 'poster', wall: 'left', u1: 1.25, u2: 2.75, z1: 62, z2: 118, title: 'GROW', sub: 'OR DIE', color: '#c8ff6a' },
-      { type: 'shelf', wall: 'left', u1: 3.6, u2: 5.1, z1: 62, z2: 78 },
-      { type: 'stringlights', wall: 'back', u1: 1.0, u2: 4.0, z: 145 }
+      { type: 'window', wall: 'back', u1: 4.15, u2: 7.25, z1: 56, z2: 144, curtain: '#704735' },
+      { type: 'poster', wall: 'left', u1: 1.2, u2: 2.85, z1: 58, z2: 122, title: 'GROW', sub: 'OR DIE', color: '#c8ff6a' },
+      { type: 'shelf', wall: 'left', u1: 3.55, u2: 5.3, z1: 64, z2: 84 },
+      { type: 'stringlights', wall: 'back', u1: .9, u2: 4.0, z: 148 },
+      { type: 'picture', wall: 'left', u1: 5.65, u2: 6.6, z1: 88, z2: 116, title: 'AUNT JUNE', color: '#d6b27a' }
     ],
     props: [
       { type: 'couch', x: 1.15, y: 3.75, w: 2.15, d: 1.05, hue: '#4c6b58' },
@@ -106,10 +107,13 @@ export const PROPERTIES = {
       trim: '#777d82', accent: '#ffb257', glow: 'rgba(255, 165, 80, .18)'
     },
     decor: [
-      { type: 'garagedoor', wall: 'back', u1: 4.6, u2: 8.2, z1: 18, z2: 142 },
-      { type: 'sign', wall: 'left', u1: 1.2, u2: 3.4, z1: 100, z2: 130, title: "ROURKE'S", sub: 'AUTO BODY', color: '#ffbd69' },
-      { type: 'pegboard', wall: 'left', u1: 4.0, u2: 6.0, z1: 55, z2: 105 },
-      { type: 'pipe', wall: 'back', u1: 1.0, z: 132 }
+      { type: 'garagedoor', wall: 'back', u1: 4.5, u2: 8.25, z1: 16, z2: 144, label: 'BAY 02' },
+      { type: 'sign', wall: 'left', u1: 1.15, u2: 3.5, z1: 98, z2: 132, title: "ROURKE'S", sub: 'AUTO BODY', color: '#ffbd69', icon: 'wrench' },
+      { type: 'pegboard', wall: 'left', u1: 3.95, u2: 5.95, z1: 54, z2: 108 },
+      { type: 'pipe', wall: 'back', u1: .85, z: 136, length: 104, color: '#6c7c7f' },
+      { type: 'clock', wall: 'left', u1: 5.95, u2: 6.95, z1: 112, z2: 134 },
+      { type: 'noticeboard', wall: 'left', u1: 5.98, u2: 6.96, z1: 76, z2: 106, title: 'WORK ORDERS', sub: 'AUTO BODY' },
+      { type: 'hazardstripe', wall: 'left', u1: .9, u2: 3.5, z1: 24, z2: 34 }
     ],
     props: [
       { type: 'car', x: 4.7, y: 2.25, w: 2.5, d: 1.35 },
@@ -133,11 +137,14 @@ export const PROPERTIES = {
       trim: '#5a707d', accent: '#6fe7ff', glow: 'rgba(110, 210, 255, .2)'
     },
     decor: [
-      { type: 'duct', wall: 'back', u1: 1.5, u2: 7.3, z: 148 },
-      { type: 'warning', wall: 'left', u1: 1.2, u2: 3.2, z1: 62, z2: 102 },
-      { type: 'labwindow', wall: 'back', u1: 6.6, u2: 8.8, z1: 65, z2: 125 },
-      { type: 'pipe', wall: 'back', u1: 9.0, z: 120 },
-      { type: 'pipe', wall: 'left', u1: 6.3, z: 125 }
+      { type: 'labstrip', wall: 'back', u1: 1.05, u2: 8.6, z: 157 },
+      { type: 'duct', wall: 'back', u1: 1.6, u2: 7.1, z: 146, h: 16 },
+      { type: 'warning', wall: 'left', u1: 1.2, u2: 3.25, z1: 58, z2: 104, title: 'CAUTION', sub: 'BIOHAZARD' },
+      { type: 'noticeboard', wall: 'left', u1: 3.8, u2: 5.9, z1: 66, z2: 108, title: 'THE HIVE', sub: 'SUBLEVEL 3' },
+      { type: 'labwindow', wall: 'back', u1: 7.0, u2: 9.1, z1: 56, z2: 132, color: '#6fe7ff' },
+      { type: 'pipe', wall: 'back', u1: 9.5, z: 134, length: 120, color: '#6c8f96' },
+      { type: 'pipe', wall: 'left', u1: 6.6, z: 136, length: 100, color: '#6c8f96' },
+      { type: 'hazardstripe', wall: 'left', u1: .9, u2: 4.8, z1: 22, z2: 32 }
     ],
     props: [
       { type: 'reactor', x: 7.7, y: 1.5 },
@@ -160,10 +167,13 @@ export const PROPERTIES = {
       trim: '#73776f', accent: '#ffcf6b', glow: 'rgba(255, 205, 100, .17)'
     },
     decor: [
-      { type: 'sign', wall: 'back', u1: 4.6, u2: 7.2, z1: 112, z2: 150, title: 'PIER 9', sub: 'DISTRIBUTION', color: '#ffcf6b' },
-      { type: 'wirefence', wall: 'left', u1: .6, u2: 4.6, z1: 20, z2: 110 },
-      { type: 'duct', wall: 'back', u1: 1.0, u2: 8.6, z: 160 },
-      { type: 'warning', wall: 'left', u1: 5.6, u2: 7.4, z1: 58, z2: 98 }
+      { type: 'sign', wall: 'back', u1: 4.6, u2: 7.4, z1: 108, z2: 150, title: 'PIER 9', sub: 'DISTRIBUTION', color: '#ffcf6b', icon: 'anchor' },
+      { type: 'duct', wall: 'back', u1: .9, u2: 8.6, z: 159, h: 18 },
+      { type: 'wirefence', wall: 'left', u1: .55, u2: 4.5, z1: 18, z2: 112 },
+      { type: 'warning', wall: 'left', u1: 5.4, u2: 7.35, z1: 58, z2: 100, title: 'RESTRICTED', sub: 'AUTHORIZED ONLY' },
+      { type: 'clock', wall: 'left', u1: 7.15, u2: 7.95, z1: 114, z2: 134 },
+      { type: 'fireext', wall: 'left', u1: 7.32, u2: 7.82, z1: 36, z2: 66 },
+      { type: 'hazardstripe', wall: 'left', u1: .5, u2: 4.5, z1: 20, z2: 30 }
     ],
     props: [
       { type: 'rack', x: 5.0, y: 1.0, w: 2.3, d: .65 },
@@ -187,9 +197,12 @@ export const PROPERTIES = {
       trim: '#b39a6b', accent: '#ffd98a', glow: 'rgba(255, 215, 140, .22)'
     },
     decor: [
-      { type: 'skyline', wall: 'back', u1: .8, u2: 10.2, z1: 34, z2: 158 },
-      { type: 'art', wall: 'left', u1: 1.3, u2: 3.2, z1: 78, z2: 120 },
-      { type: 'neon', wall: 'left', u1: 4.4, u2: 6.4, z1: 98, z2: 125, title: 'EMPIRE', color: '#ffd98a' }
+      { type: 'skyline', wall: 'back', u1: .7, u2: 10.4, z1: 30, z2: 158, curtain: '#3a2733' },
+      { type: 'art', wall: 'left', u1: 1.25, u2: 3.25, z1: 76, z2: 122, title: 'NO. 7', color: '#d7b46a' },
+      { type: 'neon', wall: 'left', u1: 4.35, u2: 6.45, z1: 96, z2: 126, title: 'EMPIRE', sub: 'TOP FLOOR', color: '#ffd98a' },
+      { type: 'sconce', wall: 'left', u1: 7.08, u2: 7.58, z1: 116, z2: 132, color: '#ffd98a' },
+      { type: 'winerack', wall: 'left', u1: 6.42, u2: 7.9, z1: 54, z2: 88 },
+      { type: 'hangingplant', wall: 'left', u1: 3.6, u2: 4.0, z: 151 }
     ],
     props: [
       { type: 'sofa', x: 6.3, y: 2.0, w: 2.3, d: 1.0, hue: '#7d3f4c' },
