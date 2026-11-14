@@ -188,6 +188,7 @@
     <section class="disassembly-room" role="dialog" aria-modal="true" aria-labelledby="disassemblyTitle">
       <header class="activity-stage-header">
         <div class="stage-brand"><span class="live-dot"></span><div><span class="eyebrow">ACTIVITY 01 · TEARDOWN</span><strong id="disassemblyTitle">DISASSEMBLY BAY</strong></div></div>
+        <label class="activity-saber-picker disassembly-saber-picker"><span>YOUR SABER</span><select id="disassemblySaberSelect" aria-label="Choose a saber for the disassembly bay"></select></label>
         <div class="stage-status"><span class="stage-status-light"></span><span id="disassemblyStatus">ASSEMBLED</span></div>
         <button class="sale-close" id="disassemblyClose" aria-label="Close disassembly bay">×</button>
       </header>
@@ -239,6 +240,7 @@
         <div class="slicer-start" id="slicerStart">
           <span class="eyebrow">TRAINING PROTOCOL · 60 SECONDS</span>
           <h2>Slice the <em>salvage.</em></h2>
+          <label class="activity-saber-picker slicer-saber-picker"><span>YOUR SABER</span><select id="slicerSaberSelect" aria-label="Choose a saber color for Scrap Run"></select></label>
           <p>Drag a glowing blade through crates, battle droids, holocrons, astromechs and rare gear. Chain cuts for a multiplier. Three misses end the run — and any of three detonator models costs a life.</p>
           <p class="slicer-manifest">CRATES · BATTLE DROIDS · TROOPER HELMETS · ASTROMECHS · HOLOCRONS · SABERS · BLASTERS · MANDALORIAN STEEL · X-WINGS · TIE FIGHTERS · SITH HELMETS · PROTOCOL DROIDS · STAR DESTROYERS · DARKSABERS</p>
           <div class="slicer-legend"><span><i class="legend-crate"></i> SALVAGE</span><span><i class="legend-bomb"></i> DETONATORS ×3 · AVOID</span><span><i class="legend-blade"></i> DRAG TO SLICE</span></div>

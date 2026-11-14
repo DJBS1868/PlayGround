@@ -44,6 +44,12 @@
 /* Shared full-screen activity stage */
 .disassembly-room,.slicer-room{position:relative;width:min(1320px,100%);height:min(840px,calc(100vh - 32px));min-height:560px;display:grid;grid-template-rows:62px minmax(0,1fr) 74px;overflow:hidden;border:1px solid #48544a;background:#0c1110;box-shadow:0 30px 120px #000d;color:var(--paper)}
 .activity-stage-header{position:relative;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:22px;padding:0 56px 0 28px;border-bottom:1px solid #313d34;background:#121815}
+.activity-saber-picker{display:grid;gap:4px;min-width:0;color:#829087;font:7px var(--mono);letter-spacing:.13em}
+.activity-saber-picker select{width:clamp(150px,20vw,230px);min-width:0;padding:7px 28px 7px 9px;border:1px solid #3b493f;border-radius:0;background:#0d1410;color:#d9e3da;font:8px var(--mono);letter-spacing:.02em;cursor:pointer}
+.activity-saber-picker select:focus-visible{outline:1px solid var(--acid);outline-offset:2px}
+.activity-saber-picker select:disabled{color:#7c877e;cursor:not-allowed}
+.slicer-saber-picker{margin:0 0 16px}
+.slicer-saber-picker select{width:min(100%,300px)}
 .stage-status{display:flex;align-items:center;gap:8px;font:8px var(--mono);letter-spacing:.13em;color:#a5afa7}
 .stage-status-light{width:6px;height:6px;border-radius:50%;background:var(--acid);box-shadow:0 0 10px #d8f36a99;animation:activityPulse 1.8s infinite}
 .stage-status.is-busy .stage-status-light{background:#f2a471;box-shadow:0 0 10px #f2a47199}
@@ -171,6 +177,10 @@
   .activity-stage-header{padding:0 46px 0 16px}
   .stage-brand strong{font-size:10px;letter-spacing:.1em;white-space:nowrap}
   .stage-brand .eyebrow{display:none}
+  .activity-stage-header{gap:10px}
+  .activity-saber-picker{display:block}
+  .activity-saber-picker>span{display:none}
+  .activity-saber-picker select{width:min(125px,30vw);padding:6px 20px 6px 7px;font-size:7px}
   .stage-status{display:none}
   .activity-stage-footer{flex-direction:column;align-items:stretch;gap:9px;padding:11px 16px 13px}
   .stage-copy p{white-space:normal;max-width:none}

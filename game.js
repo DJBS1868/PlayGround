@@ -387,6 +387,26 @@ function optionIcon(stepId, option, colors) {
 }
 
 function selectedOption(id) { return options[id][selected[id]]; }
+function withActivityArtifact(artifact, callback) {
+  if (!artifact) return callback();
+  const original = { selected: { ...selected }, bladeIgnited, bladeUserChoice };
+  try {
+    Object.keys(selected).forEach(key => { selected[key] = Math.max(0, Math.min(Number(artifact.parts?.[key]) || 0, options[key].length - 1)); });
+    bladeIgnited = Boolean(artifact.blade); bladeUserChoice = bladeIgnited;
+    rebuildSaber();
+    return callback();
+  } finally {
+    Object.assign(selected, original.selected);
+    bladeIgnited = original.bladeIgnited; bladeUserChoice = original.bladeUserChoice;
+    rebuildSaber();
+  }
+}
+function activityCrystalColor() {
+  const artifact = selectedActivityArtifact();
+  if (!artifact) return selectedOption('crystal').color;
+  const index = Math.max(0, Math.min(Number(artifact.parts?.crystal) || 0, options.crystal.length - 1));
+  return options.crystal[index].color;
+}
 function totalValue() {
   const sum = Object.keys(options).reduce((total, key) => total + selectedOption(key).price, 0);
   const rarity = Object.values(selected).filter(index => index > 0).length >= 5 ? 360 : 0;
@@ -474,7 +494,45 @@ function saveCollection() {
   try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); }
   catch (_) { showToast('Collection could not be saved in this browser.'); }
   updateCollectionCount();
+  updateActivitySaberSelectors();
 }
+let activitySaberSelection = 0;
+function selectedActivityArtifact() { return collection[activitySaberSelection] || null; }
+function updateActivitySaberSelectors() {
+  activitySaberSelection = collection.length ? Math.max(0, Math.min(activitySaberSelection, collection.length - 1)) : 0;
+  ['disassemblySaberSelect', 'slicerSaberSelect'].forEach(id => {
+    const select = $(id);
+    if (!select) return;
+    select.replaceChildren();
+    if (!collection.length) {
+      const option = document.createElement('option');
+      option.value = '0'; option.textContent = 'Workbench saber · no saved sabers';
+      select.append(option); select.disabled = true;
+      return;
+    }
+    collection.forEach((artifact, index) => {
+      const option = document.createElement('option');
+      option.value = String(index); option.textContent = artifact.name;
+      select.append(option);
+    });
+    select.disabled = false;
+    select.value = String(activitySaberSelection);
+  });
+}
+function changeActivitySaber(event) {
+  const index = Number(event.currentTarget.value);
+  activitySaberSelection = collection.length ? Math.max(0, Math.min(Number.isFinite(index) ? index : 0, collection.length - 1)) : 0;
+  updateActivitySaberSelectors();
+  if (disassemblyOpen) {
+    disassemblyProgress = 0; disassemblyTarget = 0; disassemblyPhase = 'assembled';
+    disassemblyActivePart = null; disassemblyCameraProgress = -1;
+    buildDisassemblySaber(); updateDisassemblyUI(); resizeDisassemblyScene();
+  }
+  if (slicer.open) slicer.bladeRgb = hexToRgb(activityCrystalColor());
+}
+$('disassemblySaberSelect').addEventListener('change', changeActivitySaber);
+$('slicerSaberSelect').addEventListener('change', changeActivitySaber);
+updateActivitySaberSelectors();
 function showToast(message) {
   $('toast').textContent = message;
   $('toast').classList.add('show');
@@ -1459,6 +1517,9 @@ function crystalTone(detail) {
 }
 
 function buildDisassemblySaber() {
+  return withActivityArtifact(selectedActivityArtifact(), buildDisassemblySaberFromCurrentSaber);
+}
+function buildDisassemblySaberFromCurrentSaber() {
   disassemblyRoot.clear();
   disassemblyPieces = [];
   disassemblyCrystalPiece = null;
@@ -1599,7 +1660,7 @@ function updateDisassemblyDetail() {
     readout.classList.add('is-active');
   } else {
     kicker.textContent = 'ON THE PAD';
-    name.textContent = buildName().toUpperCase();
+    name.textContent = (selectedActivityArtifact()?.name || buildName()).toUpperCase();
     type.textContent = disassemblyPhase === 'disassembled' ? '06 COMPONENTS · TAP A LABEL TO IDENTIFY' : '06 COMPONENTS · SYSTEMS NOMINAL';
     note.hidden = true;
     swatch.hidden = true;
@@ -2381,9 +2442,10 @@ function sliceSlicerObject(object, cutAngle) {
   slicer.comboTimer = 1.05;
   const multiplier = comboMultiplier();
   const gained = object.points * multiplier;
+  const saberColor = activityCrystalColor();
   slicer.score += gained;
-  spawnSlicerSparks(object.x, object.y, meta.colors, 12 + Math.min(10, multiplier * 2), 240);
-  addSlicerRing(object.x, object.y, meta.colors[1] || '#d8f36a', 48 + multiplier * 10, .4);
+  spawnSlicerSparks(object.x, object.y, [saberColor], 12 + Math.min(10, multiplier * 2), 240);
+  addSlicerRing(object.x, object.y, saberColor, 48 + multiplier * 10, .4);
   addSlicerFloat(object.x, object.y - object.radius - 8, `${meta.rare ? '✦ ' : ''}+${gained}`, multiplier > 1 || meta.rare ? '#d8f36a' : '#f5f7e9');
   const separation = cutAngle + Math.PI / 2;
   const push = 150 + Math.random() * 90;
@@ -2444,7 +2506,7 @@ function openSlicer() {
   openOverlayElement($('slicerOverlay'));
   slicer.open = true;
   activityBodyLock();
-  slicer.bladeRgb = hexToRgb(selectedOption('crystal').color);
+  slicer.bladeRgb = hexToRgb(activityCrystalColor());
   resetSlicerGame();
   resizeSlicer();
   requestAnimationFrame(resizeSlicer);
