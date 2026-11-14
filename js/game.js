@@ -241,7 +241,7 @@ export class Game {
     return mult / strain.growTime;
   }
 
-  plant(propId, index, strainId = this.state.selectedStrain) {
+  plant(propId, index, strainId = this.state.selectedStrain, auto = false) {
     const ps = this.state.properties[propId];
     const p = PROPERTIES[propId];
     const strain = STRAIN_BY_ID[strainId];
@@ -254,7 +254,7 @@ export class Game {
     else if (!this.spendDirty(strain.cost)) return { ok: false, msg: `Need $${strain.cost} for a ${strain.short} seed.` };
     ps.slots[index] = { strain: strainId, progress: 0, tendQ: 0, lastTend: -99, planted: this.state.clock, notified: false };
     this.state.stats.plants++;
-    this.emit('plant', { propId, index, strain: strainId });
+    this.emit('plant', { propId, index, strain: strainId, auto });
     this.save();
     return { ok: true, strain };
   }
@@ -269,14 +269,14 @@ export class Game {
     this.emit('ui');
   }
 
-  tend(propId, index) {
+  tend(propId, index, auto = false) {
     const slot = this.state.properties[propId]?.slots[index];
     if (!slot || slot.progress >= 1) return { ok: false };
     if (this.state.clock - slot.lastTend < 4) return { ok: false, msg: 'Give it a moment to drink.' };
     slot.lastTend = this.state.clock;
     slot.progress = Math.min(1, slot.progress + .11);
     slot.tendQ = Math.min(12, (slot.tendQ || 0) + 1);
-    this.emit('tend', { propId, index });
+    this.emit('tend', { propId, index, auto });
     return { ok: true };
   }
 
@@ -559,7 +559,7 @@ export class Game {
         .filter(({ slot }) => slot && slot.progress < 1 && this.state.clock - (slot.lastTend ?? -99) >= 4)
         .sort((a, b) => a.slot.progress - b.slot.progress);
       if (!candidates.length) continue;
-      this.tend(propId, candidates[0].index);
+      this.tend(propId, candidates[0].index, true);
       return true;
     }
     return false;
@@ -573,7 +573,7 @@ export class Game {
       if (!ps?.owned) continue;
       const index = ps.slots.findIndex(slot => !slot);
       if (index < 0) continue;
-      const result = this.plant(propId, index, strainId);
+      const result = this.plant(propId, index, strainId, true);
       if (result.ok) return true;
       if (result.msg?.startsWith('Need $')) return false;
     }
