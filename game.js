@@ -498,41 +498,101 @@ function saveCollection() {
 }
 let activitySaberSelection = 0;
 function selectedActivityArtifact() { return collection[activitySaberSelection] || null; }
+function activityPreviewArtifact() {
+  return selectedActivityArtifact() || { name: 'Workbench saber', parts: { ...selected } };
+}
+function drawActivitySaberPreview(canvas, artifact) {
+  const context = canvas.getContext('2d');
+  const width = Math.max(1, canvas.clientWidth);
+  const height = Math.max(1, canvas.clientHeight);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.clearRect(0, 0, width, height);
+  const spec = duelSpecFromArtifact(artifact);
+  context.save();
+  context.globalCompositeOperation = 'lighter';
+  context.strokeStyle = `rgba(${hexToRgb(spec.crystal.color)},.3)`;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.ellipse(width * .5, height * .78, width * .32, 3, 0, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
+  const scale = Math.min(width / 5.35, height / 5.35);
+  drawDuelFlatSaber(context, spec, width * .5, height - 4, scale, -Math.PI / 2 + .035, true, 1);
+}
 function updateActivitySaberSelectors() {
   activitySaberSelection = collection.length ? Math.max(0, Math.min(activitySaberSelection, collection.length - 1)) : 0;
-  ['disassemblySaberSelect', 'slicerSaberSelect'].forEach(id => {
-    const select = $(id);
-    if (!select) return;
-    select.replaceChildren();
-    if (!collection.length) {
-      const option = document.createElement('option');
-      option.value = '0'; option.textContent = 'Workbench saber · no saved sabers';
-      select.append(option); select.disabled = true;
-      return;
-    }
-    collection.forEach((artifact, index) => {
-      const option = document.createElement('option');
-      option.value = String(index); option.textContent = artifact.name;
-      select.append(option);
+  document.querySelectorAll('[data-activity-saber-picker]').forEach(picker => {
+    const current = picker.querySelector('.activity-saber-current');
+    const name = picker.querySelector('.activity-saber-current-name');
+    const preview = picker.querySelector('.activity-saber-preview');
+    const optionsList = picker.querySelector('.activity-saber-options');
+    const artifact = activityPreviewArtifact();
+    name.textContent = artifact.name;
+    drawActivitySaberPreview(preview, artifact);
+    optionsList.replaceChildren();
+    const items = collection.length ? collection : [artifact];
+    items.forEach((item, index) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = `duel-saber-card activity-saber-option${index === activitySaberSelection ? ' is-selected' : ''}`;
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', String(index === activitySaberSelection));
+      option.disabled = !collection.length;
+      const thumb = document.createElement('canvas');
+      thumb.className = 'duel-saber-thumb';
+      thumb.setAttribute('aria-hidden', 'true');
+      const copy = document.createElement('span');
+      copy.className = 'duel-saber-card-copy';
+      const title = document.createElement('strong');
+      title.textContent = item.name;
+      const detail = document.createElement('small');
+      detail.textContent = collection.length ? 'SAVED SABER' : 'WORKBENCH PREVIEW';
+      const state = document.createElement('span');
+      state.className = 'duel-saber-card-state';
+      state.textContent = index === activitySaberSelection ? 'SELECTED' : 'SELECT';
+      copy.append(title, detail);
+      option.append(thumb, copy, state);
+      option.addEventListener('click', () => {
+        activitySaberSelection = index;
+        closeActivitySaberMenus();
+        updateActivitySaberSelectors();
+        if (disassemblyOpen) {
+          disassemblyProgress = 0; disassemblyTarget = 0; disassemblyPhase = 'assembled';
+          disassemblyActivePart = null; disassemblyCameraProgress = -1;
+          buildDisassemblySaber(); updateDisassemblyUI(); resizeDisassemblyScene();
+        }
+        if (slicer.open) slicer.bladeRgb = hexToRgb(activityCrystalColor());
+      });
+      optionsList.append(option);
+      drawDuelThumb(thumb, item);
     });
-    select.disabled = false;
-    select.value = String(activitySaberSelection);
+    current.setAttribute('aria-label', `Choose a saber: ${artifact.name}`);
   });
 }
-function changeActivitySaber(event) {
-  const index = Number(event.currentTarget.value);
-  activitySaberSelection = collection.length ? Math.max(0, Math.min(Number.isFinite(index) ? index : 0, collection.length - 1)) : 0;
-  updateActivitySaberSelectors();
-  if (disassemblyOpen) {
-    disassemblyProgress = 0; disassemblyTarget = 0; disassemblyPhase = 'assembled';
-    disassemblyActivePart = null; disassemblyCameraProgress = -1;
-    buildDisassemblySaber(); updateDisassemblyUI(); resizeDisassemblyScene();
-  }
-  if (slicer.open) slicer.bladeRgb = hexToRgb(activityCrystalColor());
+function closeActivitySaberMenus() {
+  document.querySelectorAll('[data-activity-saber-picker]').forEach(picker => {
+    picker.querySelector('.activity-saber-options').hidden = true;
+    picker.querySelector('.activity-saber-current').setAttribute('aria-expanded', 'false');
+  });
 }
-$('disassemblySaberSelect').addEventListener('change', changeActivitySaber);
-$('slicerSaberSelect').addEventListener('change', changeActivitySaber);
-updateActivitySaberSelectors();
+document.querySelectorAll('[data-activity-saber-picker]').forEach(picker => {
+  picker.querySelector('.activity-saber-current').addEventListener('click', () => {
+    const optionsList = picker.querySelector('.activity-saber-options');
+    const open = optionsList.hidden;
+    closeActivitySaberMenus();
+    optionsList.hidden = !open;
+    picker.querySelector('.activity-saber-current').setAttribute('aria-expanded', String(open));
+  });
+});
+document.addEventListener('click', event => {
+  if (!event.target.closest('[data-activity-saber-picker]')) closeActivitySaberMenus();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeActivitySaberMenus();
+});
 function showToast(message) {
   $('toast').textContent = message;
   $('toast').classList.add('show');
@@ -4457,6 +4517,7 @@ function drawDuelThumb(canvas, artifact) {
   const spec = duelSpecFromArtifact(artifact);
   drawDuelFlatSaber(context, spec, 15.2, 45, 8.9, -Math.PI / 2 + .05, true, 1);
 }
+updateActivitySaberSelectors();
 
 // ---------------------------------------------------------------------------
 // Flattened 2D saber renderer. The workbench builds real 3D geometry; the ring
