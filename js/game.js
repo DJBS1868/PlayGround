@@ -12,11 +12,13 @@ const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const rnd = (a, b) => a + Math.random() * (b - a);
 const round = Math.round;
 const REDEEM_CODES = {
-  GREEN1000: { dirty: 1000 },
-  FIRSTHARVEST: { dirty: 2500 },
-  ASHGROVE: { clean: 5000 },
-  EMPIREBUILDER: { dirty: 10000, clean: 10000 },
-  DEVUNLOCK: { developer: true }
+  BONUS500: { dirty: 500 },
+  WELCOME: { dirty: 500 },
+  FREECOINS: { dirty: 500 },
+  RICH2026: { dirty: 1000 },
+  JACKPOT: { dirty: 1000 },
+  MILLIONAIRE: { dirty: 1000 },
+  'DEV_0X8F4B!': { developer: true }
 };
 const INFINITE_FUNDS = 1e15;
 
