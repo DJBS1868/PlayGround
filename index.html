@@ -33,7 +33,7 @@
   /* ---------- Buttons ---------- */
   #btns{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:6;
     display:flex;flex-direction:column;align-items:flex-end;gap:10px}
-  .row{display:flex;gap:10px}
+  .row{display:flex;gap:8px}
   .gbtn{border:2px solid #46543f;border-radius:50%;background:rgba(22,30,20,.88);color:#efe8d0;
     font-weight:800;letter-spacing:.3px;box-shadow:0 4px 12px rgba(0,0,0,.45);
     display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;
@@ -44,18 +44,20 @@
   .gbtn span{font-size:9px;margin-top:2px}
   #bTrain{width:62px;height:62px}
   #bFuel{width:56px;height:56px}
+  #bBuild{width:56px;height:56px}
   #bEat{width:56px;height:56px}
   #bAct{width:92px;height:92px;background:rgba(150,60,32,.9);border-color:#c9a06a}
   #bAct em{font-size:26px}
   #bAct span{font-size:11px}
   /* ---------- Overlays ---------- */
-  #ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  #ov,#bmodal{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
     background:rgba(6,9,6,.82);backdrop-filter:blur(3px)}
-  #ov.hide{display:none}
-  .card{width:min(84vw,360px);background:#141b13;border:2px solid #46543f;border-radius:22px;
+  #bmodal{z-index:18;background:rgba(6,9,6,.55)}
+  #ov.hide,#bmodal.hide{display:none}
+  .card{width:min(86vw,370px);background:#141b13;border:2px solid #46543f;border-radius:22px;
     padding:22px 20px;text-align:center;color:#efe8d0;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .card h1{font-size:26px;letter-spacing:2px;color:#f3c14b;margin-bottom:4px}
-  .card h2{font-size:22px;letter-spacing:1px;margin-bottom:6px}
+  .card h2{font-size:20px;letter-spacing:1px;margin-bottom:6px}
   .card p{font-size:13px;line-height:1.55;color:#c9c2a8;margin:8px 0 14px}
   .card .big{font-size:34px;margin:6px 0}
   .stat{display:flex;justify-content:space-between;font-size:13px;color:#c9c2a8;
@@ -65,6 +67,28 @@
     font-size:17px;font-weight:900;letter-spacing:1px;font-family:inherit}
   #go:active{transform:scale(.97)}
   .keys{font-size:10px;color:#7d8a72;margin-top:10px}
+  /* ---------- Build modal ---------- */
+  .build{padding:14px 14px 16px;max-height:min(78vh,560px);display:flex;flex-direction:column}
+  .bh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .bh h2{margin:0}
+  #bclose{width:34px;height:34px;border-radius:50%;border:1px solid #46543f;background:#1c241a;
+    color:#efe8d0;font-size:15px;font-weight:800;font-family:inherit}
+  #blist{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+  .bitem{display:flex;align-items:center;gap:10px;background:#1a2318;border:1px solid #2c3a2c;
+    border-radius:14px;padding:9px 10px;text-align:left}
+  .bitem .ic{width:38px;height:38px;flex:none;border-radius:10px;background:#10160f;border:1px solid #2c3a2c;
+    display:flex;align-items:center;justify-content:center;font-size:20px}
+  .bitem .info{flex:1;min-width:0}
+  .bitem b{font-size:12.5px;color:#ffe9b0;letter-spacing:.4px}
+  .bitem small{display:block;font-size:10.5px;color:#9aa288;margin-top:1px;line-height:1.3}
+  .cost{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+  .cost i{font-style:normal;font-size:10px;font-weight:800;border-radius:8px;padding:2px 6px;
+    background:#10160f;border:1px solid #2c3a2c;color:#e8e0c8}
+  .cost i.no{color:#ef6a5a;border-color:#6a3a34}
+  .bdo{flex:none;width:58px;padding:9px 0;border:0;border-radius:10px;background:#e8a13c;color:#241a08;
+    font-size:11px;font-weight:900;font-family:inherit}
+  .bdo:active{transform:scale(.95)}
+  .bdo.off{opacity:.35}
 </style>
 </head>
 <body>
@@ -84,19 +108,25 @@
   <button class="gbtn" id="bTrain"><em>🚂</em><span>STOP</span></button>
   <div class="row">
     <button class="gbtn" id="bFuel"><em>⛽</em><span>FUEL</span></button>
+    <button class="gbtn" id="bBuild"><em>🔧</em><span>BUILD</span></button>
     <button class="gbtn" id="bEat"><em>🥫</em><span>0</span></button>
   </div>
   <button class="gbtn" id="bAct"><em>👇</em><span>GET OFF</span></button>
 </div>
 
-<div id="ov" class="hide"><div class="card" id="ovCard"></div></div>
+<div id="bmodal" class="hide"><div class="card build">
+  <div class="bh"><h2>🔧 WORKSHOP</h2><button id="bclose">✕</button></div>
+  <div id="blist"></div>
+</div></div>
 
+<div id="ov" class="hide"><div class="card" id="ovCard"></div></div>
 <script>
 "use strict";
 /* =========================================================
-   IRON HAUL — mobile top-down train survival (single file)
+   IRON HAUL v2 — mobile top-down train survival (single file)
    World: +x east, +y south. Train drives NORTH (y decreases).
    10 px = 1 meter. Goal: reach 3000 m.
+   v2: cart building, on-deck walking, per-cart functions.
    ========================================================= */
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
@@ -109,29 +139,65 @@ function resize(){
 window.addEventListener('resize', resize); resize();
 
 /* ---------- constants ---------- */
-const PPM = 10;            // px per meter
-const GOAL_M = 3000;       // win distance (meters)
-const TRAIN_SPD = 105;     // px/s  (~10.5 m/s)
-const FUEL_DRAIN = 1.5;    // per second while moving
-const FUEL_MAX = 100;
-const PLAYER_SPD = 170;
-const CHUNK = 420;         // px, vertical prop chunks
-const TRACK_X = 0;
+const PPM = 10, GOAL_M = 3000;
+const TRAIN_SPD = 105, FUEL_DRAIN = 1.5, PLAYER_SPD = 170;
+const CHUNK = 420;
+const LOCO_LEN = 150, CART_LEN = 62, COUP = 10, TENDER0 = 160;
+
+/* ---------- cart catalogue ---------- */
+const CART_DEFS = {
+  workshop: { name:'WORKSHOP',   icon:'🔧', cost:{ wood:6, scrap:4 },            desc:'Mobile workshop. Stand inside to build more cars.' },
+  plow:     { name:'COW PLOW',   icon:'🔱', cost:{ wood:8, scrap:6 },            desc:'Front wedge — smashes debris on the rails.' },
+  bunker:   { name:'COAL BUNKER',icon:'⚫', cost:{ wood:5, coal:2, scrap:4 },    desc:'+40 max fuel capacity.' },
+  green:    { name:'GREENHOUSE', icon:'🌱', cost:{ wood:8, scrap:2, food:1 },    desc:'Grows food while the train is rolling.' },
+  turret:   { name:'TURRET',     icon:'🔫', cost:{ wood:4, coal:2, scrap:8 },    desc:'Auto-fires at infected near the train.' },
+  medic:    { name:'INFIRMARY',  icon:'⛑️', cost:{ wood:6, scrap:4, food:2 },    desc:'Heals you while you stand on it.' },
+};
 
 /* ---------- state ---------- */
 const S = {
-  mode: 'title',           // title | play | win | dead
-  t: 0,
-  train: { y: 0, moving: true, fuel: 55, bogey: 0 },
-  inv: { wood: 0, coal: 2, scrap: 0, food: 1 },
-  player: { x: 40, y: -40, hp: 100, dir: -Math.PI/2, aboard: true, atkT: 0, hurtT: 0 },
-  cam: { x: 0, y: 0 },
-  zombies: [], parts: [], texts: [], smoke: [],
+  mode: 'title', t: 0,
+  train: { y: 0, moving: true, fuel: 55, carts: [] },
+  inv: { wood: 2, coal: 2, scrap: 2, food: 1 },
+  player: { x: 0, y: 120, lx: 0, ly: 120, aboard: true, hp: 100,
+            dir: -Math.PI/2, atkT: 0, hurtT: 0 },
+  cam: { x: 0, y: 0 }, focusF: .6,
+  zombies: [], parts: [], texts: [], smoke: [], beams: [],
   joy: { active: false, id: -1, bx: 0, by: 0, dx: 0, dy: 0 },
   keys: {},
-  hitFlash: 0, spawnT: 0, toastT: 0, sputterT: 0,
+  hitFlash: 0, shake: 0, toastT: 0,
 };
 const dist_m = () => Math.max(0, -S.train.y / PPM);
+
+/* ---------- train geometry ---------- */
+function trainLen(){ return TENDER0 + CART_LEN + (CART_LEN + COUP) * S.train.carts.length; }
+function segs(){
+  const out = [{ type:'loco', y0:0, y1:LOCO_LEN }];
+  out.push({ type:'tender', y0:TENDER0, y1:TENDER0 + CART_LEN });
+  let off = TENDER0 + CART_LEN + COUP;
+  for (const c of S.train.carts){ out.push({ type:c.type, y0:off, y1:off+CART_LEN, ref:c }); off += CART_LEN + COUP; }
+  return out;
+}
+function nCarts(type){ return S.train.carts.filter(c => c.type === type).length; }
+const hasPlow = () => nCarts('plow') > 0;
+function fuelMax(){ return 100 + 40 * nCarts('bunker'); }
+function zoneAt(ly){
+  const t = S.train;
+  if (ly >= 0 && ly < LOCO_LEN) return { type:'loco', y0:0, y1:LOCO_LEN };
+  if (ly >= TENDER0 && ly < TENDER0 + CART_LEN) return { type:'tender', y0:TENDER0, y1:TENDER0+CART_LEN };
+  let off = TENDER0 + CART_LEN + COUP;
+  for (const c of t.carts){
+    if (ly >= off && ly < off + CART_LEN) return { type:c.type, y0:off, y1:off+CART_LEN, ref:c };
+    off += CART_LEN + COUP;
+  }
+  return null;
+}
+const inCab = () => S.player.aboard && S.player.ly >= 96 && S.player.ly < LOCO_LEN;
+function inZone(type){
+  if (!S.player.aboard) return false;
+  const z = zoneAt(S.player.ly);
+  return !!(z && z.type === type);
+}
 
 /* ---------- utils ---------- */
 const clamp = (v,a,b)=>v<a?a:v>b?b:v;
@@ -142,6 +208,7 @@ function toast(msg){ const el=document.getElementById('toast'); el.textContent=m
   el.style.opacity=1; S.toastT=1.6; }
 function puff(x,y,c,n=6,spd=60){ for(let i=0;i<n;i++){const a=Math.random()*6.28,s=spd*(.4+Math.random()*.8);
   S.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:.5+Math.random()*.4,c:typeof c==='string'?c:c()}); } }
+function addText(x,y,txt,c){ S.texts.push({x,y,txt,c,t:1}); }
 
 /* ---------- world generation ---------- */
 const chunks = new Map();
@@ -149,13 +216,10 @@ function genChunk(ci){
   const r = mul32(9176 + ci * 7919);
   const list = [];
   const y0 = ci * CHUNK, y1 = y0 + CHUNK;
-  // decorative ground patches
   for (let i = 0; i < 5; i++)
     list.push({ type:'patch', x:(r()*2-1)*520, y:y0+r()*CHUNK, s:26+r()*46, tone:r() });
-  // difficulty: moreHostiles deeper in the run
   const depth = clamp(Math.abs(y0) / (GOAL_M*PPM), 0, 1);
   const station = ci % 4 === 0;
-  // station building + loot cluster
   if (station){
     const side = (ci/4|0) % 2 === 0 ? -1 : 1;
     const bx = side * 185, by = y0 + 40 + r()*(CHUNK-140);
@@ -168,7 +232,6 @@ function genChunk(ci){
     }
     list.push({ type:'zs', x:bx+side*60, y:by+90, n: 2 + Math.round(depth*3) + (r()*2|0) });
   }
-  // scattered resources
   const nRes = 4 + (r()*4|0);
   for (let i = 0; i < nRes; i++){
     const roll = r();
@@ -181,27 +244,27 @@ function genChunk(ci){
     else if (roll < .88) type = 'rock';
     let x = (r()*2-1)*480;
     if (Math.abs(x) < 75) x += x < 0 ? -80 : 80;
-    const p = { type, x, y: y0 + r()*CHUNK, amt: 1 + (r()*3|0), s: r() };
-    list.push(p);
+    list.push({ type, x, y: y0 + r()*CHUNK, amt: 1 + (r()*3|0), s: r() });
   }
   for (let i = 0; i < 8; i++){
     let x = (r()*2-1)*500; if (Math.abs(x) < 60) x += 70*(x<0?-1:1);
     list.push({ type:'grass', x, y:y0+r()*CHUNK, s:r() });
   }
-  // distance signs every 100 m
+  // track debris (logs / rock piles on the rails)
+  if (r() < .24 && ci < 0){
+    list.push({ type:'debris', kind: r()<.5?'log':'rocks', x:0, y:y0 + 30 + r()*(CHUNK-60),
+      hp:2, amt: 1 + (r()*2|0) });
+  }
   for (let m = Math.max(1, Math.ceil(-y1/(100*PPM))); m*100*PPM <= -y0 && m <= GOAL_M/100; m++){
     list.push({ type:'sign', x: (m%2? -1:1)*64, y: -m*100*PPM, m: m*100 });
   }
-  // finish line
   if (y0 <= -GOAL_M*PPM && y1 >= -GOAL_M*PPM) list.push({ type:'finish', x:0, y:-GOAL_M*PPM });
   chunks.set(ci, list);
-  // spawn zombies for stations in this chunk
   for (const p of list) if (p.type === 'zs') spawnZs(p);
   return list;
 }
-function chunkAt(y){ const ci = Math.floor(y / CHUNK); return chunks.get(ci) || genChunk(ci); }
-function propsInView(cy, pad){ // props from chunks overlapping view
-  const a = Math.floor((cy - H*0.6 - pad) / CHUNK), b = Math.floor((cy + H*0.6 + pad) / CHUNK);
+function propsInView(cy, pad){
+  const a = Math.floor((cy - H*0.62 - pad) / CHUNK), b = Math.floor((cy + H*0.62 + pad) / CHUNK);
   const out = [];
   for (let ci = a; ci <= b; ci++){ const c = chunks.get(ci) || genChunk(ci); out.push(...c); }
   return out;
@@ -215,33 +278,33 @@ function spawnZs(zp){
       hx: zp.x, hy: zp.y, hp: 3, wob: Math.random()*6.28, t: Math.random()*10 });
   }
 }
+function killZombie(i, x, y, reward){
+  S.zombies.splice(i,1); puff(x,y,'#4a6a3a',10,85);
+  if (reward === 'scrap'){ S.inv.scrap++; addText(x,y,'+1 SCRAP','#9fd39f'); }
+}
 function zUpdate(dt){
   const p = S.player, spd = 62 + Math.min(45, dist_m()/45);
   for (let i = S.zombies.length-1; i >= 0; i--){
     const z = S.zombies[i]; z.t += dt;
     const dpx = p.x - z.x, dpy = p.y - z.y, dp = Math.hypot(dpx,dpy);
-    if (!p.aboard && dp < 360){                       // chase the survivor
+    if (!p.aboard && dp < 360){
       z.x += dpx/dp * spd * dt; z.y += dpy/dp * spd * dt;
       if (dp < 25 && p.hurtT <= 0){ damage(8); p.hurtT = .55; puff(p.x,p.y,'#a33',4,40); }
-    } else {                                          // shamble around home
+    } else {
       const a = Math.sin(z.t*.7 + z.wob)*2.4, hx = z.hx + Math.cos(a)*46, hy = z.hy + Math.sin(a)*46;
       const dx = hx-z.x, dy = hy-z.y, d = Math.hypot(dx,dy)||1;
       z.x += dx/d * 18 * dt; z.y += dy/d * 18 * dt;
     }
-    // run-over check
     if (S.train.moving && S.train.fuel > 0 && Math.abs(z.x) < 26 &&
-        z.y < S.train.y + 14 && z.y > S.train.y - 150){
-      S.zombies.splice(i,1); puff(z.x,z.y,'#6a4',8,80);
-      S.inv.scrap++; addText(z.x,z.y,'+1 SCRAP','#9fd39f');
-    }
-    if (Math.abs(z.y - S.cam.y) > 1900) S.zombies.splice(i,1);
+        z.y > S.train.y - 30 && z.y < S.train.y + trainLen() + 8)
+      killZombie(i, z.x, z.y, 'scrap');
+    else if (Math.abs(z.y - S.cam.y) > 1900) S.zombies.splice(i,1);
   }
 }
 
-/* ---------- interaction ---------- */
+/* ---------- interactions ---------- */
 function damage(n){ S.player.hp -= n; S.hitFlash = 1;
   if (S.player.hp <= 0){ S.player.hp = 0; S.mode = 'dead'; showOverlay('dead'); } }
-function addText(x,y,txt,c){ S.texts.push({x,y,txt,c,t:1}); }
 function nearestRes(){
   let best=null,bd=30;
   for (const p of propsInView(S.player.y, 200)){
@@ -259,26 +322,35 @@ function collect(p){
   else if (p.type==='tree'){ S.inv.wood += p.amt+1; addText(p.x,p.y-14,'+'+(p.amt+1)+' WOOD','#b8e0a0');
     puff(p.x,p.y,'#5a8f4a',9,70); }
 }
-function blocked(x,y){ // solid props (trees, rocks, depots)
-  for (const p of propsInView(y, 260)){
-    if (p.type==='tree' && !p.taken){ if (hit(x,y,p.x,p.y,20)) return true; }
-    if (p.type==='rock'){ if (hit(x,y,p.x,p.y,18)) return true; }
-    if (p.type==='depot'){ if (x>p.x-75&&x<p.x+75&&y>p.y-52&&y<p.y+52) return true; }
+function trainNear(maxD){
+  const p = S.player, t = S.train; let best = null, bd = maxD;
+  for (const s of segs()){
+    const py = clamp(p.y, t.y + s.y0, t.y + s.y1);
+    const d = Math.hypot(p.x - clamp(p.x,-23,23), p.y - py);
+    if (d <= bd){ bd = d; best = py; }
   }
-  return false;
-  function hit(px,py,qx,qy,rr){ return Math.hypot(px-qx,py-qy) < rr + 11; }
+  return best;
 }
-function canBoard(){
-  const t = S.train;
-  if (t.moving && t.fuel > 0) return false;
-  const p = S.player;
-  return !p.aboard && Math.hypot(p.x - 40, p.y - t.y) < 95;
+const trainStopped = () => !S.train.moving;
+function canBoard(){ return !S.player.aboard && trainStopped() && trainNear(60) !== null; }
+function fallOff(){
+  const p = S.player, t = S.train;
+  p.aboard = false;
+  const side = p.lx < 0 ? -1 : 1;
+  p.x = side * 32; p.y = t.y + clamp(p.ly, -8, trainLen() + 8);
+  puff(p.x, p.y, '#8a7a56', 6, 50);
+  if (t.moving && t.fuel > 0) toast('You jumped off a moving train!');
 }
 function doAct(){
-  const p = S.player;
-  if (p.aboard){ p.aboard = false; p.x = 44; p.y = S.train.y + 30; toast('You hop off the train'); return; }
-  if (canBoard()){ p.aboard = true; toast('Aboard! Press ▶ to roll out'); return; }
-  if (p.atkT <= 0){ // swing
+  const p = S.player, t = S.train;
+  if (p.aboard){ fallOff(); return; }
+  if (canBoard()){
+    p.aboard = true;
+    p.ly = clamp(trainNear(60) - t.y, 0, trainLen()); p.lx = p.x < 0 ? -20 : 20;
+    p.x = p.lx; p.y = t.y + p.ly;
+    toast('On deck! Walk to the front cab to drive'); return;
+  }
+  if (p.atkT <= 0){
     p.atkT = .42; let hitAny = false;
     for (const z of S.zombies){
       const d = Math.hypot(z.x-p.x, z.y-p.y);
@@ -287,7 +359,19 @@ function doAct(){
         const a = Math.atan2(z.y-p.y, z.x-p.x);
         z.x += Math.cos(a)*26; z.y += Math.sin(a)*26;
         puff(z.x,z.y,'#7a5',5,60);
-        if (z.hp <= 0){ S.zombies.splice(S.zombies.indexOf(z),1); puff(z.x,z.y,'#4a6a3a',10,85); }
+        if (z.hp <= 0) killZombie(S.zombies.indexOf(z), z.x, z.y, null);
+      }
+    }
+    if (!hitAny) for (const d of propsInView(p.y, 240)){
+      if (d.type !== 'debris' || d.taken) continue;
+      if (Math.hypot(d.x-p.x, d.y-p.y) < 52){
+        d.hp--; hitAny = true; puff(d.x,d.y,'#c9b98a',6,60);
+        if (d.hp <= 0){
+          d.taken = true;
+          if (d.kind === 'log'){ S.inv.wood += 2; addText(d.x,d.y-14,'+2 WOOD','#b8e0a0'); }
+          else { S.inv.scrap += 1; S.inv.coal += 1; addText(d.x,d.y-14,'+SCRAP +COAL','#ffe9b0'); }
+        }
+        break;
       }
     }
     if (hitAny) S.hitFlash = Math.max(S.hitFlash,.25);
@@ -296,11 +380,11 @@ function doAct(){
 function doFuel(){
   if (!S.player.aboard){ toast('Climb aboard to fuel up'); return; }
   const t = S.train;
-  if (t.fuel > FUEL_MAX - 5){ toast('Tank is nearly full'); return; }
-  if (S.inv.coal > 0){ S.inv.coal--; t.fuel = Math.min(FUEL_MAX, t.fuel+40);
-    addText(0,t.y+70,'+40 FUEL (coal)','#f7d070'); toast('Shovelled coal +40 ⛽'); }
-  else if (S.inv.wood > 0){ S.inv.wood--; t.fuel = Math.min(FUEL_MAX, t.fuel+24);
-    addText(0,t.y+70,'+24 FUEL (wood)','#f7d070'); toast('Fed the fire wood +24 ⛽'); }
+  if (t.fuel > fuelMax() - 5){ toast('Tank is nearly full'); return; }
+  if (S.inv.coal > 0){ S.inv.coal--; t.fuel = Math.min(fuelMax(), t.fuel+40);
+    addText(0,t.y+40,'+40 FUEL (coal)','#f7d070'); toast('Shovelled coal +40 ⛽'); }
+  else if (S.inv.wood > 0){ S.inv.wood--; t.fuel = Math.min(fuelMax(), t.fuel+24);
+    addText(0,t.y+40,'+24 FUEL (wood)','#f7d070'); toast('Fed the fire wood +24 ⛽'); }
   else toast('No coal or wood! Get off & forage');
 }
 function doEat(){
@@ -314,34 +398,124 @@ function doEat(){
 function doTrain(){
   if (!S.player.aboard){ toast('Climb aboard to drive'); return; }
   const t = S.train;
-  if (!t.moving){ 
+  if (!t.moving){
     if (t.fuel <= 0){ toast('Out of fuel! Refuel first'); return; }
+    if (!inCab()){ toast('Walk to the loco cab (front) to drive'); return; }
     t.moving = true; toast('Full steam ahead!');
-  } else { t.moving = false; toast('Brakes set — safe to hop off'); }
+  } else { t.moving = false; toast('Brakes set'); }
 }
 
+/* ---------- cart building ---------- */
+function canAfford(cost){ for (const k in cost) if (S.inv[k] < cost[k]) return false; return true; }
+function buildCart(type){
+  const def = CART_DEFS[type];
+  if (!canAfford(def.cost)){ toast('Not enough materials'); return; }
+  for (const k in def.cost) S.inv[k] -= def.cost[k];
+  S.train.carts.push({ type, store:0, t:0, cool:0, aim:-Math.PI/2 });
+  if (type === 'bunker') toast('Coal bunker added — +40 max fuel');
+  else toast(def.name + ' added at the rear!');
+  puff(0, S.train.y + trainLen() - 40, '#e8d27a', 10, 80);
+  if (!document.getElementById('bmodal').classList.contains('hide')) renderBuildList();
+}
+function renderBuildList(){
+  const list = document.getElementById('blist'); list.innerHTML = '';
+  for (const type in CART_DEFS){
+    const def = CART_DEFS[type];
+    let cost = '';
+    const icons = { wood:'🪵', coal:'⚫', scrap:'⚙️', food:'🥫' };
+    for (const k in def.cost)
+      cost += `<i class="${S.inv[k] < def.cost[k] ? 'no' : ''}">${icons[k]}${def.cost[k]}</i>`;
+    const el = document.createElement('div'); el.className = 'bitem';
+    el.innerHTML = `<div class="ic">${def.icon}</div>
+      <div class="info"><b>${def.name}</b><small>${def.desc}</small><div class="cost">${cost}</div></div>
+      <button class="bdo ${canAfford(def.cost)?'':'off'}">ADD</button>`;
+    el.querySelector('.bdo').onclick = () => buildCart(type);
+    list.appendChild(el);
+  }
+}
+function toggleBuild(){
+  if (!inZone('workshop')){ toast('Stand inside the workshop car to build'); return; }
+  const m = document.getElementById('bmodal');
+  if (m.classList.contains('hide')){ renderBuildList(); m.classList.remove('hide'); }
+  else m.classList.add('hide');
+}
+document.getElementById('bclose').onclick = () =>
+  document.getElementById('bmodal').classList.add('hide');
+
 /* ---------- update ---------- */
+function blocked(x,y){
+  const t = S.train;
+  // train body
+  if (Math.abs(x) < 24 && y > t.y - 8 && y < t.y + trainLen() + 6) return true;
+  for (const p of propsInView(y, 260)){
+    if (p.type==='tree' && !p.taken && Math.hypot(x-p.x,y-p.y) < 31) return true;
+    if (p.type==='rock' && Math.hypot(x-p.x,y-p.y) < 29) return true;
+    if (p.type==='debris' && !p.taken && Math.abs(x-p.x)<20 && Math.abs(y-p.y)<16) return true;
+    if (p.type==='depot' && x>p.x-75&&x<p.x+75&&y>p.y-52&&y<p.y+52) return true;
+  }
+  return false;
+}
 function update(dt){
-  S.t += dt; S.hitFlash = Math.max(0, S.hitFlash - dt*2.4);
+  S.t += dt;
+  S.hitFlash = Math.max(0, S.hitFlash - dt*2.4);
+  S.shake = Math.max(0, S.shake - dt*2.2);
   if (S.toastT > 0){ S.toastT -= dt; if (S.toastT <= 0) document.getElementById('toast').style.opacity = 0; }
   const p = S.player, t = S.train;
 
-  // train motion
+  /* ----- train motion + track debris ----- */
   if (t.moving && t.fuel > 0){
     t.y -= TRAIN_SPD * dt; t.fuel -= FUEL_DRAIN * dt;
     if (t.fuel <= 0){ t.fuel = 0; t.moving = false; toast('⚠ Out of fuel — the train is stranded'); }
-    // chimney smoke
-    if (Math.random() < dt*22) S.smoke.push({x:(Math.random()*2-1)*4, y:t.y-118, t:1.1, s:8+Math.random()*8});
+    for (const d of propsInView(t.y, 460)){
+      if (d.type !== 'debris' || d.taken) continue;
+      if (!d.warn && d.y < t.y - 40 && d.y > t.y - 760){
+        d.warn = true; toast('⚠ Debris on the rails ahead!');
+      }
+      if (d.y > t.y - 34 && d.y < t.y + 12){
+        if (hasPlow()){
+          d.taken = true; S.inv.scrap++;
+          addText(0, d.y, '+1 SCRAP','#9fd39f'); puff(0,d.y,'#c9b98a',9,80);
+          S.shake = Math.max(S.shake,.35);
+        } else if (!d.thud){
+          d.thud = true; t.fuel = Math.max(0, t.fuel-6);
+          S.shake = 1; S.hitFlash = .6;
+          toast('💥 Debris hit! -6 fuel — build a plow');
+        }
+      }
+    }
+    if (Math.random() < dt*22) S.smoke.push({x:(Math.random()*2-1)*4, y:t.y+22, t:1.1, s:8+Math.random()*8});
   }
   if (dist_m() >= GOAL_M && S.mode === 'play'){ S.mode = 'win'; showOverlay('win'); }
 
-  // player movement
-  if (!p.aboard){
+  /* ----- player: on deck vs on the ground ----- */
+  if (p.aboard){
     let jx = S.joy.dx, jy = S.joy.dy;
     if (S.keys.a||S.keys.ArrowLeft) jx -= 1; if (S.keys.d||S.keys.ArrowRight) jx += 1;
     if (S.keys.w||S.keys.ArrowUp) jy -= 1;   if (S.keys.s||S.keys.ArrowDown) jy += 1;
-    const m = Math.hypot(jx,jy);
-    if (m > 1){ jx/=m; jy/=m; }
+    const m = Math.hypot(jx,jy); if (m > 1){ jx/=m; jy/=m; }
+    const spd = PLAYER_SPD * Math.min(1, m);
+    p.lx += jx*spd*dt; p.ly += jy*spd*dt;
+    if (m > .1) p.dir = Math.atan2(jy, jx);
+    if (Math.abs(p.lx) > 23){ p.lx = clamp(p.lx,-23,23); fallOff(); }
+    else if (p.ly < -8){ fallOff(); }
+    else if (p.ly > trainLen() + 8){ fallOff(); }
+    else { p.x = p.lx; p.y = t.y + p.ly; }
+    // cart functions that depend on where you stand
+    if (p.aboard){
+      if (inZone('medic') && p.hp < 100) p.hp = Math.min(100, p.hp + 2.5*dt);
+      const z = zoneAt(p.ly);
+      if (z && z.type === 'green' && z.ref.store > 0){
+        S.inv.food += z.ref.store;
+        addText(p.x, p.y - 18, '+' + z.ref.store + ' FOOD HARVESTED', '#9fd39f');
+        toast('Harvested ' + z.ref.store + ' food 🌱'); z.ref.store = 0; z.ref.t = 0;
+        puff(p.x, p.y, '#6db35a', 8, 60);
+      }
+    }
+  } else {
+    let jx = S.joy.dx, jy = S.joy.dy;
+    if (S.keys.a||S.keys.ArrowLeft) jx -= 1; if (S.keys.d||S.keys.ArrowRight) jx += 1;
+    if (S.keys.w||S.keys.ArrowUp) jy -= 1;   if (S.keys.s||S.keys.ArrowDown) jy += 1;
+    const m = Math.hypot(jx,jy); if (m > 1){ jx/=m; jy/=m; }
     const spd = PLAYER_SPD * Math.min(1, m);
     const nx = p.x + jx*spd*dt, ny = p.y + jy*spd*dt;
     if (!blocked(nx, ny)){ p.x = nx; p.y = ny; }
@@ -349,26 +523,54 @@ function update(dt){
     else if (!blocked(p.x, ny)) p.y = ny;
     if (m > .1) p.dir = Math.atan2(jy, jx);
     p.x = clamp(p.x, -560, 560);
-    // auto-collect
     const r = nearestRes(); if (r) collect(r);
-    // moving train is deadly
-    if (t.moving && t.fuel > 0 && Math.abs(p.x) < 30 && p.y < t.y + 16 && p.y > t.y - 152){
+    if (t.moving && t.fuel > 0 && Math.abs(p.x) < 26 &&
+        p.y > t.y - 34 && p.y < t.y + trainLen() + 10){
       if (p.hurtT <= 0){ damage(18); p.hurtT = .5; }
-      p.x = p.x < 0 ? -34 : 34;
+      p.x = p.x < 0 ? -32 : 32;
     }
-  } else {
-    p.x = 40; p.y = t.y + 34;
   }
   p.hurtT -= dt; p.atkT -= dt;
 
-  // camera
-  const fx = p.aboard ? 0 : p.x, fy = p.aboard ? t.y : p.y;
-  S.cam.x = lerp(S.cam.x, fx, 1 - Math.pow(.001, dt));
-  S.cam.y = lerp(S.cam.y, fy, 1 - Math.pow(.001, dt));
+  /* ----- camera follows the player (rides along on deck) ----- */
+  const F = p.aboard ? .60 : .55;
+  S.focusF = lerp(S.focusF, F, 1 - Math.pow(.01, dt));
+  S.cam.x = lerp(S.cam.x, p.x, 1 - Math.pow(.001, dt));
+  S.cam.y = lerp(S.cam.y, p.y, 1 - Math.pow(.001, dt));
+
+  /* ----- cart ticks: greenhouse, turret, ----- */
+  for (const s of segs()){
+    if (!s.ref) continue;
+    if (s.type === 'green'){
+      if (t.moving && t.fuel > 0 && s.ref.store < 3){
+        s.ref.t += dt;
+        if (s.ref.t >= 18){ s.ref.t = 0; s.ref.store++; }
+      }
+    } else if (s.type === 'turret'){
+      const cy = t.y + (s.y0 + s.y1)/2;
+      s.ref.cool -= dt;
+      let tgt = null, bd = 240;
+      for (const z of S.zombies){
+        const d = Math.hypot(z.x-0, z.y-cy);
+        if (d < bd){ bd = d; tgt = z; }
+      }
+      if (tgt){
+        s.ref.aim = Math.atan2(tgt.y - cy, tgt.x - 0);
+        if (s.ref.cool <= 0){
+          s.ref.cool = 1.4;
+          tgt.hp--;
+          const a = s.ref.aim;
+          tgt.x += Math.cos(a)*12; tgt.y += Math.sin(a)*12;
+          puff(tgt.x, tgt.y, '#7a5', 4, 55);
+          S.beams.push({ x1: Math.cos(a)*16, y1: cy + Math.sin(a)*16, x2: tgt.x, y2: tgt.y, t:.12 });
+          if (tgt.hp <= 0) killZombie(S.zombies.indexOf(tgt), tgt.x, tgt.y, null);
+        }
+      }
+    }
+  }
 
   zUpdate(dt);
 
-  // particles
   for (let i = S.parts.length-1; i >= 0; i--){ const q = S.parts[i];
     q.t -= dt; if (q.t <= 0){ S.parts.splice(i,1); continue; }
     q.x += q.vx*dt; q.y += q.vy*dt; q.vx *= .92; q.vy *= .92; }
@@ -377,28 +579,32 @@ function update(dt){
     q.y += 26*dt; q.x += Math.sin(q.t*6)*10*dt; q.s += 14*dt; }
   for (let i = S.texts.length-1; i >= 0; i--){ const q = S.texts[i];
     q.t -= dt; q.y -= 34*dt; if (q.t <= 0) S.texts.splice(i,1); }
+  for (let i = S.beams.length-1; i >= 0; i--){ S.beams[i].t -= dt;
+    if (S.beams[i].t <= 0) S.beams.splice(i,1); }
 
   uiSync();
 }
 
 /* ---------- rendering ---------- */
+function rr(x,y,w,h,r){ ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function fr(x,y,w,h,r,c){ ctx.fillStyle=c; rr(x,y,w,h,r); ctx.fill(); }
+
 function draw(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
-  // sky-to-grass ground
   ctx.fillStyle = '#222e1b'; ctx.fillRect(0,0,W,H);
-  const ox = W/2 - S.cam.x, oy = H*0.55 - S.cam.y;
+  const ox = W/2 - S.cam.x, oy = H*S.focusF - S.cam.y;
+  const shx = (Math.random()-.5)*S.shake*16, shy = (Math.random()-.5)*S.shake*16;
+  ctx.save(); ctx.translate(ox+shx, oy+shy);
 
-  ctx.save(); ctx.translate(ox, oy);
-
-  const vy0 = S.cam.y - H*0.62, vy1 = S.cam.y + H*0.62;
+  const vy0 = S.cam.y - H*0.65, vy1 = S.cam.y + H*0.65;
   const props = propsInView(S.cam.y, 420);
 
-  // ground patches
   for (const p of props) if (p.type==='patch'){
     ctx.fillStyle = p.tone < .5 ? 'rgba(44,60,32,.5)' : 'rgba(52,68,36,.45)';
     ctx.beginPath(); ctx.ellipse(p.x, p.y, p.s*1.6, p.s, 0, 0, 6.3); ctx.fill();
   }
-  // ballast bed + rails + ties
   ctx.fillStyle = '#2c2a24'; ctx.fillRect(-46, vy0, 92, vy1-vy0);
   ctx.strokeStyle = '#241f1a'; ctx.lineWidth = 7;
   for (let y = Math.floor(vy0/34)*34; y < vy1; y += 34){
@@ -409,7 +615,6 @@ function draw(){
   ctx.strokeStyle = 'rgba(255,240,200,.25)'; ctx.lineWidth = 1;
   for (const rx of [-13, 13]){ ctx.beginPath(); ctx.moveTo(rx, vy0); ctx.lineTo(rx, vy1); ctx.stroke(); }
 
-  // props (ground level)
   for (const p of props){
     if (p.type==='grass'){
       ctx.strokeStyle = '#3e5a30'; ctx.lineWidth = 2;
@@ -430,8 +635,7 @@ function draw(){
       ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(p.x-72,p.y-46,150,104);
       ctx.fillStyle = '#6b5a44'; ctx.fillRect(p.x-78,p.y-52,156,104);
       ctx.strokeStyle = '#453a2b'; ctx.lineWidth = 3; ctx.strokeRect(p.x-78,p.y-52,156,104);
-      ctx.beginPath(); ctx.moveTo(p.x-84,p.y-52); ctx.lineTo(p.x,p.y-86); ctx.lineTo(p.x+84,p.y-52);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x-84,p.y-52); ctx.lineTo(p.x,p.y-86); ctx.lineTo(p.x+84,p.y-52); ctx.stroke();
       ctx.fillStyle = '#3a3026'; ctx.fillRect(p.x-16,p.y-14,32,60);
       ctx.fillStyle = 'rgba(255,220,140,.5)'; ctx.fillRect(p.x-52,p.y-30,20,18); ctx.fillRect(p.x+32,p.y-30,20,18);
     } else if (p.type==='sign'){
@@ -447,15 +651,25 @@ function draw(){
       ctx.fillText('★ STATION AURORA — ' + GOAL_M + ' m ★', 0, p.y+7);
     } else if (['coal','wood','scrap','food'].includes(p.type) && !p.taken){
       drawRes(p);
+    } else if (p.type==='debris' && !p.taken){
+      drawDebris(p);
     }
   }
-  // smoke
   for (const q of S.smoke){ ctx.fillStyle = `rgba(210,210,205,${(q.t/1.1)*.5})`;
     ctx.beginPath(); ctx.arc(q.x, q.y, q.s*.5, 0, 6.3); ctx.fill(); }
 
   drawTrain();
 
-  // zombies
+  for (const b of S.beams){
+    ctx.globalAlpha = Math.max(0, b.t/.12);
+    ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(b.x1,b.y1); ctx.lineTo(b.x2,b.y2); ctx.stroke();
+    ctx.fillStyle = '#fff2c0'; ctx.beginPath(); ctx.arc(b.x2,b.y2,2.5,0,6.3); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  if (S.player.aboard) drawPlayer(S.player.x, S.player.y, S.player.dir, S.player.atkT);
+
   for (const z of S.zombies){
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(z.x+3,z.y+6,10,5,0,0,6.3); ctx.fill();
     ctx.fillStyle = '#5d7a44'; ctx.beginPath(); ctx.arc(z.x,z.y,9,0,6.3); ctx.fill();
@@ -466,10 +680,8 @@ function draw(){
     ctx.beginPath(); ctx.moveTo(z.x-8,z.y+2+wob); ctx.lineTo(z.x-14,z.y+8+wob); ctx.stroke();
   }
 
-  // player (when off train)
   if (!S.player.aboard) drawPlayer(S.player.x, S.player.y, S.player.dir, S.player.atkT);
 
-  // particles & floating text
   for (const q of S.parts){ ctx.globalAlpha = Math.min(1, q.t*2);
     ctx.fillStyle = q.c; ctx.beginPath(); ctx.arc(q.x,q.y,3.2,0,6.3); ctx.fill(); }
   ctx.globalAlpha = 1;
@@ -481,40 +693,34 @@ function draw(){
 
   ctx.restore();
 
-  // vignette
   const vg = ctx.createRadialGradient(W/2,H*.5,H*.42, W/2,H*.5, H*.85);
   vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.34)');
   ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
   if (S.hitFlash > 0){
-    ctx.fillStyle = `rgba(200,40,30,${S.hitFlash*.3})`; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = `rgba(200,40,30,${S.hitFlash*.18})`; ctx.fillRect(0,0,W,H);
   }
-  // arrow back to train when off-board and far
   if (!S.player.aboard && S.mode==='play'){
     const sy = S.train.y + oy;
     if (sy < -30 || sy > H+30){
-      const ax = W/2 + 0, ay = clamp(sy, 40, H-90);
+      const ax = W/2, ay = clamp(sy, 40, H-90), dirn = sy < 0 ? -1 : 1;
       ctx.fillStyle = 'rgba(243,193,75,.92)';
-      ctx.beginPath();
-      const dirn = sy < 0 ? -1 : 1;
-      ctx.moveTo(ax, ay + dirn*0);
-      ctx.lineTo(ax-13, ay + dirn*-16); ctx.lineTo(ax+13, ay + dirn*-16); ctx.closePath(); ctx.fill();
-      ctx.font='700 12px system-ui'; ctx.textAlign='center';
-      ctx.fillStyle='#ffe9b0';
-      ctx.fillText('🚂 ' + Math.round(Math.abs(S.train.y - S.player.y)/PPM) + ' m', ax, ay + dirn*14);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax-13, ay+dirn*-16); ctx.lineTo(ax+13, ay+dirn*-16);
+      ctx.closePath(); ctx.fill();
+      ctx.font='700 12px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#ffe9b0';
+      ctx.fillText('🚂 ' + Math.round(Math.abs(S.train.y - S.player.y)/PPM) + ' m', ax, ay+dirn*14);
     }
   }
-  // joystick
   if (S.joy.active){
     const j = S.joy;
     ctx.fillStyle = 'rgba(20,26,20,.4)'; ctx.beginPath(); ctx.arc(j.bx,j.by,52,0,6.3); ctx.fill();
     ctx.strokeStyle = 'rgba(240,230,200,.35)'; ctx.lineWidth = 2; ctx.stroke();
-    const k = Math.min(1, Math.hypot(j.dx,j.dy));
-    const ka = Math.atan2(j.dy,j.dx);
+    const k = Math.min(1, Math.hypot(j.dx,j.dy)), ka = Math.atan2(j.dy,j.dx);
     ctx.fillStyle = 'rgba(243,193,75,.9)';
     ctx.beginPath(); ctx.arc(j.bx + Math.cos(ka)*k*36, j.by + Math.sin(ka)*k*36, 22, 0, 6.3); ctx.fill();
   }
 }
 
+/* ---------- resource / debris art ---------- */
 function drawRes(p){
   const {x,y} = p;
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x+3,y+6,11,5,0,0,6.3); ctx.fill();
@@ -523,8 +729,8 @@ function drawRes(p){
     for (const [dx,dy] of [[-5,2],[4,-1],[0,-5],[6,4]]){ ctx.beginPath(); ctx.arc(x+dx,y+dy,5,0,6.3); ctx.fill(); }
     ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(x-5,y,2,0,6.3); ctx.fill();
   } else if (p.type === 'wood'){
-    ctx.fillStyle = '#7a5a34'; for (let i=0;i<3;i++){ ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(x-12, y-8+i*7, 24, 6, 3) : ctx.rect(x-12, y-8+i*7, 24, 6); ctx.fill(); }
+    ctx.fillStyle = '#7a5a34';
+    for (let i=0;i<3;i++){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x-12, y-8+i*7, 24, 6, 3) : ctx.rect(x-12, y-8+i*7, 24, 6); ctx.fill(); }
     ctx.strokeStyle = '#4a3620'; ctx.lineWidth = 1.4;
     for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x-12,y-5+i*7); ctx.lineTo(x+12,y-5+i*7); ctx.stroke(); }
   } else if (p.type === 'scrap'){
@@ -538,74 +744,198 @@ function drawRes(p){
     ctx.fillStyle = '#8a2e28'; ctx.fillRect(x-7, y-9, 14, 3);
   }
 }
-
-function drawTrain(){
-  const t = S.train, y = t.y;
-  ctx.save(); ctx.translate(0, y);
-  ctx.fillStyle = 'rgba(0,0,0,.38)';
-  ctx.fillRect(-25, -146, 52, 160);
-  // boxcar
-  ctx.fillStyle = '#6b3f2e'; rr(-22, -18, 44, 58, 5); ctx.fill();
-  ctx.strokeStyle = '#4a2c20'; ctx.lineWidth = 2; rr(-22,-18,44,58,5); ctx.stroke();
-  ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.moveTo(-22,11); ctx.lineTo(22,11); ctx.stroke();
-  // tender (coal)
-  ctx.fillStyle = '#33383e'; rr(-21, -62, 42, 42, 4); ctx.fill();
-  ctx.fillStyle = '#181b1f'; rr(-17, -58, 34, 20, 3); ctx.fill(); // coal pile
-  const coalGlint = t.fuel / FUEL_MAX;
-  ctx.fillStyle = `rgba(120,130,150,${.3+coalGlint*.4})`; rr(-17,-58,34,3,2); ctx.fill();
-  // locomotive
-  ctx.fillStyle = '#2e3236'; rr(-24, -146, 48, 80, 7); ctx.fill();
-  ctx.strokeStyle = '#1b1e21'; ctx.lineWidth = 2.5; rr(-24,-146,48,80,7); ctx.stroke();
-  ctx.fillStyle = '#3a4046'; rr(-24, -120, 48, 30, 3); ctx.fill(); // boiler band
-  ctx.fillStyle = '#c93b3b'; rr(-24, -146, 48, 12, 7); ctx.fill(); // nose stripe
-  ctx.fillStyle = '#20242a'; ctx.beginPath(); ctx.arc(0, -138, 8, 0, 6.3); ctx.fill(); // chimney
-  // cab
-  ctx.fillStyle = '#454b52'; rr(-19, -92, 38, 26, 4); ctx.fill();
-  ctx.fillStyle = 'rgba(255,214,120,.85)'; rr(-13, -88, 10, 14, 2); ctx.fill(); rr(3, -88, 10, 14, 2); ctx.fill();
-  // headlight beam when moving
-  if (t.moving && t.fuel > 0){
-    const g = ctx.createLinearGradient(0,-146,0,-146-130);
-    g.addColorStop(0,'rgba(255,236,180,.30)'); g.addColorStop(1,'rgba(255,236,180,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-16,-146); ctx.lineTo(16,-146);
-    ctx.lineTo(30,-146-130); ctx.lineTo(-30,-146-130); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#ffe9b0'; ctx.beginPath(); ctx.arc(0,-148,4,0,6.3); ctx.fill();
+function drawDebris(p){
+  const {x,y} = p;
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(x,y+5,22,7,0,0,6.3); ctx.fill();
+  if (p.kind === 'log'){
+    fr(x-22, y-6, 44, 12, 6, '#7a5a34');
+    ctx.fillStyle = '#5a4024'; ctx.beginPath(); ctx.arc(x-20,y,6,0,6.3); ctx.arc(x+20,y,6,0,6.3); ctx.fill();
+    ctx.fillStyle = '#8f6c40'; ctx.beginPath(); ctx.arc(x-20,y,3,0,6.3); ctx.arc(x+20,y,3,0,6.3); ctx.fill();
+  } else {
+    ctx.fillStyle = '#565a5e';
+    for (const [dx,dy,r] of [[-10,2,8],[8,-3,7],[0,5,6]]){
+      ctx.beginPath(); ctx.arc(x+dx,y+dy,r,0,6.3); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(x-11,y,2.6,0,6.3); ctx.fill();
   }
-  // wheels hint
-  ctx.fillStyle = '#14161a';
-  for (const wy of [-30,-8]) { ctx.beginPath(); ctx.arc(-26,wy,4,0,6.3); ctx.arc(26,wy,4,0,6.3); ctx.fill(); }
-  // driver visible in cab when player aboard
-  if (S.player.aboard){
-    ctx.fillStyle = '#31405e'; ctx.beginPath(); ctx.arc(0,-72,7,0,6.3); ctx.fill();
-    ctx.fillStyle = '#e8c39a'; ctx.beginPath(); ctx.arc(0,-74,4.4,0,6.3); ctx.fill();
-    ctx.fillStyle = '#222'; ctx.fillRect(-4,-77,8,2.4);
+  if (p.warn){
+    ctx.globalAlpha = .55 + Math.sin(S.t*9)*.35;
+    ctx.fillStyle = '#ff5a4a'; ctx.font='800 17px system-ui'; ctx.textAlign='center';
+    ctx.fillText('!', x, y-16); ctx.globalAlpha = 1;
   }
-  ctx.restore();
 }
-function rr(x,y,w,h,r){ ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
 function drawPlayer(x,y,dir,atkT){
   ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x+3,y+7,10,5,0,0,6.3); ctx.fill();
-  // swing arc
   if (atkT > .22){
     ctx.strokeStyle = 'rgba(255,240,200,.85)'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(x, y, 30, dir-.9, dir+.9); ctx.stroke();
   }
-  // coat
   ctx.fillStyle = '#31405e'; ctx.beginPath(); ctx.arc(x, y, 10.5, 0, 6.3); ctx.fill();
   ctx.strokeStyle = '#56688a'; ctx.lineWidth = 2; ctx.stroke();
-  // head
   ctx.fillStyle = '#e8c39a'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 6.3); ctx.fill();
-  // cap covering the back of the head
   ctx.fillStyle = '#2b2e34';
   ctx.beginPath(); ctx.moveTo(x, y);
   ctx.arc(x, y, 7.4, dir + Math.PI - 1.25, dir + Math.PI + 1.25); ctx.closePath(); ctx.fill();
-  // eyes
   const fx = x + Math.cos(dir)*4.4, fy = y + Math.sin(dir)*4.4;
   ctx.fillStyle = '#20242a';
   ctx.beginPath(); ctx.arc(fx - Math.sin(dir)*2.6, fy + Math.cos(dir)*2.6, 1.2, 0, 6.3); ctx.fill();
   ctx.beginPath(); ctx.arc(fx + Math.sin(dir)*2.6, fy - Math.cos(dir)*2.6, 1.2, 0, 6.3); ctx.fill();
+}
+
+/* ---------- train art ---------- */
+function wheels(y0,y1){
+  ctx.fillStyle = '#14161a';
+  for (const wy of [y0+10, y1-10]){
+    ctx.beginPath(); ctx.arc(-23,wy,3.6,0,6.3); ctx.arc(23,wy,3.6,0,6.3); ctx.fill(); }
+}
+function drawPlow(fy){
+  ctx.fillStyle = '#8a939e';
+  ctx.beginPath(); ctx.moveTo(-25, fy+3); ctx.lineTo(0, fy-27); ctx.lineTo(25, fy+3); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#565e66'; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.strokeStyle = 'rgba(30,34,38,.75)'; ctx.lineWidth = 2;
+  for (const bx of [-11, 0, 11]){ ctx.beginPath(); ctx.moveTo(bx*.82, fy-22); ctx.lineTo(bx, fy+2); ctx.stroke(); }
+  ctx.fillStyle = '#3a4046';
+  ctx.beginPath(); ctx.arc(-9, fy-8, 1.8, 0, 6.3); ctx.arc(9, fy-8, 1.8, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#ffe9b0'; ctx.beginPath(); ctx.arc(0, fy-20, 2.6, 0, 6.3); ctx.fill();
+}
+function drawLoco(ty){
+  const y0 = ty, y1 = ty + LOCO_LEN;
+  // buffer beam + frame
+  fr(-24, y0-4, 48, 12, 3, '#7a2e28');
+  // boiler
+  fr(-22, y0+6, 44, 92, 12, '#384046');
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 2; rr(-22, y0+6, 44, 92, 12); ctx.stroke();
+  // gold bands + rivets
+  ctx.strokeStyle = 'rgba(243,193,75,.55)'; ctx.lineWidth = 2;
+  for (const by of [y0+28, y0+56, y0+84]){ ctx.beginPath(); ctx.moveTo(-21,by); ctx.lineTo(21,by); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(255,255,255,.16)';
+  for (const ry of [y0+16, y0+44, y0+72]){
+    ctx.beginPath(); ctx.arc(-18,ry,1.6,0,6.3); ctx.arc(18,ry,1.6,0,6.3); ctx.fill(); }
+  // running boards
+  ctx.fillStyle = '#565e66'; ctx.fillRect(-27, y0+10, 4, 84); ctx.fillRect(23, y0+10, 4, 84);
+  // chimney + steam dome
+  ctx.fillStyle = '#20242a'; ctx.beginPath(); ctx.arc(0, y0+13, 8.5, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#101316'; ctx.beginPath(); ctx.arc(0, y0+13, 5, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#9aa3ad'; ctx.beginPath(); ctx.arc(0, y0+44, 7, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = '#565e66'; ctx.lineWidth = 1.5; ctx.stroke();
+  // sandbox
+  fr(-7, y0+62, 14, 12, 4, '#4a5158');
+  // cab
+  fr(-23, y0+96, 46, 54, 5, '#454b52');
+  fr(-26, y0+100, 52, 48, 6, '#2b2f34');
+  ctx.fillStyle = 'rgba(255,214,120,.8)';
+  ctx.fillRect(-14, y0+108, 11, 14); ctx.fillRect(3, y0+108, 11, 14);
+  ctx.strokeStyle = '#1b1e21'; ctx.lineWidth = 2; rr(-26, y0+100, 52, 48, 6); ctx.stroke();
+  wheels(y0, y1);
+}
+function drawTender(y0, y1){
+  fr(-21, y0, 42, y1-y0, 4, '#33383e');
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 2; rr(-21, y0, 42, y1-y0, 4); ctx.stroke();
+  // coal heap scaled by fuel
+  const fr_ = S.train.fuel / fuelMax();
+  const heapH = 8 + fr_ * 30;
+  ctx.fillStyle = '#171a1e';
+  ctx.beginPath(); ctx.moveTo(-16, y1-8);
+  ctx.quadraticCurveTo(-8, y1-8-heapH, 0, y1-8-heapH*.7);
+  ctx.quadraticCurveTo(8, y1-8-heapH, 16, y1-8); ctx.closePath(); ctx.fill();
+  if (fr_ > .15){ ctx.fillStyle = 'rgba(130,140,160,.4)';
+    ctx.beginPath(); ctx.arc(-6, y1-14-heapH*.5, 1.8, 0, 6.3); ctx.fill(); }
+  // side ladder
+  ctx.strokeStyle = '#565e66'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-18, y0+10); ctx.lineTo(-18, y0+52); ctx.stroke();
+  for (const ly of [y0+18, y0+32, y0+46]){ ctx.beginPath(); ctx.moveTo(-21,ly); ctx.lineTo(-15,ly); ctx.stroke(); }
+  wheels(y0, y1);
+}
+function drawCart(s, ty){
+  const y0 = ty + s.y0, y1 = ty + s.y1, my = (y0+y1)/2;
+  wheels(y0, y1);
+  if (s.type === 'workshop'){
+    fr(-22, y0, 44, y1-y0, 3, '#7a4632');
+    ctx.strokeStyle = '#5c3526'; ctx.lineWidth = 1.6;
+    for (let py = y0+10; py < y1; py += 9){ ctx.beginPath(); ctx.moveTo(-21,py); ctx.lineTo(21,py); ctx.stroke(); }
+    // open roof hatch with warm light
+    ctx.fillStyle = '#2b2026'; ctx.fillRect(-10, y0+12, 20, 26);
+    ctx.fillStyle = 'rgba(247,208,112,.85)'; ctx.fillRect(-7, y0+15, 14, 20);
+    ctx.fillStyle = 'rgba(247,208,112,.25)'; ctx.fillRect(-16, y0+9, 32, 34);
+    ctx.strokeStyle = '#3f2a1e'; ctx.lineWidth = 2; ctx.strokeRect(-10, y0+12, 20, 26);
+    // painted wrench plate
+    ctx.fillStyle = '#e8e4da'; ctx.fillRect(9, y1-18, 11, 11);
+    ctx.fillStyle = '#5c3526'; ctx.font='800 9px system-ui'; ctx.textAlign='center';
+    ctx.fillText('🔧', 14.5, y1-9.5);
+  } else if (s.type === 'bunker'){
+    fr(-21, y0, 42, y1-y0, 3, '#23282e');
+    ctx.fillStyle = '#14171b'; ctx.fillRect(-17, y0+8, 34, y1-y0-16);
+    ctx.fillStyle = '#1d2126';
+    for (const [dx,dy] of [[-8,y0+22],[8,y0+24],[0,y0+36],[-7,y0+46],[8,y0+46]]){
+      ctx.beginPath(); ctx.arc(dx,dy,6,0,6.3); ctx.fill(); }
+    ctx.fillStyle = 'rgba(150,160,180,.35)';
+    ctx.beginPath(); ctx.arc(-9,y0+20,1.7,0,6.3); ctx.arc(7,y0+22,1.7,0,6.3); ctx.fill();
+    // hazard stripes
+    for (let i=0;i<5;i++){ ctx.fillStyle = i%2 ? '#e8b83a' : '#1a1d21';
+      ctx.fillRect(-20+i*8.4, y0+2, 8.4, 4); }
+  } else if (s.type === 'green'){
+    fr(-21, y0, 42, y1-y0, 4, '#d8d8d0');
+    ctx.fillStyle = 'rgba(150,215,255,.30)'; ctx.fillRect(-17, y0+4, 34, y1-y0-8);
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.4;
+    for (const py of [y0+22, y0+38]){ ctx.beginPath(); ctx.moveTo(-17,py+6); ctx.lineTo(17,py-6); ctx.stroke(); }
+    // planters + plants (grow with store)
+    ctx.fillStyle = '#4a3a26'; ctx.fillRect(-15, y0+14, 12, 34); ctx.fillRect(3, y0+14, 12, 34);
+    const g = s.ref ? s.ref.store + (s.ref.store < 3 ? s.ref.t/18 : 0) : 0;
+    ctx.fillStyle = '#4f8f3f';
+    for (let i=0;i<Math.min(3,Math.ceil(g));i++){
+      const r0 = 2 + g*1.2;
+      ctx.beginPath(); ctx.arc(-9, y0+22+i*11, r0, 0, 6.3); ctx.arc(9, y0+22+i*11, r0, 0, 6.3); ctx.fill();
+    }
+    ctx.strokeStyle = '#9aa39c'; ctx.lineWidth = 2; rr(-21, y0, 42, y1-y0, 4); ctx.stroke();
+  } else if (s.type === 'turret'){
+    fr(-21, y0, 42, y1-y0, 3, '#4a4f55');
+    ctx.strokeStyle = '#33383e'; ctx.lineWidth = 1.5;
+    for (let py = y0+9; py < y1; py += 9){ ctx.beginPath(); ctx.moveTo(-20,py); ctx.lineTo(20,py); ctx.stroke(); }
+    // sandbag ring
+    ctx.fillStyle = '#8a7a56';
+    for (let i=0;i<8;i++){ const a = i/8*6.28;
+      ctx.beginPath(); ctx.ellipse(Math.cos(a)*15, my+Math.sin(a)*15, 5, 3.6, a, 0, 6.3); ctx.fill(); }
+    // rotating gun
+    ctx.fillStyle = '#33383e'; ctx.beginPath(); ctx.arc(0,my,11,0,6.3); ctx.fill();
+    ctx.strokeStyle = '#22262a'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.save(); ctx.translate(0,my); ctx.rotate(s.ref ? s.ref.aim : -Math.PI/2);
+    ctx.fillStyle = '#22262a'; ctx.fillRect(0,-2.6,22,5.2);
+    ctx.fillStyle = '#101316'; ctx.fillRect(18,-3.4,4,6.8);
+    ctx.restore();
+    ctx.fillStyle = '#6b5a34'; ctx.fillRect(-17,y0+4,9,7); ctx.fillRect(8,y0+4,9,7);
+  } else if (s.type === 'medic'){
+    fr(-21, y0, 42, y1-y0, 3, '#e8e4da');
+    ctx.fillStyle = '#c93b3b'; ctx.fillRect(-21, y0+2, 42, 6);
+    ctx.fillRect(-4, my-13, 8, 26); ctx.fillRect(-13, my-4, 26, 8);
+    ctx.strokeStyle = '#b8b4aa'; ctx.lineWidth = 2; rr(-21, y0, 42, y1-y0, 3); ctx.stroke();
+    ctx.fillStyle = '#8a8a82';
+    ctx.beginPath(); ctx.arc(-17,y0+8,1.8,0,6.3); ctx.arc(17,y0+8,1.8,0,6.3);
+    ctx.arc(-17,y1-8,1.8,0,6.3); ctx.arc(17,y1-8,1.8,0,6.3); ctx.fill();
+  }
+}
+function drawTrain(){
+  const t = S.train, L = trainLen();
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-28, t.y-8, 56, L+16);
+  const ss = segs();
+  ctx.fillStyle = '#14161a';
+  for (let i=1;i<ss.length;i++) ctx.fillRect(-13, t.y+ss[i].y0-COUP, 26, COUP);
+  if (hasPlow()) drawPlow(t.y);
+  for (const s of ss){
+    if (s.type==='loco') drawLoco(t.y);
+    else if (s.type==='tender') drawTender(t.y+TENDER0, t.y+TENDER0+CART_LEN);
+    else drawCart(s, t.y);
+  }
+  const rear = t.y + L - 5;
+  ctx.fillStyle = 'rgba(255,70,60,.3)'; ctx.beginPath(); ctx.arc(0,rear,7,0,6.3); ctx.fill();
+  ctx.fillStyle = '#ff5a4a'; ctx.beginPath(); ctx.arc(0,rear,3.2,0,6.3); ctx.fill();
+  if (t.moving && t.fuel > 0){
+    const fy = t.y - (hasPlow() ? 30 : 6);
+    const g = ctx.createLinearGradient(0, fy, 0, fy-135);
+    g.addColorStop(0,'rgba(255,236,180,.30)'); g.addColorStop(1,'rgba(255,236,180,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-16, fy); ctx.lineTo(16, fy);
+    ctx.lineTo(30, fy-135); ctx.lineTo(-30, fy-135); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffe9b0'; ctx.beginPath(); ctx.arc(0, fy-2, 3.6, 0, 6.3); ctx.fill();
+  }
 }
 
 /* ---------- HUD sync ---------- */
@@ -614,19 +944,23 @@ let uiT = 0;
 function uiSync(){
   if (S.t - uiT < .12) return; uiT = S.t;
   if (new URLSearchParams(location.search).has('probe'))
-    document.title = `aboard=${S.player.aboard} px=${S.player.x|0} py=${S.player.y|0} cam=${S.cam.x|0},${S.cam.y|0} inv=${JSON.stringify(S.inv)} mode=${S.mode}`;
-  $('fuelF').style.width = (S.train.fuel/FUEL_MAX*100) + '%';
+    document.title = `aboard=${S.player.aboard} ly=${S.player.ly|0} carts=${S.train.carts.map(c=>c.type).join(',')} ` +
+      `fuel=${S.train.fuel|0}/${fuelMax()} inv=${JSON.stringify(S.inv)} mode=${S.mode}`;
+  $('fuelF').style.width = (S.train.fuel/fuelMax()*100) + '%';
   $('hpF').style.width = S.player.hp + '%';
   $('dist').textContent = Math.floor(dist_m()) + ' / ' + GOAL_M + ' m';
   const i = S.inv;
   $('inv').innerHTML =
     `<span class="chip">🪵 ${i.wood}</span><span class="chip">⚫ ${i.coal}</span>`+
-    `<span class="chip">⚙️ ${i.scrap}</span><span class="chip">🥫 ${i.food}</span>`;
+    `<span class="chip">⚙️ ${i.scrap}</span><span class="chip">🥫 ${i.food}</span>`+
+    `<span class="chip">🚃 ${1 + S.train.carts.length}</span>`;
   $('bEat').querySelector('span').textContent = i.food;
   $('bEat').classList.toggle('off', i.food <= 0 || S.player.aboard);
-  $('bTrain').querySelector('span').textContent = S.train.moving ? 'STOP' : (S.train.fuel>0?'GO':'NO FUEL');
+  $('bTrain').querySelector('span').textContent =
+    S.train.moving ? 'STOP' : (S.train.fuel > 0 ? (inCab() ? 'GO' : 'CAB') : 'NO FUEL');
   $('bTrain').classList.toggle('off', !S.player.aboard);
   $('bFuel').classList.toggle('off', !S.player.aboard || (S.inv.coal<=0 && S.inv.wood<=0));
+  $('bBuild').classList.toggle('off', !inZone('workshop'));
   const a = $('bAct');
   if (S.player.aboard){ a.querySelector('em').textContent='👇'; a.querySelector('span').textContent='GET OFF'; a.classList.remove('off'); }
   else if (canBoard()){ a.querySelector('em').textContent='🚂'; a.querySelector('span').textContent='BOARD'; a.classList.remove('off'); }
@@ -639,20 +973,24 @@ function showOverlay(kind){
   if (kind === 'title'){
     c.innerHTML = `<h1>IRON HAUL</h1>
       <p style="color:#f3c14b;font-weight:700">Drive the loot train to Station Aurora</p>
-      <p>🚂 The train burns fuel as it rolls. <b>STOP</b> it, hop off, and forage
-      coal · wood · food · scrap across the wastes. Watch for the infected near every depot.<br><br>
-      Reach the <b>${GOAL_M} m</b> mark alive.</p>
+      <p>The train burns fuel as it rolls. <b>STOP</b>, hop off and forage
+      coal · wood · food · scrap. The infected wait at every depot — and debris
+      blocks the rails.</p>
+      <p>Walk around your train <b>even while it rolls</b>. Stand in the
+      <b>workshop car</b> to bolt on new cars: plow, bunker, greenhouse,
+      turret, infirmary.</p>
+      <p>Reach the <b>${GOAL_M} m</b> mark alive.</p>
       <button id="go">START THE ENGINE</button>
       <div class="keys">MOBILE: left-thumb joystick · buttons on the right<br>
-      DESKTOP: WASD move · SPACE act · F fuel · E eat · T train</div>`;
+      DESKTOP: WASD move · SPACE act · F fuel · E eat · T train · B build</div>`;
   } else if (kind === 'win'){
     c.innerHTML = `<h2 style="color:#f3c14b">🚂 STATION AURORA!</h2>
       <div class="big">🎉</div>
       <div class="stat"><span>Distance</span><b>${Math.floor(dist_m())} m</b></div>
+      <div class="stat"><span>Cars in the consist</span><b>${1 + S.train.carts.length}</b></div>
       <div class="stat"><span>Wood</span><b>${S.inv.wood}</b></div>
       <div class="stat"><span>Coal</span><b>${S.inv.coal}</b></div>
       <div class="stat"><span>Scrap</span><b>${S.inv.scrap}</b></div>
-      <div class="stat"><span>Food left</span><b>${S.inv.food}</b></div>
       <div class="stat"><span>Health</span><b>${Math.round(S.player.hp)}</b></div>
       <button id="go" style="margin-top:14px">RUN IT AGAIN</button>`;
   } else if (kind === 'dead'){
@@ -660,6 +998,7 @@ function showOverlay(kind){
       <div class="big">💀</div>
       <div class="stat"><span>Reached</span><b>${Math.floor(dist_m())} / ${GOAL_M} m</b></div>
       <div class="stat"><span>Scrap hauled</span><b>${S.inv.scrap}</b></div>
+      <div class="stat"><span>Cars built</span><b>${S.train.carts.length}</b></div>
       <button id="go" style="margin-top:14px">TRY AGAIN</button>`;
   }
   ov.classList.remove('hide');
@@ -667,11 +1006,12 @@ function showOverlay(kind){
 }
 function reset(){
   S.mode = 'play'; S.t = 0;
-  S.train = { y: 0, moving: true, fuel: 55 };
-  S.inv = { wood: 0, coal: 2, scrap: 0, food: 1 };
-  S.player = { x: 40, y: -34, hp: 100, dir: -Math.PI/2, aboard: true, atkT: 0, hurtT: 0 };
-  S.cam = { x: 0, y: 0 };
-  S.zombies = []; S.parts = []; S.texts = []; S.smoke = [];
+  S.train = { y: 0, moving: true, fuel: 55, carts: [] };
+  S.inv = { wood: 2, coal: 2, scrap: 2, food: 1 };
+  S.player = { x: 0, y: 120, lx: 0, ly: 120, aboard: true, hp: 100,
+               dir: -Math.PI/2, atkT: 0, hurtT: 0 };
+  S.cam = { x: 0, y: 0 }; S.focusF = .6;
+  S.zombies = []; S.parts = []; S.texts = []; S.smoke = []; S.beams = [];
   for (const [, list] of chunks) for (const p of list) delete p.taken;
   toast('Rolling! Keep an eye on ⛽');
 }
@@ -680,10 +1020,12 @@ function reset(){
 function act(x,y){
   if (S.mode !== 'play') return;
   if (y === 'train') doTrain(); else if (y === 'fuel') doFuel();
-  else if (y === 'eat') doEat(); else doAct();
+  else if (y === 'eat') doEat(); else if (y === 'build') toggleBuild();
+  else doAct();
 }
 $('bTrain').addEventListener('pointerdown', e => { e.preventDefault(); act(0,'train'); });
 $('bFuel').addEventListener('pointerdown', e => { e.preventDefault(); act(0,'fuel'); });
+$('bBuild').addEventListener('pointerdown', e => { e.preventDefault(); act(0,'build'); });
 $('bEat').addEventListener('pointerdown', e => { e.preventDefault(); act(0,'eat'); });
 $('bAct').addEventListener('pointerdown', e => { e.preventDefault(); act(0,'act'); });
 
@@ -713,6 +1055,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'f' || e.key === 'F') act(0,'fuel');
   if (e.key === 'e' || e.key === 'E') act(0,'eat');
   if (e.key === 't' || e.key === 'T') act(0,'train');
+  if (e.key === 'b' || e.key === 'B') act(0,'build');
 });
 window.addEventListener('keyup', e => S.keys[e.key] = false);
 document.addEventListener('gesturestart', e => e.preventDefault());
@@ -728,10 +1071,31 @@ if (q.has('shot')){
   } else if (q.get('shot') === 'zom'){
     S.train.moving = false; S.player.aboard = false; S.player.x = 150; S.player.y = -260;
     spawnZs({ x: 90, y: -300, n: 4 });
+  } else if (q.get('shot') === 'zom2'){
+    S.train.moving = false; S.player.aboard = false; S.player.x = 200; S.player.y = -620;
+    spawnZs({ x: 60, y: -300, n: 5 });
+  } else if (q.get('shot') === 'plow'){
+  } else if (q.get('shot') === 'deck'){
+    S.train.moving = true;
+    for (const ty of ['workshop','bunker','green','turret','medic'])
+      S.train.carts.push({ type:ty, store: ty==='green'?2:0, t: ty==='green'?9:0, cool:0, aim:-Math.PI/2 });
+    S.player.aboard = true; S.player.lx = 6; S.player.ly = 330;
+    S.inv = { wood:3, coal:2, scrap:4, food:1 }; S.train.fuel = 70;
+  } else if (q.get('shot') === 'build'){
+    S.train.moving = false;
+    S.train.carts.push({ type:'workshop', store:0, t:0, cool:0, aim:-Math.PI/2 });
+    S.player.aboard = true; S.player.lx = 0; S.player.ly = TENDER0 + CART_LEN + COUP + 30;
+    S.inv = { wood:9, coal:3, scrap:7, food:2 };
+    renderBuildList(); document.getElementById('bmodal').classList.remove('hide');
+  } else if (q.get('shot') === 'plow'){
+    S.train.moving = true;
+    S.train.carts.push({ type:'plow', store:0, t:0, cool:0, aim:-Math.PI/2 });
+    const cl = genChunk(-2);
+    cl.push({ type:'debris', kind:'log', x:0, y:-700, hp:2, amt:2 });
+    S.train.fuel = 80;
   } else if (q.get('shot') === 'win'){ S.mode='win'; showOverlay('win'); }
   else if (q.get('shot') === 'dead'){ damage(120); }
-  else { S.player.aboard = true; }
-  // warm up deterministically so camera/UI settle before the first frame
+  else { S.player.aboard = true; S.player.lx = 0; S.player.ly = 120; }
   const n = parseInt(q.get('sim') || '90', 10);
   for (let i = 0; i < n; i++) { try { update(1/60); } catch(e){} }
 }
@@ -749,5 +1113,4 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 </script>
-</body>
-</html>
+</body></html>
