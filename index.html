@@ -198,6 +198,15 @@ function inZone(type){
   const z = zoneAt(S.player.ly);
   return !!(z && z.type === type);
 }
+function canOpenBuild(){
+  // The first workshop must be constructible before there is a workshop to stand in.
+  return S.player.aboard && (nCarts('workshop') === 0 || inZone('workshop'));
+}
+function canBuildType(type){
+  if (!S.player.aboard) return false;
+  if (nCarts('workshop') === 0) return type === 'workshop';
+  return inZone('workshop');
+}
 
 /* ---------- utils ---------- */
 const clamp = (v,a,b)=>v<a?a:v>b?b:v;
@@ -409,6 +418,10 @@ function doTrain(){
 function canAfford(cost){ for (const k in cost) if (S.inv[k] < cost[k]) return false; return true; }
 function buildCart(type){
   const def = CART_DEFS[type];
+  if (!canBuildType(type)){
+    toast(nCarts('workshop') === 0 ? 'Build a workshop car first' : 'Stand inside the workshop car to build');
+    return;
+  }
   if (!canAfford(def.cost)){ toast('Not enough materials'); return; }
   for (const k in def.cost) S.inv[k] -= def.cost[k];
   S.train.carts.push({ type, store:0, t:0, cool:0, aim:-Math.PI/2 });
@@ -428,13 +441,16 @@ function renderBuildList(){
     const el = document.createElement('div'); el.className = 'bitem';
     el.innerHTML = `<div class="ic">${def.icon}</div>
       <div class="info"><b>${def.name}</b><small>${def.desc}</small><div class="cost">${cost}</div></div>
-      <button class="bdo ${canAfford(def.cost)?'':'off'}">ADD</button>`;
+      <button class="bdo ${canBuildType(type) && canAfford(def.cost)?'':'off'}">ADD</button>`;
     el.querySelector('.bdo').onclick = () => buildCart(type);
     list.appendChild(el);
   }
 }
 function toggleBuild(){
-  if (!inZone('workshop')){ toast('Stand inside the workshop car to build'); return; }
+  if (!canOpenBuild()){
+    toast(S.player.aboard ? 'Stand inside the workshop car to build' : 'Climb aboard to build');
+    return;
+  }
   const m = document.getElementById('bmodal');
   if (m.classList.contains('hide')){ renderBuildList(); m.classList.remove('hide'); }
   else m.classList.add('hide');
@@ -960,7 +976,7 @@ function uiSync(){
     S.train.moving ? 'STOP' : (S.train.fuel > 0 ? (inCab() ? 'GO' : 'CAB') : 'NO FUEL');
   $('bTrain').classList.toggle('off', !S.player.aboard);
   $('bFuel').classList.toggle('off', !S.player.aboard || (S.inv.coal<=0 && S.inv.wood<=0));
-  $('bBuild').classList.toggle('off', !inZone('workshop'));
+  $('bBuild').classList.toggle('off', !canOpenBuild());
   const a = $('bAct');
   if (S.player.aboard){ a.querySelector('em').textContent='👇'; a.querySelector('span').textContent='GET OFF'; a.classList.remove('off'); }
   else if (canBoard()){ a.querySelector('em').textContent='🚂'; a.querySelector('span').textContent='BOARD'; a.classList.remove('off'); }
@@ -976,9 +992,9 @@ function showOverlay(kind){
       <p>The train burns fuel as it rolls. <b>STOP</b>, hop off and forage
       coal · wood · food · scrap. The infected wait at every depot — and debris
       blocks the rails.</p>
-      <p>Walk around your train <b>even while it rolls</b>. Stand in the
-      <b>workshop car</b> to bolt on new cars: plow, bunker, greenhouse,
-      turret, infirmary.</p>
+      <p>Walk around your train <b>even while it rolls</b>. Gather supplies,
+      then use BUILD while aboard to construct your first workshop; stand inside it to bolt on
+      new cars: plow, bunker, greenhouse, turret, infirmary.</p>
       <p>Reach the <b>${GOAL_M} m</b> mark alive.</p>
       <button id="go">START THE ENGINE</button>
       <div class="keys">MOBILE: left-thumb joystick · buttons on the right<br>
