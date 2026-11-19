@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>IRON HAUL — Top-Down Train Survival</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23162018'/%3E%3Ctext x='32' y='46' font-size='42' text-anchor='middle'%3E%F0%9F%9A%82%3C/text%3E%3C/svg%3E">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
   html,body{width:100%;height:100%;overflow:hidden;position:fixed;background:#0c120c;
@@ -100,6 +101,8 @@
   #bclose{width:40px;height:40px;flex:none;border-radius:50%;border:1px solid #46543f;background:#1c241a;
     color:#efe8d0;font-size:15px;font-weight:800;font-family:inherit}
   #blist{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+  #blist.more{-webkit-mask-image:linear-gradient(#000 calc(100% - 30px), transparent);
+    mask-image:linear-gradient(#000 calc(100% - 30px), transparent)}
   #bnote{font-size:10.5px;line-height:1.4;color:#c9c2a8;background:#10160f;border:1px solid #2c3a2c;
     border-radius:10px;padding:7px 9px;margin-bottom:8px;text-align:left}
   #bnote.hide{display:none}
@@ -486,13 +489,13 @@ function propsInView(cy, pad){
 /* ---------- zombies ---------- */
 const Z_VARIANTS = [
   { hp:3, spd:1.00, dmg:8,  scale:1.00, knock:26,
-    skins:['#6f8250','#7b8d58','#677a49'], shirts:['#4c5a3c','#594838','#43564c'],
-    eyes:'#d9e878' },
+    skins:['#7d9159','#88996a','#72854f'], shirts:['#39472f','#5a4432','#3f5058'],
+    eyes:'#e2f08a' },
   { hp:2, spd:1.26, dmg:6,  scale:0.90, knock:32,
-    skins:['#8b945f','#7e8a55','#949b6b'], shirts:['#713c33','#5f3a45','#6b4b2f'],
+    skins:['#99a268','#8d9960','#a3aa75'], shirts:['#6c382e','#543549','#66452c'],
     eyes:'#ffd766' },
   { hp:4, spd:0.82, dmg:13, scale:1.20, knock:16,
-    skins:['#5e7348','#66784c'], shirts:['#3e4a36','#4a3c34'],
+    skins:['#6c8154','#748759'], shirts:['#333a2c','#40332c'],
     eyes:'#ff6a4a' },
 ];
 function spawnZs(zp){
@@ -692,7 +695,12 @@ function renderBuildList(){
     el.querySelector('.bdo').onclick = () => buildCart(type);
     list.appendChild(el);
   }
+  requestAnimationFrame(() => list.classList.toggle('more', list.scrollHeight > list.clientHeight + 2));
 }
+document.getElementById('blist').addEventListener('scroll', e => {
+  const list = e.currentTarget;
+  list.classList.toggle('more', list.scrollHeight - list.scrollTop > list.clientHeight + 2);
+});
 function openBuild(){
   const m = document.getElementById('bmodal');
   renderBuildList(); m.classList.remove('hide');
@@ -1173,10 +1181,7 @@ function draw(){
       ctx.fillStyle = '#3a3226'; ctx.font = '700 11px system-ui'; ctx.textAlign='center';
       ctx.fillText(p.m+' m', p.x, p.y-3);
     } else if (p.type==='finish'){
-      ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(-90, p.y-10, 180, 26);
-      ctx.fillStyle = '#c93b3b'; ctx.fillRect(-84, p.y-6, 168, 18);
-      ctx.fillStyle = '#fff'; ctx.font='800 13px system-ui'; ctx.textAlign='center';
-      ctx.fillText('★ STATION AURORA — ' + GOAL_M + ' m ★', 0, p.y+7);
+      drawFinishGate(p.y);
     } else if (['coal','wood','scrap','food'].includes(p.type) && !p.taken){
       drawRes(p);
     } else if (p.type==='debris' && !p.taken){
@@ -1419,11 +1424,17 @@ function drawDepot(p){
     gb.addColorStop(0, dark); gb.addColorStop(1, mixHex(dark, lit, .22));
     poly([[x-88,y+back],[x+88,y+back],[x+rw,y+ry],[x-rw,y+ry]], gb);
     const glh = ctx.createLinearGradient(x-88, 0, x-rw, 0);
-    glh.addColorStop(0, dark); glh.addColorStop(1, lit);
+    glh.addColorStop(0, mixHex(dark, lit, .38)); glh.addColorStop(1, lit);
     poly([[x-88,y+back],[x-88,y+eave],[x-rw,y+ry]], glh);
     const grh = ctx.createLinearGradient(x+rw, 0, x+88, 0);
-    grh.addColorStop(0, lit); grh.addColorStop(1, mixHex(dark, '#000', .05));
+    grh.addColorStop(0, lit); grh.addColorStop(1, mixHex(dark, lit, .30));
     poly([[x+88,y+back],[x+88,y+eave],[x+rw,y+ry]], grh);
+    /* shingle courses on the far slope */
+    for (let i=1;i<=3;i++){
+      const t = i/4, yy = lerp(y+back, ry, t), hw = lerp(88, rw, t);
+      ctx.strokeStyle = `rgba(0,0,0,${.20-t*.04})`; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(x-hw,yy); ctx.lineTo(x+hw,yy); ctx.stroke();
+    }
     /* shingle courses on the near slope */
     ctx.lineWidth = 1.1;
     for (let i=1;i<=5;i++){
@@ -1450,6 +1461,7 @@ function drawDepot(p){
     ctx.stroke();
     /* ridge and eaves */
     fr(x-rw-3, ry-4, rw*2+6, 8, 4, ridgeC);
+    fr(x-90, y+back-1, 180, 5, 2, mixHex(lit, '#fff2d8', .16));
     ctx.strokeStyle = eaveC; ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(x-89,y+back); ctx.lineTo(x-89,y+eave);
@@ -1457,21 +1469,26 @@ function drawDepot(p){
     fr(x-89, y+eave-3, 178, 6, 3, eaveC);
   } else {
     /* flat tar roof with a parapet, skylight, vent and water tank */
-    const base = mixHex(roof, '#211d1a', .42);
+    const base = mixHex('#3b3d3e', roof, .34);
     fr(x-88, y+back, 176, 80, 3, base);
-    for (let i=0;i<48;i++){
+    for (let i=0;i<52;i++){
       const gx = x-84+rnd()*168, gy = y+back+5+rnd()*70;
-      ctx.fillStyle = i%3 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.10)';
+      ctx.fillStyle = i%3 ? 'rgba(255,255,255,.055)' : 'rgba(0,0,0,.11)';
       ctx.fillRect(gx, gy, 1.7, 1.3);
     }
-    ctx.strokeStyle = 'rgba(0,0,0,.13)'; ctx.lineWidth = 1;
+    // tar seams
+    ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1;
     for (let sy=y+back+16; sy<y+eave; sy+=18){
       ctx.beginPath(); ctx.moveTo(x-84,sy); ctx.lineTo(x+84,sy); ctx.stroke();
     }
-    // parapet
-    ctx.strokeStyle = lit; ctx.lineWidth = 7; rr(x-88, y+back, 176, 80, 3); ctx.stroke();
-    ctx.strokeStyle = eaveC; ctx.lineWidth = 1.6; rr(x-91, y+back-3, 182, 86, 4); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1;
+    // shadow cast by the parapet onto the roof
+    ctx.strokeStyle = 'rgba(0,0,0,.24)'; ctx.lineWidth = 5;
+    rr(x-84, y+back+4, 168, 72, 2); ctx.stroke();
+    // parapet cap
+    ctx.strokeStyle = mixHex(lit, '#d2ccbe', .32); ctx.lineWidth = 6;
+    rr(x-88, y+back, 176, 80, 3); ctx.stroke();
+    ctx.strokeStyle = eaveC; ctx.lineWidth = 1.4; rr(x-91, y+back-3, 182, 86, 4); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.13)'; ctx.lineWidth = 1;
     rr(x-85, y+back+3, 170, 74, 2); ctx.stroke();
     // skylight
     fr(x-70, y-46, 34, 20, 2, '#2c3a44');
@@ -1485,17 +1502,38 @@ function drawDepot(p){
     // vent stack
     fr(x+12, y-50, 12, 12, 2, '#4c545a');
     ctx.fillStyle = '#6d767d'; ctx.fillRect(x+11, y-53, 14, 4);
-    // water tank on legs
-    const tx = x+52, ty = y-34;
-    ctx.strokeStyle = '#3d4448'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(tx-8,ty+8); ctx.lineTo(tx-8,ty+18);
-    ctx.moveTo(tx+8,ty+8); ctx.lineTo(tx+8,ty+18); ctx.stroke();
-    ctx.fillStyle = '#5d666b'; ctx.beginPath(); ctx.arc(tx,ty,11,0,6.3); ctx.fill();
-    ctx.strokeStyle = '#3d4448'; ctx.lineWidth = 1.6; ctx.stroke();
-    ctx.strokeStyle = '#7d878c'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(tx,ty,7.6,0,6.3); ctx.stroke();
-    ctx.fillStyle = '#8b959a'; ctx.beginPath(); ctx.ellipse(tx-3,ty-4,2.8,2.2,-.4,0,6.3); ctx.fill();
-    ctx.fillStyle = '#3a4145'; ctx.beginPath(); ctx.ellipse(tx,ty,3.2,2.6,0,0,6.3); ctx.fill();
+    // water tank on a stand
+    const tx = x+52, ty = y-35;
+    ctx.strokeStyle = '#33383c'; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(tx-13,ty+16); ctx.lineTo(tx-8,ty+5);
+    ctx.moveTo(tx+13,ty+16); ctx.lineTo(tx+8,ty+5);
+    ctx.moveTo(tx,ty+18); ctx.lineTo(tx,ty+6); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,.20)';
+    ctx.beginPath(); ctx.ellipse(tx+2, ty+16, 15, 4.5, 0, 0, 6.3); ctx.fill();
+    ctx.fillStyle = '#596166';
+    ctx.beginPath(); ctx.ellipse(tx,ty,10.5,9.4,0,0,6.3); ctx.fill();
+    ctx.strokeStyle = '#363c40'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = '#7c858a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(tx,ty,7.2,6.4,0,0,6.3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(20,24,26,.45)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(tx,ty+1.5,9.8,8.4,0,.15,3.0); ctx.stroke();
+    ctx.fillStyle = '#8d979c'; ctx.beginPath(); ctx.ellipse(tx-2.6,ty-3.6,2.6,1.9,-.5,0,6.3); ctx.fill();
+    ctx.fillStyle = '#2f3538'; ctx.beginPath(); ctx.ellipse(tx,ty-1,3.1,2.5,0,0,6.3); ctx.fill();
+    ctx.fillStyle = '#454c50'; ctx.fillRect(tx+9, ty+2, 3, 12);
+    // roof hatch
+    fr(x-14, y-40, 24, 17, 2, '#4a5257');
+    ctx.strokeStyle = '#2a3034'; ctx.lineWidth = 1.4; rr(x-14,y-40,24,17,2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x-11,y-38); ctx.lineTo(x+7,y-38); ctx.stroke();
+    // maintenance ladder on the near corner
+    ctx.strokeStyle = '#6e777c'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x-80,y+8); ctx.lineTo(x-80,y+25);
+    ctx.moveTo(x-73,y+8); ctx.lineTo(x-73,y+25); ctx.stroke();
+    ctx.lineWidth = 1.1;
+    for (let ly=y+10; ly<y+25; ly+=4){
+      ctx.beginPath(); ctx.moveTo(x-80,ly); ctx.lineTo(x-73,ly); ctx.stroke();
+    }
   }
 
   /* shade under the front eave so the wall sits back */
@@ -1784,7 +1822,7 @@ function drawPlayer(x,y,dir,atkT){
   ctx.strokeStyle = 'rgba(160,190,225,.38)'; ctx.lineWidth = 1.1;
   ctx.beginPath(); ctx.arc(0,-7.4, 5.2, Math.PI*1.16, Math.PI*1.84); ctx.stroke();
   ctx.fillStyle = '#d9ae85';
-  ctx.beginPath(); ctx.arc(-5.3,-6.4, 1.5, 0, 6.3); ctx.arc(5.3,-6.4, 1.5, 0, 6.3); ctx.fill();
+  ctx.beginPath(); ctx.arc(-5.0,-6.6, 1.15, 0, 6.3); ctx.arc(5.0,-6.6, 1.15, 0, 6.3); ctx.fill();
   ctx.fillStyle = '#232a33';
   ctx.beginPath(); ctx.arc(-1.9,-8.7, 1.0, 0, 6.3); ctx.arc(1.9,-8.7, 1.0, 0, 6.3); ctx.fill();
   ctx.fillStyle = 'rgba(255,248,232,.6)';
@@ -1820,80 +1858,103 @@ function drawZombie(z){
 
   /* dragging feet */
   ctx.fillStyle = '#2d2822';
-  rr(-6.2, 4+gait*.5, 5.4, 7.5, 2); ctx.fill();
-  rr(1, 4-gait*.5, 5.4, 7.5, 2); ctx.fill();
+  rr(-6.0, 7.2+gait*.5, 5.2, 7.2, 2); ctx.fill();
+  rr(0.8, 7.2-gait*.5, 5.2, 7.2, 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.08)';
+  ctx.fillRect(-5.5, 8.6+gait*.5, 4.2, 1);
+  ctx.fillRect(1.3, 8.6-gait*.5, 4.2, 1);
 
   /* arms */
   const arm = (sx, ex, ey, bx, by)=>{
-    ctx.strokeStyle = z.shirt; ctx.lineWidth = 4.4;
-    ctx.beginPath(); ctx.moveTo(sx,-1.5); ctx.quadraticCurveTo(bx,by,ex,ey); ctx.stroke();
+    ctx.strokeStyle = z.shirt; ctx.lineWidth = 4.2;
+    ctx.beginPath(); ctx.moveTo(sx,-3); ctx.quadraticCurveTo(bx,by,ex,ey); ctx.stroke();
     ctx.fillStyle = z.skin;
     ctx.beginPath(); ctx.arc(ex,ey,2.2,0,6.3); ctx.fill();
     ctx.strokeStyle = 'rgba(60,20,20,.5)'; ctx.lineWidth = .9;
     ctx.beginPath(); ctx.moveTo(ex-1,ey-1); ctx.lineTo(ex-2.4,ey-2.2); ctx.stroke();
   };
   if (z.v === 2){
-    arm(-6.6, -8.6-lunge, -11.4, -9.4, -7.2);
-    arm(6.6, 8.6+lunge, -11.4, 9.4, -7.2);
+    arm(-6.2, -8.4-lunge, -12.2, -9.2, -8.2);
+    arm(6.2, 8.4+lunge, -12.2, 9.2, -8.2);
   } else if (z.v === 1){
-    arm(-6.2, -4.4-lunge*.5, -13.4, -8.4, -8);
-    arm(6.2, 4.4+lunge*.5, -13.4, 8.4, -8);
+    arm(-6.0, -3.8-lunge*.5, -14.2, -8.2, -9);
+    arm(6.0, 3.8+lunge*.5, -14.2, 8.2, -9);
   } else {
-    if (!z.arm) arm(-6.2, -8.2, 5.5, -9.2, .5);
-    arm(6.2, 4.2+lunge*.6, -12.8, 8.6, -7.6);
+    if (!z.arm) arm(-6.0, -8.6, 3.2, -9.2, -1.2);
+    arm(6.0, 3.6+lunge*.6, -13.6, 8.4, -8.6);
   }
 
-  /* torso */
+  /* torso: narrow, hunched, torn */
   ctx.fillStyle = z.shirt;
-  ctx.beginPath(); ctx.ellipse(0,0,7.3,9.6,0,0,6.3); ctx.fill();
-  ctx.strokeStyle = shade(z.shirt,-.35); ctx.lineWidth = 1.4; ctx.stroke();
-  ctx.fillStyle = 'rgba(72,18,16,.42)';
-  ctx.beginPath(); ctx.ellipse(2.2,1.6,3,4,0,0,6.3); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-3.4,-4.5,2,2.6,0,0,6.3); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0,0.6,6.8,8.8,0,0,6.3); ctx.fill();
+  ctx.strokeStyle = shade(z.shirt,-.38); ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.fillStyle = shade(z.shirt,.10);
+  ctx.beginPath(); ctx.ellipse(-1.6,-3.6,4.2,3.2,-.3,0,6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(72,18,16,.40)';
+  ctx.beginPath(); ctx.ellipse(2.2,1.8,2.4,3.2,0,0,6.3); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-3.2,-4.4,1.7,2.2,0,0,6.3); ctx.fill();
   if (z.v !== 2){
-    ctx.strokeStyle = 'rgba(226,218,184,.42)'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(-4,-1.2); ctx.lineTo(3.5,-1.2);
-    ctx.moveTo(-3.4,1.8); ctx.lineTo(3,1.8); ctx.stroke();
+    ctx.strokeStyle = 'rgba(226,218,184,.40)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-3.7,-1.2); ctx.lineTo(3.2,-1.2);
+    ctx.moveTo(-3.2,1.6); ctx.lineTo(2.8,1.6); ctx.stroke();
   } else {
-    ctx.strokeStyle = 'rgba(226,218,184,.30)'; ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.moveTo(-4.5,-2); ctx.lineTo(4,-2);
-    ctx.moveTo(-3.6,1.2); ctx.lineTo(3.6,1.2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(226,218,184,.28)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(-4.2,-2); ctx.lineTo(3.6,-2);
+    ctx.moveTo(-3.4,1.1); ctx.lineTo(3.4,1.1); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.10)';
-    ctx.beginPath(); ctx.arc(-4.8,-5.4,2.4,0,6.3); ctx.fill();
+    ctx.beginPath(); ctx.arc(-4.2,-5,2.2,0,6.3); ctx.fill();
+  }
+  /* ragged shirt hem */
+  ctx.fillStyle = z.shirt;
+  ctx.beginPath();
+  ctx.moveTo(-6.2,6.2); ctx.lineTo(-4.6,10.2); ctx.lineTo(-2.6,7.4);
+  ctx.lineTo(-0.6,10.6); ctx.lineTo(1.4,7.6); ctx.lineTo(3.4,10.2);
+  ctx.lineTo(5.0,7.2); ctx.lineTo(6.4,9.0); ctx.lineTo(6.4,5.4);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = shade(z.shirt,-.38); ctx.lineWidth = 1.2; ctx.stroke();
+
+  /* shoulders */
+  for (const sd of [-1,1]){
+    ctx.fillStyle = shade(z.shirt,.05);
+    ctx.beginPath(); ctx.arc(sd*6.0,-3.2, 2.7, 0, 6.3); ctx.fill();
+    ctx.strokeStyle = shade(z.shirt,-.34); ctx.lineWidth = 1; ctx.stroke();
   }
 
   /* wounds from recent hits */
   const wounds = (z.maxHp || 3) - z.hp;
   ctx.strokeStyle = 'rgba(120,24,20,.85)'; ctx.lineWidth = 1.6;
   for (let i=0;i<Math.min(3,wounds);i++){
-    const wy = -4 + i*3.4;
-    ctx.beginPath(); ctx.moveTo(-4.4,wy); ctx.lineTo(1.6,wy+2); ctx.stroke();
+    const wy = -3.4 + i*3.2;
+    ctx.beginPath(); ctx.moveTo(-4.0,wy); ctx.lineTo(1.4,wy+1.8); ctx.stroke();
   }
 
   /* head */
   ctx.fillStyle = z.skin;
-  ctx.beginPath(); ctx.arc(0,-9.4,5.7,0,6.3); ctx.fill();
-  ctx.strokeStyle = shade(z.skin,-.34); ctx.lineWidth = 1.2; ctx.stroke();
-  ctx.fillStyle = shade(z.skin,.05);
-  ctx.beginPath(); ctx.ellipse(0,-6.5,3.5,2.3,0,0,6.3); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,-9.8,5.9,0,6.3); ctx.fill();
+  ctx.strokeStyle = shade(z.skin,-.36); ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = shade(z.skin,.08);
+  ctx.beginPath(); ctx.ellipse(0,-12.6,3.4,2.6,0,0,6.3); ctx.fill();
+  ctx.fillStyle = shade(z.skin,-.12);
+  ctx.beginPath(); ctx.ellipse(0,-6.4,3.8,2.2,0,0,6.3); ctx.fill();
   ctx.fillStyle = '#2a1917';
-  ctx.beginPath(); ctx.ellipse(0,-7.2,2.2,1.2,0,0,6.3); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0,-8.4,2.3,1.3,0,0,6.3); ctx.fill();
   ctx.fillStyle = '#d8d0b4';
-  ctx.beginPath(); ctx.arc(-1.2,-7.2,.5,0,6.3); ctx.arc(1.1,-7.2,.5,0,6.3); ctx.fill();
+  ctx.beginPath(); ctx.arc(-1.2,-8.4,.5,0,6.3); ctx.arc(1.1,-8.4,.5,0,6.3); ctx.fill();
   // sunken glowing eyes
   ctx.fillStyle = z.eye;
-  ctx.beginPath(); ctx.arc(-2,-11,1.15,0,6.3); ctx.arc(2,-11,1.15,0,6.3); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,220,.75)';
-  ctx.beginPath(); ctx.arc(-2.3,-11.3,.4,0,6.3); ctx.arc(1.7,-11.3,.4,0,6.3); ctx.fill();
-  // straggly hair
+  ctx.beginPath(); ctx.arc(-2.05,-11.5,1.2,0,6.3); ctx.arc(2.05,-11.5,1.2,0,6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,220,.72)';
+  ctx.beginPath(); ctx.arc(-2.35,-11.8,.4,0,6.3); ctx.arc(1.75,-11.8,.4,0,6.3); ctx.fill();
+  // straggly hair at the sides
   ctx.strokeStyle = '#2a221c'; ctx.lineWidth = 1.2;
-  for (let i=-2;i<=2;i++){
-    ctx.beginPath(); ctx.moveTo(i*2.1,-13.6);
-    ctx.lineTo(i*2.6 + Math.sin(t*3+i)*1.2, -16.2); ctx.stroke();
+  for (let i=0;i<4;i++){
+    const sd = i%2 ? 1 : -1, yy = -7.4 - (i>>1)*2.4;
+    ctx.beginPath(); ctx.moveTo(sd*4.6, yy);
+    ctx.lineTo(sd*(6.8+Math.sin(t*3+i)*.8), yy-1.6); ctx.stroke();
   }
   // blood at the mouth
-  ctx.fillStyle = 'rgba(130,24,20,.65)';
-  ctx.beginPath(); ctx.arc(-1.6,-5.4,.8,0,6.3); ctx.arc(1.4,-5.1,.7,0,6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(130,24,20,.62)';
+  ctx.beginPath(); ctx.arc(-1.5,-7.1,.8,0,6.3); ctx.arc(1.3,-6.9,.7,0,6.3); ctx.fill();
 
   if (z.flash > 0){
     ctx.globalAlpha = Math.min(1, z.flash*4);
@@ -2073,6 +2134,46 @@ function drawCart(s, ty){
     ctx.arc(-17,y1-8,1.8,0,6.3); ctx.arc(17,y1-8,1.8,0,6.3); ctx.fill();
   }
 }
+function drawFinishGate(gy){
+  const postH = 54, bw = 92;
+  // ground shadow of the arch
+  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  ctx.beginPath(); ctx.ellipse(0, gy+10, 92, 15, 0, 0, 6.3); ctx.fill();
+  // checkered threshold on the ground
+  for (let i=0;i<10;i++){
+    for (let j=0;j<2;j++){
+      ctx.fillStyle = (i+j)%2 ? '#efe6d2' : '#b23a34';
+      ctx.fillRect(-45+i*9, gy-9+j*7, 9, 7);
+    }
+  }
+  // posts
+  for (const sx of [-1,1]){
+    fr(sx*bw-7, gy-postH, 14, postH+8, 3, '#464c52');
+    ctx.strokeStyle = '#23272b'; ctx.lineWidth = 1.6; rr(sx*bw-7, gy-postH, 14, postH+8, 3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx*bw-3, gy-postH+4); ctx.lineTo(sx*bw-3, gy+2); ctx.stroke();
+    // rivets
+    ctx.fillStyle = 'rgba(255,255,255,.22)';
+    for (let ry = gy-postH+10; ry < gy+2; ry += 12) ctx.fillRect(sx*bw-1.2, ry, 2.4, 2.4);
+    // lamp
+    ctx.fillStyle = 'rgba(255,222,140,.20)';
+    ctx.beginPath(); ctx.arc(sx*bw, gy-postH-2, 10, 0, 6.3); ctx.fill();
+    ctx.fillStyle = '#ffe6a6'; ctx.beginPath(); ctx.arc(sx*bw, gy-postH-2, 4, 0, 6.3); ctx.fill();
+    ctx.strokeStyle = '#8a6a2a'; ctx.lineWidth = 1.2; ctx.stroke();
+  }
+  // crossbeam + painted banner
+  fr(-bw-6, gy-postH-32, bw*2+12, 34, 4, '#3b4147');
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 1.6; rr(-bw-6, gy-postH-32, bw*2+12, 34, 4); ctx.stroke();
+  ctx.fillStyle = '#b3382f'; ctx.fillRect(-bw+4, gy-postH-28, bw*2-8, 26);
+  ctx.strokeStyle = '#e7c469'; ctx.lineWidth = 1.4;
+  ctx.strokeRect(-bw+5.5, gy-postH-26.5, bw*2-11, 23);
+  ctx.fillStyle = '#f7e7c2'; ctx.font = '800 12px system-ui'; ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('★ STATION AURORA ★', 0, gy-postH-17);
+  ctx.fillStyle = 'rgba(255,235,190,.92)'; ctx.font = '700 8px system-ui';
+  ctx.fillText(GOAL_M + ' METRES', 0, gy-postH-7.5);
+  ctx.textBaseline = 'alphabetic';
+}
 function drawTrain(){
   const t = S.train, L = trainLen();
   ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-28, t.y-8, 56, L+16);
@@ -2145,7 +2246,7 @@ function showOverlay(kind){
       <p style="color:#f3c14b;font-weight:700">Drive the loot train to Station Aurora</p>
       <p>The train burns fuel as it rolls. <b>STOP</b>, hop off and forage
       coal · wood · food · scrap. The infected wait at every depot — and debris
-      blocks the rails.</p>
+      on the rails batters your fuel tank unless you fit a plow.</p>
       <p>Walk around your train <b>even while it rolls</b>. Open <b>BUILD</b> to
       bolt on your workshop (you start with the parts). Then stand inside it to
       add cars: plow, bunker, greenhouse, turret, infirmary.</p>
@@ -2174,6 +2275,9 @@ function showOverlay(kind){
       <button id="go" style="margin-top:14px">TRY AGAIN</button>`;
   }
   closeBuild();
+  document.getElementById('bioBanner')?.classList.remove('show'); S.biomeT = 0;
+  const _t = document.getElementById('toast');
+  if (_t){ _t.style.opacity = 0; } S.toastT = 0;
   ov.classList.remove('hide');
   $('go').onclick = () => { reset(); ov.classList.add('hide'); };
 }
