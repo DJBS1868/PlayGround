@@ -27,7 +27,21 @@
   #inv{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap}
   .chip{font-size:11px;font-weight:700;color:#e8e0c8;background:rgba(10,14,10,.62);border:1px solid #2c3a2c;
     border-radius:12px;padding:3px 8px}
-  #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 66px);transform:translateX(-50%);
+  #biomeHud{margin-top:5px;display:flex;gap:7px;align-items:center;font-size:9.5px;font-weight:800;
+    letter-spacing:.6px;color:#9aa288;text-shadow:0 1px 2px #000}
+  #hudBiome{color:#ffe9b0;background:rgba(10,14,10,.62);border:1px solid #2c3a2c;border-radius:12px;
+    padding:2px 8px;white-space:nowrap}
+  #hudNext{white-space:nowrap}
+  #bioBanner{position:fixed;left:50%;top:30%;transform:translate(-50%,-10px);z-index:8;pointer-events:none;
+    display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0;
+    transition:opacity .55s ease,transform .55s ease;text-align:center;
+    background:rgba(8,12,8,.6);border:1px solid rgba(243,193,75,.4);border-radius:16px;
+    padding:10px 22px;backdrop-filter:blur(4px)}
+  #bioBanner.show{opacity:1;transform:translate(-50%,0)}
+  #bioIcon{font-size:24px;line-height:1.1}
+  #bioTitle{font-size:15px;font-weight:900;letter-spacing:2.5px;color:#ffe9b0}
+  #bioSub{font-size:8.5px;font-weight:800;letter-spacing:1.4px;color:#9aa288}
+  #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 92px);transform:translateX(-50%);
     background:rgba(12,16,12,.85);border:1px solid #3c4a3c;color:#ffe9b0;font-size:13px;font-weight:700;
     padding:8px 14px;border-radius:14px;opacity:0;transition:opacity .25s;z-index:9;pointer-events:none;
     max-width:80vw;text-align:center}
@@ -113,11 +127,13 @@
   <div id="bars">
     <div class="bar"><i>⛽</i><div class="t"><div class="f" id="fuelF"></div></div><b id="fuelN">0</b></div>
     <div class="bar"><i>❤️</i><div class="t"><div class="f" id="hpF"></div></div><b id="hpN">0</b></div>
-    <div id="dist">0 / 3000 m</div>
+    <div id="dist">0 / 5000 m</div>
   </div>
   <div id="inv"></div>
+  <div id="biomeHud"><span id="hudBiome">🌲 GREEN VALLEY</span><span id="hudNext">→ 1000 m</span></div>
 </div>
 <div id="toast"></div>
+<div id="bioBanner"><span id="bioIcon">🌲</span><span id="bioTitle">GREEN VALLEY</span><span id="bioSub"></span></div>
 
 <div id="btns">
   <button class="gbtn" id="bTrain"><em>🚂</em><span>STOP</span></button>
@@ -141,7 +157,7 @@
 /* =========================================================
    IRON HAUL v2 — mobile top-down train survival (single file)
    World: +x east, +y south. Train drives NORTH (y decreases).
-   10 px = 1 meter. Goal: reach 3000 m.
+   10 px = 1 meter. Goal: reach 5000 m through five blended biomes.
    v2: cart building, on-deck walking, per-cart functions.
    ========================================================= */
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -155,10 +171,11 @@ function resize(){
 window.addEventListener('resize', resize); resize();
 
 /* ---------- constants ---------- */
-const PPM = 10, GOAL_M = 3000;
+const PPM = 10, GOAL_M = 5000;
 const TRAIN_SPD = 105, FUEL_DRAIN = 1.5, PLAYER_SPD = 170;
 const CHUNK = 420;
 const LOCO_LEN = 150, CART_LEN = 62, COUP = 10, TENDER0 = 160;
+const BIOME_M = 1000, BIOME_W = 150;
 
 /* ---------- cart catalogue ---------- */
 const CART_DEFS = {
@@ -170,6 +187,61 @@ const CART_DEFS = {
   medic:    { name:'INFIRMARY',  icon:'⛑️', cost:{ wood:6, scrap:4, food:2 },    desc:'Heals you while you stand on it.' },
 };
 
+/* ---------- biomes ---------- */
+const BIOMES = [
+  { id:'valley', name:'GREEN VALLEY', icon:'🌲',
+    ground:[34,47,28], bed:[45,42,34], tie:[35,30,24],
+    grass:'#3e5a30', trunk:'#4a3a26', crown:'#376831', crown2:'#2f5a2a',
+    rock:'#565a5e', patch:[[44,60,32,.55],[52,68,36,.45]],
+    depot:'#6b5a44', accent:'#b8e0a0', wash:[40,90,40,.035] },
+  { id:'desert', name:'SUNSCORCHED BADLANDS', icon:'🌵',
+    ground:[84,61,36], bed:[70,53,35], tie:[48,37,26],
+    grass:'#9c8450', trunk:'#6b4a2e', crown:'#8a7a4a', crown2:'#6b5e38',
+    rock:'#8d6a46', patch:[[112,82,46,.45],[96,70,40,.5]],
+    depot:'#8a6a44', accent:'#f0c27a', wash:[255,160,60,.055] },
+  { id:'frozen', name:'FROZEN EXPANSE', icon:'❄️',
+    ground:[58,76,90], bed:[54,66,76], tie:[44,52,60],
+    grass:'#a8c8d6', trunk:'#4a4038', crown:'#2d5a50', crown2:'#dfeaf0',
+    rock:'#93aab8', patch:[[150,172,186,.34],[122,146,164,.30]],
+    depot:'#5a6a72', accent:'#cfeaf7', wash:[160,210,255,.075] },
+  { id:'swamp', name:'BLACKWATER MIRE', icon:'🌿',
+    ground:[28,50,42], bed:[41,46,38], tie:[31,34,28],
+    grass:'#4a7a5a', trunk:'#3e4a32', crown:'#4f7040', crown2:'#6a8a52',
+    rock:'#4a5a50', patch:[[34,64,54,.55],[44,78,62,.45]],
+    depot:'#4a5a48', accent:'#8fd3a8', wash:[50,170,120,.05] },
+  { id:'ash', name:'ASHEN WASTES', icon:'🔥',
+    ground:[42,35,35], bed:[46,39,37], tie:[32,28,27],
+    grass:'#6a5050', trunk:'#3a2e2c', crown:'#4a3a38', crown2:'#2a2220',
+    rock:'#4a4040', patch:[[58,44,42,.55],[76,50,46,.42]],
+    depot:'#4a3a36', accent:'#ff9a5a', wash:[255,80,30,.06] },
+];
+function smoothstep(t){ t = clamp(t,0,1); return t*t*(3-2*t); }
+function mix3(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+function biomeMix(y){
+  const m = clamp(-y/PPM, 0, GOAL_M);
+  for (let b = 1; b < BIOMES.length; b++){
+    const edge = b*BIOME_M;
+    if (m > edge - BIOME_W/2 && m < edge + BIOME_W/2)
+      return { a:b-1, b, t:smoothstep((m - (edge - BIOME_W/2)) / BIOME_W) };
+  }
+  return { a:clamp(Math.floor(m/BIOME_M),0,BIOMES.length-1), b:0, t:0 };
+}
+function biomeIdxAt(y){ const m = biomeMix(y); return m.t >= .5 ? m.b : m.a; }
+function pickBiomeIdx(y, rnd){
+  const m = biomeMix(y);
+  return (m.t > 0 && rnd() < m.t) ? m.b : m.a;
+}
+function biomeRgbAt(y){
+  const m = biomeMix(y);
+  return m.t ? mix3(BIOMES[m.a].ground, BIOMES[m.b].ground, m.t) : BIOMES[m.a].ground;
+}
+function biomeWashAt(y){
+  const m = biomeMix(y), A = BIOMES[m.a].wash, B = BIOMES[m.b].wash, t = m.t;
+  return [A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, A[2]+(B[2]-A[2])*t, A[3]+(B[3]-A[3])*t];
+}
+function rgbCss(c,a){ return a === undefined
+  ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`; }
+
 /* ---------- state ---------- */
 const S = {
   mode: 'title', t: 0,
@@ -179,6 +251,7 @@ const S = {
             dir: -Math.PI/2, atkT: 0, hurtT: 0 },
   cam: { x: 0, y: 0 }, focusF: .6,
   zombies: [], parts: [], texts: [], smoke: [], beams: [],
+  amb: [], biomeIdx: 0, biomeT: 0,
   joy: { active: false, id: -1, bx: 0, by: 0, dx: 0, dy: 0 },
   keys: {},
   hitFlash: 0, shake: 0, toastT: 0,
@@ -237,52 +310,140 @@ function puff(x,y,c,n=6,spd=60){ for(let i=0;i<n;i++){const a=Math.random()*6.28
   S.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:.5+Math.random()*.4,c:typeof c==='string'?c:c()}); } }
 function addText(x,y,txt,c){ S.texts.push({x,y,txt,c,t:1}); }
 
+/* ---------- biome atmosphere ---------- */
+function showBiomeBanner(i){
+  const el = document.getElementById('bioBanner');
+  if (!el) return;
+  document.getElementById('bioIcon').textContent = BIOMES[i].icon;
+  document.getElementById('bioTitle').textContent = BIOMES[i].name;
+  document.getElementById('bioSub').textContent =
+    'BIOME ' + (i+1) + ' OF ' + BIOMES.length + '  ·  ' + (i*BIOME_M) + ' m';
+  el.classList.add('show');
+  S.biomeT = 3.6;
+}
+function ambientUpdate(dt){
+  const bi = biomeIdxAt(S.cam.y);
+  const rate = [9, 16, 52, 12, 26][bi];
+  if (S.amb.length < 150 && Math.random() < rate*dt){
+    const p = { bi, t:2+Math.random()*2.4, r:1.2+Math.random()*2, wob:Math.random()*6.28 };
+    p.tt = p.t;
+    p.x = S.cam.x + (Math.random()*2-1)*W*0.8;
+    p.y = S.cam.y + (Math.random()*2-1)*H*0.65;
+    if (bi === 2){ // snow falls from above
+      p.y = S.cam.y - H*0.62;
+      p.vx = -6 + Math.random()*12; p.vy = 45 + Math.random()*50;
+      p.c = 'rgba(232,246,255,.88)';
+    } else if (bi === 1){ // desert dust
+      p.vx = 36 + Math.random()*46; p.vy = -6 + Math.random()*18;
+      p.c = 'rgba(226,196,138,.5)';
+    } else if (bi === 4){ // rising embers
+      p.y = S.cam.y + H*0.45 + Math.random()*H*0.2;
+      p.vx = -12 + Math.random()*24; p.vy = -30 - Math.random()*40;
+      p.c = 'rgba(255,140,60,.85)';
+    } else if (bi === 3){ // swamp spores
+      p.vx = -8 + Math.random()*16; p.vy = -8 + Math.random()*16;
+      p.c = 'rgba(160,230,180,.55)';
+    } else { // valley leaves
+      p.vx = 8 + Math.random()*24; p.vy = 22 + Math.random()*32;
+      p.c = 'rgba(150,190,110,.7)';
+    }
+    S.amb.push(p);
+  }
+  for (let i = S.amb.length-1; i >= 0; i--){
+    const p = S.amb[i]; p.t -= dt;
+    if (p.t <= 0){ S.amb.splice(i,1); continue; }
+    p.x += (p.vx + Math.sin(S.t*2 + p.wob)*10)*dt;
+    p.y += p.vy*dt;
+  }
+}
+
 /* ---------- world generation ---------- */
 const chunks = new Map();
+const COLLECT_TYPES = { coal:1, wood:1, scrap:1, food:1, tree:1 };
+const BIOME_RES = [
+  [['tree',30],['grass',9],['coal',15],['wood',14],['scrap',13],['food',9],['rock',10]],
+  [['tree',7],['grass',5],['coal',21],['wood',8],['scrap',23],['food',10],['rock',26]],
+  [['tree',26],['grass',6],['coal',16],['wood',12],['scrap',14],['food',10],['rock',16]],
+  [['tree',24],['grass',8],['coal',8],['wood',16],['scrap',14],['food',15],['rock',15]],
+  [['tree',7],['grass',4],['coal',25],['wood',7],['scrap',25],['food',6],['rock',26]],
+];
+const BIOME_DECOR = [
+  ['grass','grass','grass','rock'],
+  ['drybush','cactus','rock','cactus'],
+  ['snowdrift','snowdrift','iceberg','rock'],
+  ['reed','reed','pool','grass'],
+  ['ashpile','crack','rock','obsidian'],
+];
+const BIOME_LANDMARK = ['tree','mesa','iceberg','pool','crack'];
+const BIOME_DEPOT = [
+  ['scrap','food','coal','wood'], ['scrap','food','coal','wood'],
+  ['coal','food','scrap','wood'], ['food','wood','scrap','coal'], ['coal','scrap','wood','food'],
+];
+function pickWeighted(list, roll){
+  let total = 0; for (const e of list) total += e[1];
+  let v = roll * total;
+  for (const e of list){ v -= e[1]; if (v <= 0) return e[0]; }
+  return list[list.length-1][0];
+}
 function genChunk(ci){
   const r = mul32(9176 + ci * 7919);
   const list = [];
   const y0 = ci * CHUNK, y1 = y0 + CHUNK;
   for (let i = 0; i < 5; i++)
-    list.push({ type:'patch', x:(r()*2-1)*520, y:y0+r()*CHUNK, s:26+r()*46, tone:r() });
+    list.push({ type:'patch', x:(r()*2-1)*540, y:y0+r()*CHUNK, s:28+r()*52, tone:r() });
   const depth = clamp(Math.abs(y0) / (GOAL_M*PPM), 0, 1);
   const station = ci % 4 === 0;
   if (station){
     const side = (ci/4|0) % 2 === 0 ? -1 : 1;
     const bx = side * 185, by = y0 + 40 + r()*(CHUNK-140);
     list.push({ type:'depot', x:bx, y:by });
+    const kinds = BIOME_DEPOT[biomeIdxAt(by)];
     for (let i = 0; i < 3; i++){
       const a = r()*6.28, d = 100 + r()*70;
-      const kinds = ['scrap','food','coal','wood'];
       list.push({ type:kinds[(r()*kinds.length)|0], x:bx+Math.cos(a)*d, y:by+Math.sin(a)*d,
         amt: 1 + (r()*2|0) });
     }
     list.push({ type:'zs', x:bx+side*60, y:by+90, n: 2 + Math.round(depth*3) + (r()*2|0) });
   }
-  const nRes = 4 + (r()*4|0);
+  const nRes = 5 + (r()*4|0);
   for (let i = 0; i < nRes; i++){
-    const roll = r();
-    let type = 'grass';
-    if (roll < .30) type = 'tree';
-    else if (roll < .44) type = 'coal';
-    else if (roll < .58) type = 'wood';
-    else if (roll < .72) type = 'scrap';
-    else if (roll < .80) type = 'food';
-    else if (roll < .88) type = 'rock';
-    let x = (r()*2-1)*480;
-    if (Math.abs(x) < 75) x += x < 0 ? -80 : 80;
-    list.push({ type, x, y: y0 + r()*CHUNK, amt: 1 + (r()*3|0), s: r() });
+    const y = y0 + r()*CHUNK;
+    const bi = pickBiomeIdx(y, r);
+    const type = pickWeighted(BIOME_RES[bi], r());
+    let x = (r()*2-1)*500;
+    if (Math.abs(x) < 70) x += x < 0 ? -85 : 85;
+    const p = { type, x, y, s:r(), tone:r() };
+    if (COLLECT_TYPES[type]) p.amt = 1 + (r()*3|0);
+    list.push(p);
   }
-  for (let i = 0; i < 8; i++){
-    let x = (r()*2-1)*500; if (Math.abs(x) < 60) x += 70*(x<0?-1:1);
-    list.push({ type:'grass', x, y:y0+r()*CHUNK, s:r() });
+  // biome-flavoured scenery
+  for (let i = 0; i < 10; i++){
+    const y = y0 + r()*CHUNK;
+    const bi = pickBiomeIdx(y, r);
+    const table = BIOME_DECOR[bi];
+    const type = table[(r()*table.length)|0];
+    let x = (r()*2-1)*530;
+    if (Math.abs(x) < 58) x += x < 0 ? -72 : 72;
+    const p = { type, x, y, s:r(), tone:r(), rot:(r()*2-1)*.6 };
+    if (COLLECT_TYPES[type]) p.amt = 1 + (r()*2|0);
+    list.push(p);
+  }
+  // occasional large landmark
+  if (r() < .58){
+    const y = y0 + 40 + r()*(CHUNK-80);
+    const bi = biomeIdxAt(y);
+    const type = BIOME_LANDMARK[bi];
+    const p = { type, x:(r()<.5?-1:1)*(130+r()*220), y, s:.75+r()*.7,
+      tone:r(), rot:(r()*2-1)*.5 };
+    if (type === 'tree') p.amt = 2 + (r()*2|0);
+    list.push(p);
   }
   // track debris (logs / rock piles on the rails)
   if (r() < .24 && ci < -8){
     list.push({ type:'debris', kind: r()<.5?'log':'rocks', x:0, y:y0 + 30 + r()*(CHUNK-60),
       hp:2, amt: 1 + (r()*2|0) });
   }
-  for (let m = Math.max(1, Math.ceil(-y1/(100*PPM))); m*100*PPM <= -y0 && m <= GOAL_M/100; m++){
+  for (let m = Math.max(1, Math.ceil(-y1/(100*PPM))); m*100*PPM <= -y0 && m*100 < GOAL_M; m++){
     list.push({ type:'sign', x: (m%2? -1:1)*64, y: -m*100*PPM, m: m*100 });
   }
   if (y0 <= -GOAL_M*PPM && y1 >= -GOAL_M*PPM) list.push({ type:'finish', x:0, y:-GOAL_M*PPM });
@@ -513,6 +674,10 @@ function blocked(x,y){
   for (const p of propsInView(y, 260)){
     if (p.type==='tree' && !p.taken && Math.hypot(x-p.x,y-p.y) < 31) return true;
     if (p.type==='rock' && Math.hypot(x-p.x,y-p.y) < 29) return true;
+    if (p.type==='cactus' && Math.hypot(x-p.x,y-p.y) < 16) return true;
+    if (p.type==='obsidian'){ const k = .8 + p.s*.5; if (Math.hypot(x-p.x,y-p.y) < 12*k) return true; }
+    if (p.type==='iceberg'){ const k = .7 + p.s*.8; if (Math.hypot(x-p.x,y-p.y) < 20*k) return true; }
+    if (p.type==='mesa'){ const k = .8 + p.s*.8; if (Math.abs(x-p.x) < 46*k && Math.abs(y-p.y) < 34*k) return true; }
     if (p.type==='debris' && !p.taken && Math.abs(x-p.x)<20 && Math.abs(y-p.y)<16) return true;
     if (p.type==='depot' && x>p.x-75&&x<p.x+75&&y>p.y-52&&y<p.y+52) return true;
   }
@@ -523,7 +688,16 @@ function update(dt){
   S.hitFlash = Math.max(0, S.hitFlash - dt*2.4);
   S.shake = Math.max(0, S.shake - dt*2.2);
   if (S.toastT > 0){ S.toastT -= dt; if (S.toastT <= 0) document.getElementById('toast').style.opacity = 0; }
+  if (S.biomeT > 0){
+    S.biomeT -= dt;
+    if (S.biomeT <= 0) document.getElementById('bioBanner')?.classList.remove('show');
+  }
   const p = S.player, t = S.train;
+
+  // announce each new biome as the locomotive crosses its boundary
+  const biNow = biomeIdxAt(t.y);
+  if (S.mode === 'play' && biNow > S.biomeIdx){ S.biomeIdx = biNow; showBiomeBanner(biNow); }
+  else if (biNow < S.biomeIdx) S.biomeIdx = biNow;
 
   /* ----- train motion + track debris ----- */
   if (t.moving && t.fuel > 0){
@@ -647,6 +821,7 @@ function update(dt){
   for (let i = S.beams.length-1; i >= 0; i--){ S.beams[i].t -= dt;
     if (S.beams[i].t <= 0) S.beams.splice(i,1); }
 
+  ambientUpdate(dt);
   uiSync();
 }
 
@@ -655,6 +830,234 @@ function rr(x,y,w,h,r){ ctx.beginPath();
   ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function fr(x,y,w,h,r,c){ ctx.fillStyle=c; rr(x,y,w,h,r); ctx.fill(); }
+
+const GROUND_DECOR = { grass:1, pool:1, snowdrift:1, crack:1, ashpile:1, drybush:1, reed:1 };
+function biomeColorCssAt(y, field){
+  const m = biomeMix(y);
+  return m.t ? rgbCss(mix3(BIOMES[m.a][field], BIOMES[m.b][field], m.t)) : rgbCss(BIOMES[m.a][field]);
+}
+function biomeGradient(field, y0, y1, n){
+  const g = ctx.createLinearGradient(0, y0, 0, y1);
+  for (let i = 0; i <= n; i++){
+    const y = y0 + (y1 - y0) * i / n;
+    g.addColorStop(i/n, biomeColorCssAt(y, field));
+  }
+  return g;
+}
+function propBiome(p){ return BIOMES[biomeIdxAt(p.y)]; }
+
+function drawGrassProp(p){
+  const B = propBiome(p), x = p.x, y = p.y, s = p.s;
+  ctx.save();
+  ctx.strokeStyle = B.grass; ctx.lineWidth = 2;
+  if (B.id === 'swamp'){
+    ctx.lineWidth = 2.2;
+    for (let i = -1; i <= 1; i++){
+      const h = 12 + s*14;
+      ctx.beginPath(); ctx.moveTo(x+i*4,y);
+      ctx.quadraticCurveTo(x+i*4+(i?i*7:2), y-h*.6, x+i*4+i*3, y-h); ctx.stroke();
+    }
+  } else if (B.id === 'desert'){
+    for (let i = -1; i <= 1; i++){
+      ctx.beginPath(); ctx.moveTo(x+i*4,y);
+      ctx.lineTo(x+i*5+(i===0?3:0), y-7-s*7); ctx.stroke();
+    }
+  } else if (B.id === 'frozen'){
+    ctx.strokeStyle = 'rgba(220,240,250,.78)';
+    for (let i = -1; i <= 1; i++){
+      ctx.beginPath(); ctx.moveTo(x+i*4,y);
+      ctx.lineTo(x+i*4+(s-.5)*5, y-7-s*5); ctx.stroke();
+    }
+  } else {
+    for (let i = -1; i <= 1; i++){
+      ctx.beginPath(); ctx.moveTo(x+i*4, y);
+      ctx.lineTo(x+i*4 + (s-.5)*6, y-8-s*5); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawTreeProp(p){
+  const B = propBiome(p), x = p.x, y = p.y, s = p.s;
+  ctx.save();
+  if (B.id === 'desert'){
+    ctx.fillStyle = 'rgba(0,0,0,.26)';
+    ctx.beginPath(); ctx.ellipse(x+4,y+8,13,6,0,0,6.3); ctx.fill();
+    ctx.strokeStyle = B.trunk; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x,y+9); ctx.lineTo(x,y-8); ctx.stroke();
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(x,y-2); ctx.lineTo(x-10,y-12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y-5); ctx.lineTo(x+9,y-15); ctx.stroke();
+    ctx.fillStyle = B.crown;
+    ctx.beginPath(); ctx.arc(x-11,y-13,5,0,6.3); ctx.arc(x+10,y-16,5.5,0,6.3);
+    ctx.arc(x,y-14,4,0,6.3); ctx.fill();
+  } else if (B.id === 'frozen'){
+    ctx.fillStyle = 'rgba(0,0,0,.24)';
+    ctx.beginPath(); ctx.ellipse(x+4,y+9,13,6,0,0,6.3); ctx.fill();
+    ctx.fillStyle = B.trunk; ctx.fillRect(x-2,y-2,4,13);
+    for (let i = 0; i < 3; i++){
+      const w = (11 - i*2.5) * (.8+s*.4), yy = y-4-i*8;
+      ctx.fillStyle = B.crown;
+      ctx.beginPath(); ctx.moveTo(x-w, yy+2); ctx.lineTo(x, yy-11); ctx.lineTo(x+w, yy+2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = B.crown2;
+      ctx.beginPath(); ctx.moveTo(x-w*.75, yy-1); ctx.lineTo(x, yy-10); ctx.lineTo(x+w*.75, yy-1); ctx.closePath(); ctx.fill();
+    }
+  } else if (B.id === 'swamp'){
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath(); ctx.ellipse(x+5,y+7,16,9,0,0,6.3); ctx.fill();
+    ctx.fillStyle = B.trunk; ctx.fillRect(x-3,y-2,6,15);
+    ctx.fillStyle = B.crown; ctx.beginPath(); ctx.arc(x,y-6,14+s*2,0,6.3); ctx.fill();
+    ctx.fillStyle = B.crown2; ctx.beginPath(); ctx.arc(x-5,y-9,7,0,6.3); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,170,110,.55)'; ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++){
+      ctx.beginPath(); ctx.moveTo(x+i*5, y-2); ctx.lineTo(x+i*5+1, y+10+Math.abs(i)*2); ctx.stroke();
+    }
+  } else if (B.id === 'ash'){
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath(); ctx.ellipse(x+4,y+8,12,6,0,0,6.3); ctx.fill();
+    ctx.strokeStyle = B.trunk; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x,y+10); ctx.lineTo(x,y-12); ctx.stroke();
+    ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(x,y-3); ctx.lineTo(x-9,y-11); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y-7); ctx.lineTo(x+8,y-14); ctx.stroke();
+    ctx.fillStyle = `rgba(255,120,40,${.35+Math.sin(S.t*4+p.tone*9)*.25})`;
+    ctx.beginPath(); ctx.arc(x-8,y-12,1.8,0,6.3); ctx.arc(x+7,y-15,1.5,0,6.3);
+    ctx.arc(x,y+3,1.4,0,6.3); ctx.fill();
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath(); ctx.ellipse(x+5,y+7,17,10,0,0,6.3); ctx.fill();
+    ctx.fillStyle = B.trunk; ctx.beginPath(); ctx.arc(x,y,5,0,6.3); ctx.fill();
+    ctx.fillStyle = p.s < .5 ? B.crown2 : B.crown;
+    ctx.beginPath(); ctx.arc(x,y,14+s*5,0,6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,220,.14)';
+    ctx.beginPath(); ctx.arc(x-5,y-5,7,0,6.3); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRockProp(p){
+  const B = propBiome(p), x = p.x, y = p.y, s = .8 + p.s*.5;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.beginPath(); ctx.ellipse(x+4,y+6,12*s,6*s,0,0,6.3); ctx.fill();
+  ctx.fillStyle = B.rock;
+  ctx.beginPath();
+  ctx.moveTo(x-11*s,y+6*s); ctx.lineTo(x-4*s,y-9*s); ctx.lineTo(x+8*s,y-7*s);
+  ctx.lineTo(x+12*s,y+5*s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  ctx.beginPath(); ctx.arc(x-2*s,y-4*s,3*s,0,6.3); ctx.fill();
+  if (B.id === 'frozen'){
+    ctx.strokeStyle = 'rgba(220,245,255,.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x-6*s,y+1); ctx.lineTo(x+4*s,y-3); ctx.stroke();
+  } else if (B.id === 'ash'){
+    ctx.strokeStyle = 'rgba(255,120,50,.5)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x-5*s,y+2); ctx.lineTo(x+5*s,y-2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawDecorProp(p){
+  const x = p.x, y = p.y, s = p.s, tone = p.tone;
+  ctx.save();
+  if (p.type === 'cactus'){
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath(); ctx.ellipse(x+4,y+9,10,5,0,0,6.3); ctx.fill();
+    ctx.strokeStyle = '#3f7a46'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x,y+9); ctx.lineTo(x,y-13); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y-2); ctx.lineTo(x-9,y-2); ctx.lineTo(x-9,y-12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x+9,y-6); ctx.lineTo(x+9,y-14); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.20)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x-2,y+6); ctx.lineTo(x-2,y-11); ctx.stroke();
+    ctx.fillStyle = '#e86a7a'; ctx.beginPath(); ctx.arc(x,y-15,2.6,0,6.3); ctx.fill();
+  } else if (p.type === 'drybush'){
+    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.beginPath(); ctx.ellipse(x+3,y+5,10,4,0,0,6.3); ctx.fill();
+    ctx.strokeStyle = '#8a7444'; ctx.lineWidth = 1.6;
+    for (let i = 0; i < 6; i++){
+      const a = i/6*6.28, r = 6 + s*6;
+      ctx.beginPath(); ctx.arc(x, y, r, a, a+1.1); ctx.stroke();
+    }
+  } else if (p.type === 'snowdrift'){
+    ctx.fillStyle = 'rgba(228,242,250,.6)';
+    ctx.beginPath(); ctx.ellipse(x,y,18+s*10,7+s*4,0,0,6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.beginPath(); ctx.ellipse(x-3,y-2,9,3.5,0,0,6.3); ctx.fill();
+  } else if (p.type === 'iceberg'){
+    const k = .7 + s*.8;
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath(); ctx.ellipse(x+5,y+9,22*k,9*k,0,0,6.3); ctx.fill();
+    ctx.fillStyle = '#a9d6e8';
+    ctx.beginPath(); ctx.moveTo(x-18*k,y+8*k); ctx.lineTo(x-8*k,y-28*k);
+    ctx.lineTo(x+6*k,y-34*k); ctx.lineTo(x+18*k,y-4*k); ctx.lineTo(x+10*k,y+9*k);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#dff3fb';
+    ctx.beginPath(); ctx.moveTo(x-8*k,y-28*k); ctx.lineTo(x+6*k,y-34*k);
+    ctx.lineTo(x+2*k,y-14*k); ctx.lineTo(x-6*k,y-10*k); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#7fb4c9';
+    ctx.beginPath(); ctx.moveTo(x+18*k,y-4*k); ctx.lineTo(x+10*k,y+9*k);
+    ctx.lineTo(x+2*k,y-10*k); ctx.closePath(); ctx.fill();
+  } else if (p.type === 'pool'){
+    const k = .8 + s*.8;
+    ctx.fillStyle = 'rgba(18,52,46,.88)';
+    ctx.beginPath(); ctx.ellipse(x,y,26*k,15*k,0,0,6.3); ctx.fill();
+    ctx.strokeStyle = 'rgba(90,160,130,.45)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x,y,26*k,15*k,0,0,6.3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(160,220,190,.28)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(x-2,y,13*k,6*k,0,0,6.3); ctx.stroke();
+    ctx.fillStyle = '#4f7a4a';
+    ctx.beginPath(); ctx.arc(x+9*k,y-2,4.6*k,0,6.3); ctx.fill();
+  } else if (p.type === 'reed'){
+    ctx.strokeStyle = '#4a7a5a'; ctx.lineWidth = 1.8;
+    for (let i = -2; i <= 2; i++){
+      const h = 14 + s*13 + (i===0?5:0), bx = x + i*4;
+      ctx.beginPath(); ctx.moveTo(bx,y+2); ctx.quadraticCurveTo(bx+i*4, y-h*.55, bx+i*2, y-h); ctx.stroke();
+      if (i % 2 === 0){
+        ctx.fillStyle = '#6a4e32';
+        ctx.beginPath(); ctx.ellipse(bx+i*2, y-h, 1.8, 4, 0, 0, 6.3); ctx.fill();
+      }
+    }
+  } else if (p.type === 'ashpile'){
+    ctx.fillStyle = 'rgba(0,0,0,.24)';
+    ctx.beginPath(); ctx.ellipse(x+3,y+5,14+s*8,6+s*3,0,0,6.3); ctx.fill();
+    ctx.fillStyle = '#4a4040';
+    ctx.beginPath(); ctx.ellipse(x,y,13+s*9,7+s*4,0,0,6.3); ctx.fill();
+    ctx.fillStyle = '#5c4e4c';
+    ctx.beginPath(); ctx.ellipse(x-3,y-2,7+s*4,3+s*2,0,0,6.3); ctx.fill();
+    ctx.fillStyle = `rgba(255,130,50,${.5+Math.sin(S.t*5+tone*9)*.3})`;
+    ctx.beginPath(); ctx.arc(x-5,y,1.5,0,6.3); ctx.arc(x+5,y-2,1.3,0,6.3); ctx.fill();
+  } else if (p.type === 'crack'){
+    const flick = .55 + Math.sin(S.t*3 + tone*8)*.25;
+    const pts = [[-17,4],[-8,-4],[-2,2],[6,-6],[14,1],[19,-2]];
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(255,84,26,${flick*.5})`; ctx.lineWidth = 7;
+    ctx.beginPath(); pts.forEach(([dx,dy],i)=> i?ctx.lineTo(x+dx,y+dy):ctx.moveTo(x+dx,y+dy)); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,190,80,${flick})`; ctx.lineWidth = 2;
+    ctx.beginPath(); pts.forEach(([dx,dy],i)=> i?ctx.lineTo(x+dx,y+dy):ctx.moveTo(x+dx,y+dy)); ctx.stroke();
+  } else if (p.type === 'obsidian'){
+    const k = .8 + s*.5;
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath(); ctx.ellipse(x+4,y+6,11*k,5*k,0,0,6.3); ctx.fill();
+    ctx.fillStyle = '#16151c';
+    ctx.beginPath(); ctx.moveTo(x-10*k,y+7*k); ctx.lineTo(x-5*k,y-14*k);
+    ctx.lineTo(x+3*k,y-19*k); ctx.lineTo(x+10*k,y+6*k); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(150,110,210,.35)';
+    ctx.beginPath(); ctx.moveTo(x-5*k,y-14*k); ctx.lineTo(x+3*k,y-19*k);
+    ctx.lineTo(x+1*k,y-5*k); ctx.closePath(); ctx.fill();
+  } else if (p.type === 'mesa'){
+    const k = .8 + s*.8;
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    ctx.beginPath(); ctx.ellipse(x+6,y+12,44*k,16*k,0,0,6.3); ctx.fill();
+    ctx.fillStyle = '#8a5f38';
+    ctx.beginPath(); ctx.moveTo(x-46*k,y+10*k); ctx.lineTo(x-32*k,y-24*k);
+    ctx.lineTo(x+30*k,y-24*k); ctx.lineTo(x+46*k,y+10*k); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a5764a'; ctx.fillRect(x-34*k,y-24*k,64*k,8*k);
+    ctx.fillStyle = '#b98a58'; ctx.fillRect(x-30*k,y-30*k,52*k,7*k);
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath(); ctx.moveTo(x+12*k,y-24*k); ctx.lineTo(x+46*k,y+10*k);
+    ctx.lineTo(x+18*k,y+10*k); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
 
 function draw(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -666,13 +1069,24 @@ function draw(){
   const vy0 = S.cam.y - H*0.65, vy1 = S.cam.y + H*0.65;
   const props = propsInView(S.cam.y, 420);
 
+  // biome-blended ground
+  ctx.fillStyle = biomeGradient('ground', vy0, vy1, 28);
+  ctx.fillRect(-2600, vy0, 5200, vy1-vy0);
   for (const p of props) if (p.type==='patch'){
-    ctx.fillStyle = p.tone < .5 ? 'rgba(44,60,32,.5)' : 'rgba(52,68,36,.45)';
-    ctx.beginPath(); ctx.ellipse(p.x, p.y, p.s*1.6, p.s, 0, 0, 6.3); ctx.fill();
+    const m = biomeMix(p.y);
+    const pa = BIOMES[m.a].patch[p.tone < .5 ? 0 : 1];
+    const pb = BIOMES[m.b].patch[p.tone < .5 ? 0 : 1];
+    const c = m.t ? mix3(pa, pb, m.t) : pa;
+    const a = m.t ? pa[3] + (pb[3]-pa[3])*m.t : pa[3];
+    ctx.fillStyle = rgbCss(c, a);
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, p.s*1.7, p.s, 0, 0, 6.3); ctx.fill();
   }
-  ctx.fillStyle = '#2c2a24'; ctx.fillRect(-46, vy0, 92, vy1-vy0);
-  ctx.strokeStyle = '#241f1a'; ctx.lineWidth = 7;
+  // ballast + sleepers take their colour from the biome under them
+  ctx.fillStyle = biomeGradient('bed', vy0, vy1, 24);
+  ctx.fillRect(-46, vy0, 92, vy1-vy0);
+  ctx.lineWidth = 7;
   for (let y = Math.floor(vy0/34)*34; y < vy1; y += 34){
+    ctx.strokeStyle = biomeColorCssAt(y, 'tie');
     ctx.beginPath(); ctx.moveTo(-40,y); ctx.lineTo(40,y); ctx.stroke();
   }
   ctx.strokeStyle = '#8a8f96'; ctx.lineWidth = 3.4;
@@ -680,25 +1094,24 @@ function draw(){
   ctx.strokeStyle = 'rgba(255,240,200,.25)'; ctx.lineWidth = 1;
   for (const rx of [-13, 13]){ ctx.beginPath(); ctx.moveTo(rx, vy0); ctx.lineTo(rx, vy1); ctx.stroke(); }
 
+  // ground-level scenery first, so pickups and trees sit on top
   for (const p of props){
-    if (p.type==='grass'){
-      ctx.strokeStyle = '#3e5a30'; ctx.lineWidth = 2;
-      for (let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(p.x+i*4, p.y);
-        ctx.lineTo(p.x+i*4 + (p.s-.5)*6, p.y-8-p.s*5); ctx.stroke(); }
-    } else if (p.type==='tree' && !p.taken){
-      ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(p.x+5,p.y+7,17,10,0,0,6.3); ctx.fill();
-      ctx.fillStyle = '#4a3a26'; ctx.beginPath(); ctx.arc(p.x,p.y,5,0,6.3); ctx.fill();
-      ctx.fillStyle = p.s<.5?'#2f5a2a':'#376831';
-      ctx.beginPath(); ctx.arc(p.x,p.y,16,0,6.3); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,220,.14)'; ctx.beginPath(); ctx.arc(p.x-5,p.y-5,7,0,6.3); ctx.fill();
+    if (p.type === 'grass') drawGrassProp(p);
+    else if (GROUND_DECOR[p.type]) drawDecorProp(p);
+  }
+
+  for (const p of props){
+    if (p.type==='patch' || p.type==='grass' || GROUND_DECOR[p.type]) continue;
+    if (p.type==='tree' && !p.taken){
+      drawTreeProp(p);
     } else if (p.type==='rock'){
-      ctx.fillStyle = '#565a5e'; ctx.beginPath();
-      ctx.moveTo(p.x-11,p.y+6); ctx.lineTo(p.x-4,p.y-9); ctx.lineTo(p.x+8,p.y-7);
-      ctx.lineTo(p.x+12,p.y+5); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(p.x-2,p.y-4,3,0,6.3); ctx.fill();
+      drawRockProp(p);
+    } else if (p.type==='cactus' || p.type==='mesa' || p.type==='iceberg' || p.type==='obsidian'){
+      drawDecorProp(p);
     } else if (p.type==='depot'){
+      const B = BIOMES[biomeIdxAt(p.y)];
       ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(p.x-72,p.y-46,150,104);
-      ctx.fillStyle = '#6b5a44'; ctx.fillRect(p.x-78,p.y-52,156,104);
+      ctx.fillStyle = B.depot; ctx.fillRect(p.x-78,p.y-52,156,104);
       ctx.strokeStyle = '#453a2b'; ctx.lineWidth = 3; ctx.strokeRect(p.x-78,p.y-52,156,104);
       ctx.beginPath(); ctx.moveTo(p.x-84,p.y-52); ctx.lineTo(p.x,p.y-86); ctx.lineTo(p.x+84,p.y-52); ctx.stroke();
       ctx.fillStyle = '#3a3026'; ctx.fillRect(p.x-16,p.y-14,32,60);
@@ -756,11 +1169,21 @@ function draw(){
     ctx.fillStyle = q.c; ctx.fillText(q.txt, q.x, q.y); }
   ctx.globalAlpha = 1;
 
+  for (const a of S.amb){
+    ctx.globalAlpha = Math.min(1, a.t/0.6) * .85;
+    ctx.fillStyle = a.c;
+    ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, 6.3); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
   ctx.restore();
 
   const vg = ctx.createRadialGradient(W/2,H*.5,H*.42, W/2,H*.5, H*.85);
   vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.34)');
   ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
+  const wash = biomeWashAt(S.cam.y);
+  ctx.fillStyle = `rgba(${wash[0]|0},${wash[1]|0},${wash[2]|0},${wash[3]})`;
+  ctx.fillRect(0,0,W,H);
   if (S.hitFlash > 0){
     ctx.fillStyle = `rgba(200,40,30,${S.hitFlash*.18})`; ctx.fillRect(0,0,W,H);
   }
@@ -1047,6 +1470,12 @@ function uiSync(){
   $('hpF').style.width = S.player.hp + '%';
   $('hpN').textContent = Math.ceil(S.player.hp);
   $('dist').textContent = Math.floor(dist_m()) + ' / ' + GOAL_M + ' m';
+  const bi = biomeIdxAt(S.train.y), B = BIOMES[bi];
+  $('hudBiome').textContent = B.icon + ' ' + B.name;
+  $('hudBiome').style.color = B.accent;
+  $('hudNext').textContent = bi < BIOMES.length-1
+    ? '→ ' + BIOMES[bi+1].icon + ' ' + Math.max(0, Math.ceil((bi+1)*BIOME_M - dist_m())) + ' m'
+    : 'FINAL STRETCH';
   const i = S.inv;
   $('inv').innerHTML =
     `<span class="chip">🪵 ${i.wood}</span><span class="chip">⚫ ${i.coal}</span>`+
@@ -1080,7 +1509,8 @@ function showOverlay(kind){
       bolt on your workshop (you start with the parts). Then stand inside it to
       add cars: plow, bunker, greenhouse, turret, infirmary.</p>
       <p>You can <b>JUMP ON</b> a moving train from beside the rails.</p>
-      <p>Reach the <b>${GOAL_M} m</b> mark alive.</p>
+      <p>Cross <b>five biomes</b> — 🌲 valley, 🌵 badlands, ❄️ ice, 🌿 mire,
+      🔥 ash — and reach <b>Station Aurora at ${GOAL_M} m</b> alive.</p>
       <button id="go">START THE ENGINE</button>
       <div class="keys">MOBILE: left-thumb joystick · buttons on the right<br>
       DESKTOP: WASD move · SPACE act · F fuel · E eat · T train · B build</div>`;
@@ -1114,6 +1544,8 @@ function reset(){
                dir: -Math.PI/2, atkT: 0, hurtT: 0 };
   S.cam = { x: 0, y: 0 }; S.focusF = .6;
   S.zombies = []; S.parts = []; S.texts = []; S.smoke = []; S.beams = [];
+  S.amb = []; S.biomeIdx = 0; S.biomeT = 0;
+  document.getElementById('bioBanner')?.classList.remove('show');
   S.joy.active = false; S.joy.dx = S.joy.dy = 0; S.keys = {};
   S.hitFlash = 0; S.shake = 0; S.toastT = 0;
   for (const [, list] of chunks) for (const p of list){ delete p.taken; delete p.thud; delete p.warn; }
@@ -1201,6 +1633,13 @@ if (q.has('shot')){
     const cl = genChunk(-2);
     cl.push({ type:'debris', kind:'log', x:0, y:-700, hp:2, amt:2 });
     S.train.fuel = 80;
+  } else if (q.get('shot') === 'biome'){
+    const m = parseFloat(q.get('m') || '500');
+    S.train.y = -m*PPM; S.train.moving = false; S.train.fuel = 70;
+    S.player.aboard = true; S.player.lx = 0; S.player.ly = 120;
+    S.cam.y = S.train.y + 120; S.cam.x = 0;
+    S.inv = { wood:9, coal:4, scrap:8, food:3 };
+    S.biomeIdx = biomeIdxAt(S.train.y);
   } else if (q.get('shot') === 'win'){
     S.train.y = -GOAL_M*PPM - 5;
     for (const t of ['workshop','plow','turret']) S.train.carts.push({ type:t, store:0, t:0, cool:0, aim:-Math.PI/2 });
