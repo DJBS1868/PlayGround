@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Velvet Ace — Blackjack Salon</title>
+  <meta name="description" content="A velvet-and-gold blackjack table. Pick your chips, beat the dealer." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d5b3c'/%3E%3Cpath d='M32 10c-3 7-16 14-16 24 0 7 5 12 12 12 2 0 4-.5 5-1.5-.5 3-1.5 5.5-4 7h14c-2.5-1.5-3.5-4-4-7 1 1 3 1.5 5 1.5 7 0 12-5 12-12 0-10-13-17-16-24z' fill='%23e3c184'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Casino carpet -->
+  <svg class="carpet" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <pattern id="damask" width="150" height="150" patternUnits="userSpaceOnUse">
+        <g fill="none" stroke="#c9a15c" stroke-width="1">
+          <path d="M75 4 146 75 75 146 4 75Z" opacity=".16" />
+          <path d="M75 30 120 75 75 120 30 75Z" opacity=".09" />
+          <path d="M0 0 22 22M150 0 128 22M0 150 22 128M150 150 128 128" opacity=".17" />
+          <path d="M75 52c-14 10-21 18-21 26 0 8 6 13 13 13 3 0 6-1 8-2-1 5-3 8-6 10h12c-3-2-5-5-6-10 2 1 5 2 8 2 7 0 13-5 13-13 0-8-7-16-21-26Z" opacity=".18" />
+          <circle cx="75" cy="75" r="28" opacity=".07" />
+          <circle cx="0" cy="0" r="3" opacity=".18" />
+          <circle cx="150" cy="0" r="3" opacity=".18" />
+          <circle cx="0" cy="150" r="3" opacity=".18" />
+          <circle cx="150" cy="150" r="3" opacity=".18" />
+          <circle cx="75" cy="75" r="2" opacity=".25" />
+        </g>
+      </pattern>
+      <radialGradient id="floorLight" cx="50%" cy="38%" r="62%">
+        <stop offset="0%" stop-color="#f0b95d" stop-opacity=".25" />
+        <stop offset="45%" stop-color="#8c3b26" stop-opacity=".1" />
+        <stop offset="100%" stop-color="#050203" stop-opacity=".62" />
+      </radialGradient>
+      <linearGradient id="floorSheen" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#000" stop-opacity=".55" />
+        <stop offset="35%" stop-color="#000" stop-opacity="0" />
+        <stop offset="100%" stop-color="#000" stop-opacity=".5" />
+      </linearGradient>
+    </defs>
+    <rect width="1440" height="900" fill="#280f12" />
+    <rect width="1440" height="900" fill="url(#damask)" />
+    <rect width="1440" height="900" fill="url(#floorLight)" />
+    <rect width="1440" height="900" fill="url(#floorSheen)" />
+  </svg>
+  <div class="atmosphere" aria-hidden="true">
+    <span class="haze haze-a"></span>
+    <span class="haze haze-b"></span>
+    <span class="grain"></span>
+  </div>
+
+  <header class="hud">
+    <div class="brand">
+      <span class="brand-emblem" aria-hidden="true">♠</span>
+      <span class="brand-text">
+        <span class="brand-name">Velvet Ace</span>
+        <span class="brand-sub">Blackjack Salon · Table 07</span>
+      </span>
+    </div>
+    <div class="hud-stats">
+      <div class="hud-stat">
+        <span class="hud-label">Bankroll</span>
+        <strong class="hud-value" id="bankroll">$1,000</strong>
+      </div>
+      <div class="hud-stat hud-stat--hand">
+        <span class="hud-label">Hand</span>
+        <strong class="hud-value" id="handNo">#01</strong>
+      </div>
+      <button class="round-btn" id="soundBtn" type="button" aria-label="Mute sound" title="Sound">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="sound-on"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Zm-2.5-7.6v2.1a6.5 6.5 0 0 1 0 11v2.1a8.5 8.5 0 0 0 0-15.2Z" fill="currentColor"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="sound-off"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.6 1.1-1.4 1.4 1.9 1.9-1.9 1.9 1.4 1.4 1.9-1.9 1.9 1.9 1.4-1.4-1.9-1.9 1.9-1.9-1.4-1.4-1.9 1.9-1.9-1.9Z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="table-wrap" id="tableWrap">
+      <div class="table-aura" aria-hidden="true"></div>
+      <div class="table" id="table">
+        <div class="table-rim">
+          <div class="felt" id="felt">
+            <svg class="felt-art" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <path id="arcTop" d="M 270 205 Q 500 -50 730 205" />
+                <linearGradient id="decoGold" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#f7e6be" />
+                  <stop offset="48%" stop-color="#cfa662" />
+                  <stop offset="100%" stop-color="#8a632e" />
+                </linearGradient>
+                <filter id="feltNoise">
+                  <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch" />
+                  <feColorMatrix type="saturate" values="0" />
+                </filter>
+              </defs>
+              <rect width="1000" height="560" fill="#0b4a30" opacity="0" />
+              <ellipse cx="500" cy="282" rx="472" ry="262" fill="none" stroke="url(#decoGold)" stroke-opacity=".26" stroke-width="2" />
+              <ellipse cx="500" cy="282" rx="455" ry="250" fill="none" stroke="#031f14" stroke-opacity=".5" stroke-width="9" />
+              <text class="arc-text">
+                <textPath href="#arcTop" startOffset="50%" text-anchor="middle">BLACKJACK PAYS 3 TO 2</textPath>
+              </text>
+              <g class="center-mark" opacity=".16">
+                <ellipse cx="500" cy="288" rx="154" ry="84" fill="none" stroke="#f4e1b6" stroke-width="1" />
+                <ellipse cx="500" cy="288" rx="166" ry="92" fill="none" stroke="#f4e1b6" stroke-width=".7" opacity=".6" />
+                <path d="M500 236c-6 13-32 30-32 48 0 14 11 23 23 23 4 0 7-1 9-3-1 7-3 11-7 14h14c-4-3-6-7-7-14 2 2 5 3 9 3 12 0 23-9 23-23 0-18-26-35-32-48Z" fill="#f4e1b6" />
+                <text x="500" y="350" text-anchor="middle" class="center-text">VELVET ACE</text>
+                <path d="M420 364h160" stroke="#f4e1b6" stroke-width=".7" opacity=".7" />
+              </g>
+              <rect width="1000" height="560" filter="url(#feltNoise)" opacity=".09" style="mix-blend-mode:overlay" />
+            </svg>
+
+            <div class="shoe" id="shoe" aria-hidden="true">
+              <span class="shoe-cards"><i></i><i></i><i></i></span>
+              <span class="shoe-block"></span>
+            </div>
+
+            <div class="bet-zone bet-left" id="leftBet" aria-hidden="true">
+              <span class="bet-ring"></span>
+              <div class="stack" id="leftBetStack"></div>
+            </div>
+            <div class="bet-zone bet-right" id="rightBet" aria-hidden="true">
+              <span class="bet-ring"></span>
+              <div class="stack" id="rightBetStack"></div>
+            </div>
+            <div class="bet-zone bet-player" id="playerBet" aria-hidden="true">
+              <span class="bet-ring"></span>
+              <div class="stack" id="playerBetStack"></div>
+            </div>
+            <div class="bet-callout" id="betCallout" aria-hidden="true">Place your bet</div>
+
+            <div class="hand-spot hand-dealer" id="dealerSpot">
+              <div class="cards" id="dealerHand"></div>
+              <div class="total total-dealer" id="dealerTotal"></div>
+            </div>
+            <div class="hand-spot hand-left" id="leftSpot">
+              <div class="cards" id="leftHand"></div>
+              <div class="total total-left" id="leftTotal"></div>
+            </div>
+            <div class="hand-spot hand-right" id="rightSpot">
+              <div class="cards" id="rightHand"></div>
+              <div class="total total-right" id="rightTotal"></div>
+            </div>
+            <div class="hand-spot hand-player" id="playerSpot">
+              <div class="cards" id="playerHand"></div>
+              <div class="total total-player" id="playerTotal"></div>
+            </div>
+          </div>
+
+          <div class="chip-tray" id="chipTray">
+            <span class="tray-title" id="trayTitle">YOUR CHIPS</span>
+            <div class="tray-chips" id="trayChips" role="group" aria-label="Chip tray"></div>
+            <span class="tray-hint" id="trayHint">tap to bet</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="seat seat-dealer" id="dealerSeat">
+        <span class="seat-avatar avatar-dealer">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M4 104c2-21 17-33 46-33s44 12 46 33Z" fill="#17151c" />
+            <path d="M30 74 50 96l20-22-7-4-13 9-13-9Z" fill="#2a2731" />
+            <path d="M50 69 39 100h8l3-14 3 14h8L50 69Z" fill="#efe4cf" />
+            <path d="m50 79-8 5 8 6 8-6Z" fill="#7d1d2b" />
+            <circle cx="50" cy="87.5" r="2.6" fill="#d9b46a" />
+            <path d="M43 57h14v13c0 4-3 6-7 6s-7-2-7-6Z" fill="#c88f64" />
+            <ellipse cx="29.5" cy="47" rx="3.4" ry="5" fill="#cc9368" />
+            <ellipse cx="70.5" cy="47" rx="3.4" ry="5" fill="#cc9368" />
+            <ellipse cx="50" cy="45" rx="20" ry="23" fill="#dda578" />
+            <path d="M29 43c-1-17 8-27 21-27s22 10 21 27c-.5 3-1.5 5-3 6 .5-9-6-14-18-14s-18.5 5-18 14c-1.5-1-2.5-3-3-6Z" fill="#2c211a" />
+            <path d="M37 44.5c3-2 7-2 10 0M53 44.5c3-2 7-2 10 0" stroke="#3a2519" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <circle cx="42" cy="49" r="1.7" fill="#251811" />
+            <circle cx="58" cy="49" r="1.7" fill="#251811" />
+            <path d="M50 51v4" stroke="#c08558" stroke-width="1.3" stroke-linecap="round" />
+            <path d="M46 59c2.5 2 5.5 2 8 0" stroke="#9a5741" stroke-width="1.5" fill="none" stroke-linecap="round" />
+          </svg>
+          <span class="seat-ring"></span>
+        </span>
+        <div class="seat-plate plate-dealer">
+          <span class="plate-name">Marcel</span>
+          <span class="plate-sub">Dealer · stands 17</span>
+        </div>
+        <div class="bubble" id="dealerBubble"></div>
+      </div>
+
+      <div class="seat seat-left" id="leftSeat">
+        <span class="seat-avatar avatar-nova">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="24" r="10" fill="#38201a" />
+            <path d="M6 104c2-21 16-32 44-32s42 11 44 32Z" fill="#1e6a66" />
+            <path d="M50 70 42 100h16Z" fill="#164f4c" />
+            <path d="M43 58h14v13c0 4-3 6-7 6s-7-2-7-6Z" fill="#d59d78" />
+            <ellipse cx="30" cy="48" rx="3.5" ry="5" fill="#d9a27e" />
+            <ellipse cx="70" cy="48" rx="3.5" ry="5" fill="#d9a27e" />
+            <ellipse cx="50" cy="46" rx="20" ry="23" fill="#e7b28c" />
+            <path d="M28 46c0-19 9-29 22-29s22 10 22 29c0 6-1 12-4 17 1-13-3-20-18-20s-19 7-18 20c-3-5-4-11-4-17Z" fill="#3b231c" />
+            <path d="M36 44c3-2 7-2 10 0M54 44c3-2 7-2 10 0" stroke="#432a20" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <circle cx="41" cy="49" r="1.7" fill="#2b1a14" />
+            <circle cx="59" cy="49" r="1.7" fill="#2b1a14" />
+            <path d="M50 50v5" stroke="#c98e68" stroke-width="1.2" stroke-linecap="round" />
+            <path d="M46 60c2.5 2.2 5.5 2.2 8 0" stroke="#a95a4d" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <circle cx="28" cy="55" r="2" fill="#e2b13c" />
+            <circle cx="72" cy="55" r="2" fill="#e2b13c" />
+          </svg>
+          <span class="seat-ring"></span>
+        </span>
+        <div class="seat-plate">
+          <span class="plate-name">Nova <i class="ai-tag">AI</i></span>
+          <span class="plate-bank" id="leftBank">$750</span>
+        </div>
+        <div class="bubble" id="leftBubble"></div>
+      </div>
+
+      <div class="seat seat-right" id="rightSeat">
+        <span class="seat-avatar avatar-kai">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M4 104c2-21 17-33 46-33s44 12 46 33Z" fill="#9a4c2f" />
+            <path d="M50 70 42 100h16Z" fill="#7d3b23" />
+            <path d="M43 58h14v13c0 4-3 6-7 6s-7-2-7-6Z" fill="#9a6142" />
+            <ellipse cx="30" cy="48" rx="3.5" ry="5" fill="#996040" />
+            <ellipse cx="70" cy="48" rx="3.5" ry="5" fill="#996040" />
+            <ellipse cx="50" cy="46" rx="20" ry="23" fill="#a96f4c" />
+            <path d="M29 43c0-16 9-26 21-26s21 10 21 26c0 4-.8 7-2 9-.5-8-6-12-19-12s-18.5 4-19 12c-1.2-2-2-5-2-9Z" fill="#1c120e" />
+            <path d="M32 54c2 12 8 18 18 18s16-6 18-18c-4 6-10 9-18 9s-14-3-18-9Z" fill="#241511" opacity=".9" />
+            <path d="M37 44c3-2 6-2 9 0M54 44c3-2 6-2 9 0" stroke="#26160f" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <circle cx="42" cy="49" r="1.7" fill="#20130e" />
+            <circle cx="58" cy="49" r="1.7" fill="#20130e" />
+            <path d="M50 50v5" stroke="#8a5638" stroke-width="1.2" stroke-linecap="round" />
+            <path d="M46 61c2.5 2 5.5 2 8 0" stroke="#6f3d2d" stroke-width="1.5" fill="none" stroke-linecap="round" />
+          </svg>
+          <span class="seat-ring"></span>
+        </span>
+        <div class="seat-plate">
+          <span class="plate-name">Kai <i class="ai-tag">AI</i></span>
+          <span class="plate-bank" id="rightBank">$750</span>
+        </div>
+        <div class="bubble" id="rightBubble"></div>
+      </div>
+
+      <div class="seat seat-player" id="playerSeat">
+        <span class="seat-avatar avatar-you">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M4 104c2-21 17-33 46-33s44 12 46 33Z" fill="#223a55" />
+            <path d="M50 70 40 100h20Z" fill="#182a3f" />
+            <path d="M43 58h14v13c0 4-3 6-7 6s-7-2-7-6Z" fill="#d6a179" />
+            <ellipse cx="30" cy="48" rx="3.4" ry="5" fill="#d8a27c" />
+            <ellipse cx="70" cy="48" rx="3.4" ry="5" fill="#d8a27c" />
+            <ellipse cx="50" cy="46" rx="20" ry="23" fill="#e6b58e" />
+            <path d="M29 43c-1-17 8-27 21-27s22 10 21 27c-1-6-4-9-9-11-7-3-17-3-24 1-4 2-7 5-9 10Z" fill="#2a1a13" />
+            <path d="M36 44c3-2 7-2 10 0M54 44c3-2 7-2 10 0" stroke="#3c281c" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <circle cx="41" cy="49" r="1.7" fill="#24170f" />
+            <circle cx="59" cy="49" r="1.7" fill="#24170f" />
+            <path d="M50 50v5" stroke="#c08b62" stroke-width="1.2" stroke-linecap="round" />
+            <path d="M46 60c2.5 2.2 5.5 2.2 8 0" stroke="#a25c46" stroke-width="1.5" fill="none" stroke-linecap="round" />
+            <path d="M27 59c2 8 7 13 13 16M73 59c-2 8-7 13-13 16" stroke="#1b2d43" stroke-width="3" fill="none" stroke-linecap="round" />
+          </svg>
+          <span class="seat-ring"></span>
+        </span>
+        <div class="seat-plate">
+          <span class="plate-name">You</span>
+          <span class="plate-bank" id="playerBank">$1,000</span>
+        </div>
+        <div class="bubble" id="playerBubble"></div>
+      </div>
+    </div>
+
+    <div class="banner" id="banner" role="status">
+      <span class="banner-eyebrow" id="bannerEyebrow">Hand complete</span>
+      <strong class="banner-title" id="bannerTitle"></strong>
+      <span class="banner-sub" id="bannerSub"></span>
+    </div>
+  </main>
+
+  <footer class="controls">
+    <div class="bet-panel" id="betPanel">
+      <span class="bet-panel-label" id="betLabel">Your bet</span>
+      <strong class="bet-panel-value" id="betValue">$0</strong>
+      <button class="link-btn" id="clearBetBtn" type="button" disabled>Clear</button>
+    </div>
+    <div class="actions" id="actions">
+      <button class="btn btn--deal" id="dealBtn" type="button" disabled>Deal</button>
+      <button class="btn btn--hit" id="hitBtn" type="button" hidden>Hit</button>
+      <button class="btn btn--stand" id="standBtn" type="button" hidden>Stand</button>
+      <button class="btn btn--deal" id="nextBtn" type="button" hidden>Next hand</button>
+    </div>
+    <button class="btn btn--shop" id="shopBtn" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7V6a6 6 0 1 1 12 0v1h2l1 15H3L4 7h2Zm2 0h8V6a4 4 0 0 0-8 0v1Z" fill="currentColor"/></svg>
+      <span>Shop</span>
+    </button>
+  </footer>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <div class="modal" id="shopModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+      <button class="modal-close" type="button" data-close="1" aria-label="Close shop">×</button>
+      <span class="modal-eyebrow">Opening soon</span>
+      <h2 id="shopTitle">The Velvet Shop</h2>
+      <p class="modal-copy">Collect card backs, chip sets and table felts as the salon opens. Win a few hands to earn your first key.</p>
+      <div class="shop-grid">
+        <div class="shop-item"><span class="shop-swatch swatch-a"></span><span>Gilded Deck</span><em>Locked</em></div>
+        <div class="shop-item"><span class="shop-swatch swatch-b"></span><span>Onyx Chips</span><em>Locked</em></div>
+        <div class="shop-item"><span class="shop-swatch swatch-c"></span><span>Emerald Felt</span><em>Locked</em></div>
+      </div>
+      <button class="btn btn--deal modal-cta" type="button" data-close="1">Back to the table</button>
+    </div>
+  </div>
+
+  <div class="sr-only" aria-live="polite" id="live"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
