@@ -11,16 +11,33 @@ const DAY_LENGTH = 300;
 const START_TIME = 0.13;
 const GATHER_RING = 283;
 
+const TOOL_TIERS = {
+  woodaxe: ['axe', 1],
+  woodpick: ['pick', 1],
+  stoneaxe: ['axe', 2],
+  stonepick: ['pick', 2],
+};
+
 const RECIPES = [
   {
-    id: 'axe', name: 'Stone Axe', tag: 'Tool', icon: 'axe', once: true,
-    desc: 'Bind a sharp stone to a stick. Chop pines for wood.',
+    id: 'woodaxe', name: 'Wooden Axe', tag: 'Tool', icon: 'axe', once: true,
+    desc: 'A sharpened branch lashed to a handle. Chop pines for wood.',
     cost: { stick: 5 },
   },
   {
-    id: 'pick', name: 'Stone Pickaxe', tag: 'Tool', icon: 'pick', once: true,
-    desc: 'A stone head on a wooden handle. Break boulders for stone.',
+    id: 'woodpick', name: 'Wooden Pickaxe', tag: 'Tool', icon: 'pick', once: true,
+    desc: 'A hardwood point. Break boulders for stone.',
     cost: { wood: 8, stick: 3 },
+  },
+  {
+    id: 'stoneaxe', name: 'Stone Axe', tag: 'Upgrade', icon: 'axe', once: true,
+    desc: 'A stone edge bound to a stick. Chops faster and yields more wood.',
+    cost: { stick: 4, stone: 5 },
+  },
+  {
+    id: 'stonepick', name: 'Stone Pickaxe', tag: 'Upgrade', icon: 'pick', once: true,
+    desc: 'A stone head bound to a handle. Mines faster and yields more stone.',
+    cost: { stick: 4, stone: 5 },
   },
   {
     id: 'campfire', name: 'Campfire', tag: 'Light', icon: 'fire',
@@ -31,10 +48,12 @@ const RECIPES = [
 
 const QUESTS = [
   { id: 'sticks', title: 'Gather sticks', text: 'Pick up fallen branches', goal: 5 },
-  { id: 'axe', title: 'Craft an axe', text: 'Open the hammer tab', goal: 1 },
+  { id: 'woodaxe', title: 'Craft a wooden axe', text: 'Open the hammer tab', goal: 1 },
   { id: 'wood', title: 'Chop pines', text: 'Gather 8 wood with the axe', goal: 8 },
-  { id: 'pick', title: 'Craft a pickaxe', text: 'Use 8 wood and 3 sticks', goal: 1 },
-  { id: 'stone', title: 'Mine boulders', text: 'Gather 4 stone', goal: 4 },
+  { id: 'woodpick', title: 'Craft a wooden pickaxe', text: 'Use 8 wood and 3 sticks', goal: 1 },
+  { id: 'stone', title: 'Mine boulders', text: 'Gather 5 stone', goal: 5 },
+  { id: 'stoneaxe', title: 'Craft a stone axe', text: 'Use 4 sticks and 5 stone', goal: 1 },
+  { id: 'stonepick', title: 'Craft a stone pickaxe', text: 'Use 4 sticks and 5 stone', goal: 1 },
   { id: 'fire', title: 'Build a campfire', text: 'Craft it on open ground', goal: 1 },
 ];
 
@@ -90,7 +109,7 @@ const state = {
   inventory: { stick: 0, wood: 0, stone: 0, food: 0 },
   totals: { stick: 0, wood: 0, stone: 0, food: 0, fire: 0 },
   quest: { index: 0 },
-  tools: { axe: false, pick: false },
+  tools: { axe: 0, pick: 0 },
   survival: { health: 100, hunger: 100, stamina: 100 },
   target: null,
   actionHeld: false,
@@ -129,7 +148,7 @@ inventoryEl.innerHTML = `
 const recipesEl = $('recipes');
 recipesEl.innerHTML = RECIPES.map((r) => `
   <article class="recipe" data-recipe="${r.id}">
-    <div class="recipe-icon"><svg class="${r.icon === 'axe' ? 'solid-icon' : ''}" aria-hidden="true"><use href="#icon-${r.icon}"></use></svg></div>
+    <div class="recipe-icon${r.tag === 'Upgrade' ? ' stone' : ''}"><svg class="${r.icon === 'axe' ? 'solid-icon' : ''}" aria-hidden="true"><use href="#icon-${r.icon}"></use></svg></div>
     <div class="recipe-body">
       <h3>${r.name} <span class="recipe-tag">${r.tag}</span></h3>
       <p>${r.desc}</p>
@@ -242,7 +261,9 @@ function canAfford(recipe) {
 }
 
 function isOwned(recipe) {
-  return !!(recipe.once && state.tools[recipe.id]);
+  const tier = TOOL_TIERS[recipe.id];
+  if (!tier) return false;
+  return state.tools[tier[0]] >= tier[1];
 }
 
 function spend(cost) {
@@ -259,19 +280,28 @@ function phaseFor(time) {
   return { name: 'Dawn', night: true };
 }
 
+function toolLevelFor(kind) {
+  if (kind === 'tree') return state.tools.axe;
+  if (kind === 'rock') return state.tools.pick;
+  return 0;
+}
+
 function gatherDuration(o) {
   let d = RESOURCE_META[o.kind].duration;
-  if (o.kind === 'tree' && state.tools.axe) d *= 0.7;
-  if (o.kind === 'rock' && state.tools.pick) d *= 0.7;
+  const level = toolLevelFor(o.kind);
+  if (level >= 2) d *= 0.55;
+  else if (level >= 1) d *= 0.7;
   return d;
 }
 
 function questProgress(q) {
   if (q.id === 'sticks') return state.totals.stick;
-  if (q.id === 'axe') return state.tools.axe ? 1 : 0;
+  if (q.id === 'woodaxe') return state.tools.axe >= 1 ? 1 : 0;
   if (q.id === 'wood') return state.totals.wood;
-  if (q.id === 'pick') return state.tools.pick ? 1 : 0;
+  if (q.id === 'woodpick') return state.tools.pick >= 1 ? 1 : 0;
   if (q.id === 'stone') return state.totals.stone;
+  if (q.id === 'stoneaxe') return state.tools.axe >= 2 ? 1 : 0;
+  if (q.id === 'stonepick') return state.tools.pick >= 2 ? 1 : 0;
   if (q.id === 'fire') return state.totals.fire;
   return 0;
 }
@@ -335,12 +365,18 @@ function updateHud(force = false) {
   $('count-food').textContent = String(state.inventory.food);
   foodChip.classList.toggle('urgent', s.hunger < 34 && state.inventory.food > 0);
 
-  const toolKey = `${state.tools.axe ? 1 : 0}${state.tools.pick ? 1 : 0}`;
+  const toolKey = `${state.tools.axe}${state.tools.pick}`;
   if (toolKey !== state.lastToolsKey) {
     state.lastToolsKey = toolKey;
     let html = '';
-    if (state.tools.axe) html += '<span class="tool-badge" title="Stone Axe"><svg class="solid-icon" aria-hidden="true"><use href="#icon-axe"></use></svg></span>';
-    if (state.tools.pick) html += '<span class="tool-badge" title="Stone Pick"><svg aria-hidden="true"><use href="#icon-pick"></use></svg></span>';
+    if (state.tools.axe) {
+      const stone = state.tools.axe >= 2;
+      html += `<span class="tool-badge${stone ? ' stone' : ''}" title="${stone ? 'Stone Axe' : 'Wooden Axe'}"><svg class="solid-icon" aria-hidden="true"><use href="#icon-axe"></use></svg></span>`;
+    }
+    if (state.tools.pick) {
+      const stone = state.tools.pick >= 2;
+      html += `<span class="tool-badge${stone ? ' stone' : ''}" title="${stone ? 'Stone Pickaxe' : 'Wooden Pickaxe'}"><svg aria-hidden="true"><use href="#icon-pick"></use></svg></span>`;
+    }
     toolBadgesEl.innerHTML = html;
   }
 
@@ -649,11 +685,17 @@ function craft(id) {
     closeSheet();
   } else {
     spend(recipe.cost);
-    state.tools[id] = true;
+    const tier = TOOL_TIERS[id];
+    if (tier) state.tools[tier[0]] = Math.max(state.tools[tier[0]], tier[1]);
     sound.craft();
     haptic(10);
     addFloater(recipe.name, p.x, p.y - 32, '#f3d69b');
-    const msg = id === 'axe' ? 'Pines can now be chopped for wood.' : 'Boulders can now be mined for stone.';
+    const msg = {
+      woodaxe: 'Pines can now be chopped for wood.',
+      woodpick: 'Boulders can now be mined for stone.',
+      stoneaxe: 'Pines fall faster and give more wood.',
+      stonepick: 'Boulders break faster and give more stone.',
+    }[id] || '';
     showToast(`Crafted <b>${recipe.name}</b>. ${msg}`, 3200);
     showSheetNotice(`Crafted ${recipe.name}. ${msg}`, 'ok');
   }
@@ -896,7 +938,7 @@ function updateLockedHints() {
       if (o.kind !== 'tree' || !o.ready) continue;
       if (Math.hypot(o.x - p.x, o.y - p.y) < 118) {
         state.hints.axe = true;
-        showToast('Pines need an axe. Gather sticks and craft one.', 3400);
+        showToast('Pines need a wooden axe. Gather sticks and craft one.', 3400);
         break;
       }
     }
@@ -906,7 +948,7 @@ function updateLockedHints() {
       if (o.kind !== 'rock' || !o.ready) continue;
       if (Math.hypot(o.x - p.x, o.y - p.y) < 118) {
         state.hints.pick = true;
-        showToast('Boulders need a pickaxe. Chop pines for wood first.', 3400);
+        showToast('Boulders need a wooden pickaxe. Chop pines for wood first.', 3400);
         break;
       }
     }
@@ -945,8 +987,8 @@ function resolveCollisions() {
 
 function completeGather(o) {
   const meta = RESOURCE_META[o.kind];
-  const tooled = (o.kind === 'tree' && state.tools.axe) || (o.kind === 'rock' && state.tools.pick);
-  const amount = tooled ? 2 : 1;
+  const level = toolLevelFor(o.kind);
+  const amount = level >= 2 ? 3 : level >= 1 ? 2 : 1;
   state.inventory[meta.resource] += amount;
   state.totals[meta.resource] = (state.totals[meta.resource] || 0) + amount;
   o.hits -= 1;
