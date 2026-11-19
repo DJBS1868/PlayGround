@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#173f45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Nova Island — a quiet, top-down island survival game. Gather, craft, and keep a fire close when the dark comes.">
+<title>Nova Island</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23163f45'/%3E%3Cpath d='M32 14c11 0 19 7 19 18 0 12-8 20-19 20s-19-8-19-20c0-11 8-18 19-18Z' fill='%235d8a4d'/%3E%3Cpath d='M32 22v22M24 31l8 5 8-5' stroke='%23f5eedb' stroke-width='3' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='32' cy='48' r='4' fill='%23e7c184'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg class="icon-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 20.2c-1.1-.8-6.9-4.7-6.9-9.2 0-2.3 1.7-3.9 3.7-3.9 1.3 0 2.5.7 3.2 1.8.7-1.1 1.9-1.8 3.2-1.8 2 0 3.7 1.6 3.7 3.9 0 4.5-5.8 8.4-6.9 9.2Z"/></symbol>
+    <symbol id="icon-bowl" viewBox="0 0 24 24"><path d="M4 11h16c0 4.4-3.6 8-8 8s-8-3.6-8-8Z"/><path d="M9 7.5c0-1.1.9-2 2-2M13 7c0-1.4 1.1-2.5 2.5-2.5"/></symbol>
+    <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13.2 2.8 5.6 13.1h5.1L9.6 21.2l8.8-11.3h-5.6l.4-7.1Z"/></symbol>
+    <symbol id="icon-wood" viewBox="0 0 24 24"><path d="M4.5 8.5 12 5l7.5 3.5v3.2L12 15.2 4.5 11.7V8.5Z"/><path d="M4.5 13.2 12 16.7l7.5-3.5v3.1L12 19.8l-7.5-3.5v-3.1Z"/></symbol>
+    <symbol id="icon-stone" viewBox="0 0 24 24"><path d="m5.2 14.7 2-6.1 5-2.8 6.2 2.6 1.4 6.4-4.6 4.1-6.8-.6-3.2-3.6Z"/></symbol>
+    <symbol id="icon-berry" viewBox="0 0 24 24"><path d="M12 8.4c1.6-2.3 4.2-3.2 6.4-2.2-.4 2.5-2.6 4.3-5.1 4.2"/><circle cx="9.2" cy="13" r="3.1"/><circle cx="14.8" cy="13.4" r="3.4"/><circle cx="12" cy="17.7" r="3"/></symbol>
+    <symbol id="icon-axe" viewBox="0 0 24 24"><path d="M5.8 21.6 11.2 10.8 13.6 12 8.2 22.8Z"/><path d="M11.2 11.4 10 4.2 18.8 2.2 22 7.2 16.4 13.4 12.6 13.8Z"/></symbol>
+    <symbol id="icon-pick" viewBox="0 0 24 24"><path d="m6.4 20.6 8.4-10.9"/><path d="M5.2 7.3c3.9-2.7 9.2-2.4 12.7.6-3.6 2.7-8.9 2.5-12.3-.1"/><path d="m11.1 4.8-1 4.1"/></symbol>
+    <symbol id="icon-fire" viewBox="0 0 24 24"><path d="M12.2 3.3c.4 3.4-2.5 4.6-2.5 7.1 0 1 .6 1.7 1.4 1.9-.1-1.8 1.2-3 2.4-3.8.2 1.5 2.8 2.6 2.8 5.6 0 3-2.2 5.3-5.1 5.3-3.2 0-5.3-2.3-5.3-5.3 0-4.6 4.4-6.2 6.3-10.8Z"/></symbol>
+    <symbol id="icon-hammer" viewBox="0 0 24 24"><path d="m7.2 20.4 6.9-9.3"/><path d="m10.6 6.4 6.3-3 3 3.8-3.4 4.3-5.9-5.1Z"/><path d="m11.9 7.3-2.2 2.7"/></symbol>
+    <symbol id="icon-sound" viewBox="0 0 24 24"><path d="M5 9.5h3.2L13 5.6v12.8L8.2 14.5H5v-5Z"/><path d="M16 8.6c1.4 1.5 1.4 5.3 0 6.8M18.5 6.4c2.5 2.7 2.5 8.5 0 11.2"/></symbol>
+    <symbol id="icon-muted" viewBox="0 0 24 24"><path d="M5 9.5h3.2L13 5.6v12.8L8.2 14.5H5v-5Z"/><path d="m16.2 9.2 4.2 5.6M20.4 9.2l-4.2 5.6"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M19.3 14.6A8.2 8.2 0 0 1 9.4 4.7a8.2 8.2 0 1 0 9.9 9.9Z"/></symbol>
+    <symbol id="icon-leaf" viewBox="0 0 24 24"><path d="M19.5 4.5C11 4.5 5 9 5 15.2c0 2.3 1.5 4.3 4.3 4.3 6.2 0 10.2-6.6 10.2-15Z"/><path d="M4.5 20.5c2.6-4.5 5.8-7.4 10-9.6"/></symbol>
+  </defs>
+</svg>
+
+<div id="game" class="prestart" aria-label="Nova Island game">
+  <canvas id="scene" aria-label="Top-down island" role="img"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div id="hud">
+    <div class="hud-left">
+      <div class="meters" id="meters" aria-label="Survival meters"></div>
+      <div class="inventory" id="inventory" aria-label="Gathered resources"></div>
+    </div>
+    <div class="hud-right">
+      <div class="daydial" id="daydial" aria-label="Time of day">
+        <div class="dial-face">
+          <svg class="dial-icon" id="dialIcon" aria-hidden="true"><use href="#icon-sun"></use></svg>
+          <span class="dial-marker" id="dialMarker"></span>
+        </div>
+        <span class="dial-label" id="dialLabel">Day 1</span>
+      </div>
+      <button class="icon-btn sound-btn" id="soundBtn" aria-label="Mute sound" aria-pressed="false">
+        <svg><use href="#icon-sound" id="soundIcon"></use></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="joystick-zone" id="joystick" aria-label="Movement joystick">
+    <div class="stick-base">
+      <div class="stick-guide"></div>
+      <div class="stick-knob" id="stickKnob"></div>
+    </div>
+  </div>
+
+  <div class="action-wrap" id="actionWrap">
+    <button class="action-btn" id="actionBtn" aria-label="Gather">
+      <svg class="action-progress" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="action-track" cx="50" cy="50" r="45"></circle>
+        <circle class="action-fill" id="actionProgress" cx="50" cy="50" r="45"></circle>
+      </svg>
+      <span class="action-inner">
+        <svg class="action-icon" id="actionIcon" aria-hidden="true"><use href="#icon-axe" id="actionIconUse"></use></svg>
+        <span class="action-label" id="actionLabel">Chop</span>
+      </span>
+    </button>
+  </div>
+
+  <button class="craft-btn" id="craftBtn" aria-label="Open crafting">
+    <svg><use href="#icon-hammer"></use></svg>
+    <span class="craft-dot" id="craftDot"></span>
+  </button>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <section class="sheet" id="sheet" aria-label="Crafting" aria-hidden="true">
+    <div class="sheet-scroll" id="sheetScroll">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <div>
+          <p class="eyebrow">Make do with the island</p>
+          <h2>Crafting</h2>
+        </div>
+        <button class="icon-btn close-btn" id="closeSheet" aria-label="Close crafting">
+          <svg><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="sheet-res" id="sheetRes"></div>
+      <p class="sheet-notice" id="sheetNotice" role="status" hidden></p>
+      <div class="recipes" id="recipes"></div>
+      <p class="sheet-note"><svg><use href="#icon-fire"></use></svg><span>Campfires hold back the dark. Build one before dusk.</span></p>
+    </div>
+  </section>
+
+  <div class="overlay faint" id="faint" hidden>
+    <div class="faint-card">
+      <p class="eyebrow">The island is patient</p>
+      <h2>You grew weak.</h2>
+      <p>You wake beside the fire, a little wiser.</p>
+      <button class="primary" id="wakeBtn">Wake up</button>
+    </div>
+  </div>
+
+  <div class="overlay title" id="title">
+    <div class="title-bg" aria-hidden="true"></div>
+    <div class="title-card">
+      <p class="eyebrow">A quiet survival</p>
+      <h1>Nova <em>Island</em></h1>
+      <p class="tagline">Gather what the island offers.<br>Keep a fire close when the dark comes.</p>
+      <button class="primary" id="startBtn" disabled>Start</button>
+      <div class="controls-hint">
+        <span class="hint-item"><span class="hint-stick"></span>Move</span>
+        <span class="hint-sep"></span>
+        <span class="hint-item"><span class="hint-ring"></span>Gather</span>
+        <span class="hint-sep"></span>
+        <span class="hint-item"><svg><use href="#icon-hammer"></use></svg>Craft</span>
+      </div>
+      <p class="loading" id="loadingText">Shaping the island…</p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
