@@ -41,6 +41,18 @@ export const RESOURCE_META = {
     reach: 74,
     radius: 14,
   },
+  stick: {
+    name: 'Fallen Stick',
+    action: 'Take',
+    icon: 'stick',
+    resource: 'stick',
+    resourceName: 'Stick',
+    duration: 0.38,
+    respawn: 0,
+    hits: 1,
+    reach: 70,
+    radius: 6,
+  },
 };
 
 const WATER_DEEP = [14, 58, 80];
@@ -533,12 +545,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
     return null;
   }
 
-  // a welcoming clearing: fire + one of each resource within easy reach
-  let fireSpot = { x: center.x + 54, y: center.y + 38 };
-  if (!isLand(fireSpot.x, fireSpot.y, 0.15)) fireSpot = { x: center.x + 40, y: center.y - 40 };
-  fires.push({ id: 1, x: fireSpot.x, y: fireSpot.y, seed: (rand() * 1e9) | 0, builtAt: 0, starter: true });
-  placed.push({ x: fireSpot.x, y: fireSpot.y, r: 26 });
-
+  // a welcoming clearing: one of each resource within easy reach
   const tutorials = [
     ['tree', -0.6, 208, 0.15],
     ['bush', 2.45, 186, 0.13],
@@ -547,6 +554,24 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
   for (const [kind, angle, dist, minE] of tutorials) {
     const spot = findTutorialSpot(kind, angle, dist, minE);
     if (spot) addObject(kind, spot.x, spot.y, 0.95 + rand() * 0.15);
+  }
+
+  // fallen sticks scattered through the clearing — the first tools come from these
+  let sticksPlaced = 0;
+  for (let i = 0; i < 160 && sticksPlaced < 28; i++) {
+    const a = rand() * TAU;
+    const d = 42 + Math.pow(rand(), 1.2) * 300;
+    const x = center.x + Math.cos(a) * d;
+    const y = center.y + Math.sin(a) * d;
+    if (!isLand(x, y, 0.06)) continue;
+    if (Math.hypot(x - (center.x + 4), y - (center.y + 40)) < 30) continue;
+    let clear = true;
+    for (const p of placed) {
+      if (Math.hypot(p.x - x, p.y - y) < p.r + 11) { clear = false; break; }
+    }
+    if (!clear) continue;
+    addObject('stick', x, y, 0.85 + rand() * 0.4);
+    sticksPlaced++;
   }
 
   function scatter(kind, target, candidates, minE, clearance, scoreFn) {

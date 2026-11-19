@@ -227,6 +227,64 @@ export function drawRock(ctx, o, time) {
   ctx.restore();
 }
 
+export function drawStick(ctx, o, time) {
+  const s = o.scale;
+  const sway = Math.sin(time * 0.9 + o.sway) * 0.02;
+  ctx.save();
+  ctx.translate(o.x, o.y + 1.5);
+  ctx.rotate(o.sway * 1.7 + sway);
+
+  ctx.fillStyle = 'rgba(20,34,24,.18)';
+  ctx.beginPath();
+  ctx.ellipse(1.5 * s, 2.2 * s, 10.5 * s, 3.4 * s, 0, 0, TAU);
+  ctx.fill();
+
+  // main branch
+  ctx.strokeStyle = '#6f5134';
+  ctx.lineWidth = 2.4 * s;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-8.5 * s, 0.8 * s);
+  ctx.quadraticCurveTo(-1 * s, -2.2 * s, 8.5 * s, -0.4 * s);
+  ctx.stroke();
+  ctx.strokeStyle = '#8a6743';
+  ctx.lineWidth = 1.1 * s;
+  ctx.beginPath();
+  ctx.moveTo(-7.8 * s, -0.2 * s);
+  ctx.quadraticCurveTo(-1 * s, -2.9 * s, 8 * s, -1.1 * s);
+  ctx.stroke();
+
+  // side twigs
+  ctx.strokeStyle = '#63472e';
+  ctx.lineWidth = 1.5 * s;
+  ctx.beginPath();
+  ctx.moveTo(1.6 * s, -1.6 * s);
+  ctx.lineTo(4.6 * s, -5.6 * s);
+  ctx.stroke();
+  ctx.lineWidth = 1.2 * s;
+  ctx.beginPath();
+  ctx.moveTo(-3.4 * s, -1.2 * s);
+  ctx.lineTo(-5.6 * s, -4.4 * s);
+  ctx.stroke();
+
+  // little leaves
+  ctx.fillStyle = 'rgba(116,144,84,.92)';
+  ctx.beginPath();
+  ctx.ellipse(5.2 * s, -6.2 * s, 2.1 * s, 1.0 * s, -0.7, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(96,126,74,.8)';
+  ctx.beginPath();
+  ctx.ellipse(-6.2 * s, -4.9 * s, 1.7 * s, 0.85 * s, 0.7, 0, TAU);
+  ctx.fill();
+
+  // cut end
+  ctx.fillStyle = 'rgba(215,186,143,.55)';
+  ctx.beginPath();
+  ctx.arc(-8.6 * s, 0.7 * s, 1.1 * s, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
 export function drawBush(ctx, o, time) {
   const s = o.scale;
   ctx.fillStyle = 'rgba(18,38,26,.24)';
@@ -913,7 +971,7 @@ export function drawPlayer(ctx, p, time, night = 0, wade = 0) {
 
 export function drawTargetRing(ctx, o, time) {
   const meta = o.scale;
-  const r = 29 * meta;
+  const r = o.kind === 'stick' ? 19 : 29 * meta;
   ctx.save();
   ctx.translate(o.x, o.y + 3);
   ctx.strokeStyle = 'rgba(255,247,225,.42)';
