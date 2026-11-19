@@ -48,7 +48,7 @@ export const RESOURCE_META = {
     resource: 'stick',
     resourceName: 'Stick',
     duration: 0.38,
-    respawn: 0,
+    respawn: 60,
     hits: 1,
     reach: 70,
     radius: 6,
@@ -558,9 +558,9 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
 
   // fallen sticks scattered through the clearing — the first tools come from these
   let sticksPlaced = 0;
-  for (let i = 0; i < 160 && sticksPlaced < 28; i++) {
+  for (let i = 0; i < 160 && sticksPlaced < 12; i++) {
     const a = rand() * TAU;
-    const d = 42 + Math.pow(rand(), 1.2) * 300;
+    const d = 50 + Math.pow(rand(), 1.2) * 300;
     const x = center.x + Math.cos(a) * d;
     const y = center.y + Math.sin(a) * d;
     if (!isLand(x, y, 0.06)) continue;
