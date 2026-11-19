@@ -173,7 +173,7 @@ button.res-chip:active{transform:scale(.93)}
   border-radius:27px 27px 0 0;border-top:1px solid rgba(245,238,219,.17);
   box-shadow:0 -24px 70px rgba(0,0,0,.42);
   backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
-  transform:translateY(105%);transition:transform .4s cubic-bezier(.2,.8,.2,1);
+  transform:translateY(102dvh);transition:transform .4s cubic-bezier(.2,.8,.2,1);
   padding-bottom:var(--safe-b);touch-action:pan-y}
 .sheet.open{transform:translateY(0)}
 .sheet-scroll{max-height:74dvh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
