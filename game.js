@@ -688,7 +688,8 @@
     const bet = seat === "player" ? state.bet : state.ai[seat].bet;
     if (hand.bust) return { key: "lose", net: -bet, payout: 0, label: "Bust" };
     if (hand.blackjack && !dealerHand.blackjack) {
-      return { key: "blackjack", net: bet * 1.5, payout: bet * 2.5, label: "Blackjack" };
+      const net = Math.round(bet * 1.5);
+      return { key: "blackjack", net, payout: bet + net, label: "Blackjack" };
     }
     if (hand.blackjack && dealerHand.blackjack) return { key: "push", net: 0, payout: bet, label: "Push" };
     if (dealerHand.blackjack) return { key: "lose", net: -bet, payout: 0, label: "Lose" };
@@ -774,7 +775,7 @@
     resetTableForRound();
     hideBanner();
     updateAllTotals();
-    if (state.bankroll <= 0) {
+    if (state.bankroll < 1) {
       state.bankroll = 500;
       updateBankroll();
       toast("The house spots you $500. Welcome back.");
