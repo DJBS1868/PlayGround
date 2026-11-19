@@ -456,18 +456,421 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export function drawPlayer(ctx, p, time, night = 0) {
-  const walking = p.moving;
-  const bob = walking ? Math.sin(time * 11.5) * 1.4 : Math.sin(time * 2.1) * 0.5;
-  const dir = p.dir;
-  const step = walking ? Math.sin(time * 11.5) * 3.2 : 0;
-  const sway = walking ? Math.sin(time * 11.5) * 0.035 : Math.sin(time * 2.1) * 0.015;
+function drawPlayerBoots(ctx, step) {
+  for (const side of [-1, 1]) {
+    const bx = -7.2 + step * 0.42 * side;
+    const by = side * 11.4;
+    ctx.fillStyle = '#4a3a2c';
+    ctx.beginPath();
+    ctx.ellipse(bx, by, 3.2, 2.4, side * -0.35, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(226,198,158,.3)';
+    ctx.beginPath();
+    ctx.ellipse(bx - 0.7, by - side * 0.25, 1.3, 0.8, side * -0.35, 0, TAU);
+    ctx.fill();
+  }
+}
 
-  // shadow
-  ctx.fillStyle = 'rgba(16,34,26,.3)';
+function drawPlayerBody(ctx, p, time, step) {
+  drawPlayerBoots(ctx, step);
+
+  // trailing cape
+  const flutter = Math.sin(time * 6.4) * 0.8 + Math.sin(time * 2.7) * 0.5;
+  const cape = ctx.createLinearGradient(-19, -8, -2, 8);
+  cape.addColorStop(0, '#3d5b3c');
+  cape.addColorStop(1, '#5a784d');
+  ctx.fillStyle = cape;
   ctx.beginPath();
-  ctx.ellipse(p.x + 1.5, p.y + 9.5, 13.5, 5.4, 0, 0, TAU);
+  ctx.moveTo(-4.4, -7.6);
+  ctx.quadraticCurveTo(-11, -9.8 + flutter, -18.8, -5.2 + flutter * 0.55);
+  ctx.quadraticCurveTo(-14.6, -0.4, -19.2, 4.8 + flutter * 0.5);
+  ctx.quadraticCurveTo(-11, 8.6 + flutter * 0.3, -4, 7.5);
+  ctx.closePath();
   ctx.fill();
+  ctx.strokeStyle = 'rgba(233,222,192,.34)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-5.2, -7.4);
+  ctx.quadraticCurveTo(-11.2, -8.8 + flutter, -17.8, -5.1 + flutter * 0.55);
+  ctx.stroke();
+
+  // backpack and bedroll
+  ctx.fillStyle = '#6b4f33';
+  roundRect(ctx, -14.2, -4.8, 6.2, 9.6, 3.0);
+  ctx.fill();
+  ctx.fillStyle = '#583f27';
+  roundRect(ctx, -14.2, -4.8, 1.9, 9.6, 0.95);
+  ctx.fill();
+  ctx.fillStyle = '#9a754f';
+  roundRect(ctx, -15.2, -3.4, 3.2, 6.8, 1.6);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(80,55,33,.55)';
+  ctx.lineWidth = 0.8;
+  for (const sy of [-1.7, 1.7]) {
+    ctx.beginPath();
+    ctx.moveTo(-14.9, sy);
+    ctx.lineTo(-12.0, sy);
+    ctx.stroke();
+  }
+
+  // scarf tail, trailing off to one side
+  const scarfFlutter = Math.sin(time * 8.4) * 1.3;
+  ctx.fillStyle = '#9d5b45';
+  ctx.beginPath();
+  ctx.moveTo(-4.2, -6.3);
+  ctx.quadraticCurveTo(-12.6, -9.6 - scarfFlutter * 0.35, -16.2, -5.0);
+  ctx.quadraticCurveTo(-10.4, -4.7, -4.9, -1.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(232,164,132,.26)';
+  ctx.beginPath();
+  ctx.ellipse(-10.8, -5.2, 2.2, 0.7, -0.3, 0, TAU);
+  ctx.fill();
+
+  // moss cloak / shoulders
+  const cloak = ctx.createRadialGradient(1.5, -3.8, 1, 0, 0, 14.5);
+  cloak.addColorStop(0, '#8aa273');
+  cloak.addColorStop(0.52, '#6b8a5b');
+  cloak.addColorStop(1, '#476642');
+  ctx.fillStyle = cloak;
+  ctx.beginPath();
+  ctx.ellipse(0.3, 0, 11.4, 12.8, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(33,55,33,.62)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // hem and cloth folds
+  ctx.strokeStyle = 'rgba(236,224,194,.2)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.ellipse(0.3, 0.8, 10.3, 11.6, 0, Math.PI * 0.1, Math.PI * 0.9);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(38,62,39,.28)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-8.2, -2.4);
+  ctx.quadraticCurveTo(-4.4, -6.2, -1.2, -9.2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-8.2, 2.4);
+  ctx.quadraticCurveTo(-4.4, 6.2, -1.2, 9.2);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,247,220,.13)';
+  ctx.beginPath();
+  ctx.moveTo(-6.4, -5.2);
+  ctx.quadraticCurveTo(-1.6, -8.2, 4.2, -7.2);
+  ctx.stroke();
+
+  // stitched hem around the back of the cloak
+  ctx.save();
+  ctx.strokeStyle = 'rgba(232,220,188,.28)';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([1.3, 2.3]);
+  ctx.beginPath();
+  ctx.ellipse(0.3, 0.2, 10.6, 11.9, 0, Math.PI * 0.62, Math.PI * 1.38);
+  ctx.stroke();
+  ctx.restore();
+
+  // moss patch on one shoulder
+  ctx.fillStyle = 'rgba(108,140,82,.55)';
+  ctx.beginPath();
+  ctx.ellipse(-4.6, 6.4, 3.4, 2.1, 0.5, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(148,178,112,.35)';
+  ctx.beginPath();
+  ctx.ellipse(-5.2, 5.9, 1.7, 1.0, 0.5, 0, TAU);
+  ctx.fill();
+
+  // cream shoulder trim along the front
+  ctx.strokeStyle = 'rgba(240,229,201,.52)';
+  ctx.lineWidth = 1.7;
+  ctx.beginPath();
+  ctx.arc(0.5, 0, 9.9, -1.12, 1.12);
+  ctx.stroke();
+
+  // shoulder straps
+  ctx.strokeStyle = 'rgba(94,66,42,.58)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-9.6, -5.5);
+  ctx.quadraticCurveTo(-4.2, -8.2, 2.6, -7.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-9.6, 5.5);
+  ctx.quadraticCurveTo(-4.2, 8.2, 2.6, 7.3);
+  ctx.stroke();
+
+  // belt pouch
+  ctx.fillStyle = '#7d5c3b';
+  roundRect(ctx, -5.8, 7.4, 4.8, 3.9, 1.6);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(80,55,33,.5)';
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+
+  // arms and hands, resting at the sides of the cloak
+  const handSwing = p.moving ? step * 0.52 : 0;
+  for (const side of [-1, 1]) {
+    const ax = -0.6 + handSwing * side;
+    const ay = side * 10.2;
+    ctx.fillStyle = '#6c8a5a';
+    ctx.beginPath();
+    ctx.ellipse(ax, ay, 4.6, 2.8, side * -0.48, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(40,63,40,.32)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.fillStyle = '#eac9a3';
+    ctx.beginPath();
+    ctx.arc(ax - 3.0, ay + side * 0.9, 2.0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,214,.35)';
+    ctx.beginPath();
+    ctx.arc(ax - 3.5, ay + side * 0.4, 0.7, 0, TAU);
+    ctx.fill();
+  }
+
+  // hat brim shadow on the shoulders
+  ctx.fillStyle = 'rgba(24,40,26,.24)';
+  ctx.beginPath();
+  ctx.ellipse(4.4, 1.8, 8.4, 7.7, 0, 0, TAU);
+  ctx.fill();
+}
+
+function drawPlayerHead(ctx, time, sway) {
+  // straw hat
+  ctx.save();
+  ctx.translate(5.5, 0);
+  ctx.rotate(sway);
+
+  ctx.fillStyle = 'rgba(48,38,24,.2)';
+  ctx.beginPath();
+  ctx.ellipse(0.4, 1.2, 6.8, 6.5, 0, 0, TAU);
+  ctx.fill();
+
+  const brim = ctx.createRadialGradient(-1.7, -2.1, 1, 0, 0, 7.3);
+  brim.addColorStop(0, '#ecd49a');
+  brim.addColorStop(0.58, '#d6b476');
+  brim.addColorStop(1, '#ab8049');
+  ctx.fillStyle = brim;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 7.0, 6.7, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(104,76,44,.65)';
+  ctx.lineWidth = 1.1;
+  ctx.stroke();
+
+  // woven brim texture
+  ctx.strokeStyle = 'rgba(146,112,68,.24)';
+  ctx.lineWidth = 0.6;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * TAU;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 3.9, Math.sin(a) * 3.7);
+    ctx.lineTo(Math.cos(a) * 6.4, Math.sin(a) * 6.0);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,246,218,.18)';
+  ctx.lineWidth = 0.75;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 5.8, 5.5, 0, 0, TAU);
+  ctx.stroke();
+
+  // crown
+  ctx.fillStyle = 'rgba(83,55,29,.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, 1.0, 4.3, 4.0, 0, 0, TAU);
+  ctx.fill();
+  const crown = ctx.createRadialGradient(-1.8, -1.9, 0.5, 0, 0, 4.2);
+  crown.addColorStop(0, '#d8b877');
+  crown.addColorStop(0.6, '#c39e5f');
+  crown.addColorStop(1, '#a77c45');
+  ctx.fillStyle = crown;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 3.9, 3.7, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(96,68,38,.6)';
+  ctx.lineWidth = 0.95;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 4.2, 4.0, 0, 0, TAU);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,244,205,.18)';
+  ctx.beginPath();
+  ctx.ellipse(-1.5, -2.0, 1.9, 1.4, -0.5, 0, TAU);
+  ctx.fill();
+
+  // thin dark binding around the crown base
+  ctx.strokeStyle = 'rgba(105,76,43,.45)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, 3.55, 0.35, TAU - 0.35);
+  ctx.stroke();
+
+  // leaf tucked into the band
+  ctx.save();
+  ctx.translate(3.6, -3.9);
+  ctx.rotate(-0.7);
+  ctx.fillStyle = '#6f8d52';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 2.6, 1.3, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(42,64,36,.55)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-1.9, 0);
+  ctx.lineTo(2.1, 0);
+  ctx.stroke();
+  ctx.restore();
+
+  // tiny flower on the brim
+  ctx.save();
+  ctx.translate(4.3, 3.1);
+  ctx.rotate(0.4);
+  ctx.fillStyle = 'rgba(244,236,213,.9)';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * 0.95, Math.sin(a) * 0.95, 0.65, 0, TAU);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#d9b66e';
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.5, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(255,247,224,.5)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.arc(0, 0, 6.4, -2.5, -0.8);
+  ctx.stroke();
+  ctx.restore();
+
+  // hair peeking from under the brim
+  ctx.fillStyle = '#5a4433';
+  ctx.beginPath();
+  ctx.ellipse(9.1, 0, 2.5, 3.0, 0, 0, TAU);
+  ctx.fill();
+
+  // face, tucked under the front of the brim
+  const skin = ctx.createRadialGradient(11.6, -1.1, 0.5, 11.0, 0, 3.7);
+  skin.addColorStop(0, '#f7d2a6');
+  skin.addColorStop(1, '#e2ab7c');
+  ctx.fillStyle = 'rgba(91,58,38,.35)';
+  ctx.beginPath();
+  ctx.ellipse(11.0, 0.45, 3.2, 3.6, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.ellipse(11.0, 0, 2.95, 3.35, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(126,82,52,.6)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // brim shadow falling over the back of the face
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(8.9, 0, 2.95, 3.35, 0, 0, TAU);
+  ctx.clip();
+  const faceShade = ctx.createLinearGradient(8.0, 0, 11.8, 0);
+  faceShade.addColorStop(0, 'rgba(79,47,27,.3)');
+  faceShade.addColorStop(1, 'rgba(79,47,27,0)');
+  ctx.fillStyle = faceShade;
+  ctx.fillRect(7.5, -4.0, 7.2, 8.0);
+  ctx.restore();
+
+  // cheeks
+  ctx.fillStyle = 'rgba(208,126,100,.3)';
+  ctx.beginPath();
+  ctx.arc(10.9, -2.05, 0.8, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(10.9, 2.05, 0.8, 0, TAU);
+  ctx.fill();
+
+  // eyes, highlights, nose
+  ctx.fillStyle = '#463528';
+  ctx.beginPath();
+  ctx.arc(11.9, -1.15, 0.55, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(11.9, 1.15, 0.55, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,250,235,.9)';
+  ctx.beginPath();
+  ctx.arc(12.06, -1.32, 0.19, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(12.06, 0.98, 0.19, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(190,132,92,.8)';
+  ctx.beginPath();
+  ctx.arc(13.0, 0, 0.44, 0, TAU);
+  ctx.fill();
+}
+
+function drawWading(ctx, p, time, wade, waterline) {
+  const strength = clamp(wade, 0, 1);
+  ctx.save();
+
+  // soft underwater shadow
+  ctx.fillStyle = `rgba(8,40,48,${0.16 * strength})`;
+  ctx.beginPath();
+  ctx.ellipse(p.x + 1.5, p.y + 8.5, 15.5, 7.2, 0, 0, TAU);
+  ctx.fill();
+
+  // foam at the waterline
+  ctx.strokeStyle = `rgba(228,244,232,${0.18 + strength * 0.3})`;
+  ctx.lineWidth = 1.35;
+  ctx.beginPath();
+  ctx.ellipse(p.x, waterline, 12.8, 4.2, 0, 0.06, Math.PI - 0.06);
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(215,238,226,${0.12 + strength * 0.16})`;
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(p.x, waterline + 1.8, 14.6, 5.0, 0, 0.16, Math.PI - 0.16);
+  ctx.stroke();
+
+  // drifting rings
+  const pace = p.moving ? 1.5 : 0.7;
+  for (let i = 0; i < 3; i++) {
+    const t = (time * 0.34 * pace + i / 3 + (p.wadePhase || 0)) % 1;
+    const r = 10 + t * 26;
+    ctx.globalAlpha = (1 - t) * (0.1 + strength * 0.2);
+    ctx.strokeStyle = 'rgba(222,243,232,1)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.ellipse(p.x, waterline + 1.2, r, r * 0.4, 0, 0, TAU);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+export function drawPlayer(ctx, p, time, night = 0, wade = 0) {
+  const walking = p.moving;
+  const wadeClamped = clamp(wade, 0, 0.62);
+  const stride = 11.5 * (1 - wadeClamped * 0.3);
+  const bob = walking ? Math.sin(time * stride) * 1.4 * (1 - wadeClamped * 0.45) : Math.sin(time * 2.1) * 0.5;
+  const step = walking ? Math.sin(time * stride) * 3.2 : 0;
+  const sway = walking ? Math.sin(time * stride) * 0.035 : Math.sin(time * 2.1) * 0.015;
+  const sink = wadeClamped * 5.5;
+  const waterline = p.y + 11.5 - wadeClamped * 7.2;
+
+  // shadow / underwater silhouette
+  if (wadeClamped > 0.02) {
+    ctx.fillStyle = `rgba(16,34,26,${0.16 * (1 - wadeClamped * 0.5)})`;
+    ctx.beginPath();
+    ctx.ellipse(p.x + 1.5, p.y + 9.5, 13.5, 5.4, 0, 0, TAU);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = 'rgba(16,34,26,.3)';
+    ctx.beginPath();
+    ctx.ellipse(p.x + 1.5, p.y + 9.5, 13.5, 5.4, 0, 0, TAU);
+    ctx.fill();
+  }
 
   if (night > 0.2) {
     ctx.save();
@@ -482,173 +885,29 @@ export function drawPlayer(ctx, p, time, night = 0) {
     ctx.restore();
   }
 
+  // body, clipped at the waterline
   ctx.save();
-  ctx.translate(p.x, p.y + bob);
-  ctx.rotate(dir);
-
-  // boots, peeking from under the cloak
-  ctx.fillStyle = '#4a3a2c';
-  ctx.beginPath();
-  ctx.ellipse(-3.4 + step * 0.35, 12.1, 3.1, 2.4, -0.25, 0, TAU);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-3.4 - step * 0.35, -12.1, 3.1, 2.4, 0.25, 0, TAU);
-  ctx.fill();
-
-  // backpack
-  ctx.fillStyle = '#7d5c3b';
-  roundRect(ctx, -14.6, -5.8, 7.2, 11.6, 3.4);
-  ctx.fill();
-  ctx.fillStyle = '#67492c';
-  roundRect(ctx, -14.6, -5.8, 2.3, 11.6, 1.1);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(60,43,28,.45)';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(-13.6, -3.4);
-  ctx.lineTo(-8.2, -3.4);
-  ctx.stroke();
-
-  // scarf tail, drifting behind
-  ctx.fillStyle = '#b96f56';
-  ctx.beginPath();
-  ctx.moveTo(-4.6, -4.4);
-  ctx.quadraticCurveTo(-13.5 - Math.sin(time * 9) * 1.5, -6.2, -14.2, -0.4);
-  ctx.quadraticCurveTo(-9.6, -1.8, -5, 1.8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = 'rgba(232,164,132,.38)';
-  ctx.beginPath();
-  ctx.ellipse(-9.6, -2.2, 2.7, 0.9, -0.28, 0, TAU);
-  ctx.fill();
-
-  // moss cloak / shoulders
-  const cloak = ctx.createRadialGradient(1, -3.5, 1, 0, 0, 14);
-  cloak.addColorStop(0, '#789366');
-  cloak.addColorStop(0.58, '#5f7d54');
-  cloak.addColorStop(1, '#46643f');
-  ctx.fillStyle = cloak;
-  ctx.beginPath();
-  ctx.ellipse(0.4, 0, 10.8, 12.1, 0, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(36,57,34,.55)';
-  ctx.lineWidth = 1.1;
-  ctx.stroke();
-
-  // cream shoulder trim along the front
-  ctx.strokeStyle = 'rgba(238,226,198,.5)';
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.arc(0.4, 0, 9.4, -1.15, 1.15);
-  ctx.stroke();
-
-  // hands
-  const handSwing = walking ? step * 0.55 : 0;
-  ctx.fillStyle = '#eac9a3';
-  ctx.beginPath();
-  ctx.arc(2.4 + handSwing, 10.5, 2.15, 0, TAU);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(2.4 - handSwing, -10.5, 2.15, 0, TAU);
-  ctx.fill();
-
-  // hat brim shadow on the shoulders
-  ctx.fillStyle = 'rgba(24,40,26,.26)';
-  ctx.beginPath();
-  ctx.ellipse(2.9, 1.9, 9.2, 8.6, 0, 0, TAU);
-  ctx.fill();
-
-  // straw hat
-  ctx.save();
-  ctx.translate(2.6, 0);
-  ctx.rotate(sway);
-  const brim = ctx.createRadialGradient(-2.5, -2.5, 1, 0, 0, 9);
-  brim.addColorStop(0, '#ecd7a6');
-  brim.addColorStop(0.62, '#ddc18a');
-  brim.addColorStop(1, '#c3a26c');
-  ctx.fillStyle = brim;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 8.6, 8.0, 0, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(126,96,58,.55)';
-  ctx.lineWidth = 1.1;
-  ctx.stroke();
-
-  ctx.strokeStyle = 'rgba(255,246,219,.48)';
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.arc(0, 0, 7.4, -2.55, -0.65);
-  ctx.stroke();
-
-  // crown
-  const crown = ctx.createRadialGradient(-2, -2, 0.5, 0, 0, 6);
-  crown.addColorStop(0, '#e3ca95');
-  crown.addColorStop(1, '#bd9c64');
-  ctx.fillStyle = crown;
-  ctx.beginPath();
-  ctx.ellipse(-0.4, 0, 5.6, 5.1, 0, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(126,96,58,.42)';
-  ctx.lineWidth = 0.9;
-  ctx.stroke();
-
-  // terracotta hat band
-  ctx.strokeStyle = '#b5745b';
-  ctx.lineWidth = 2.2;
-  ctx.beginPath();
-  ctx.arc(-0.4, 0, 4.9, 0.2, TAU - 0.35);
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(247,216,180,.32)';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.arc(-0.4, 0, 4.9, 3.5, 5.1);
-  ctx.stroke();
-
-  // leaf tucked into the band
-  ctx.save();
-  ctx.translate(4.5, -4.0);
-  ctx.rotate(-0.55);
-  ctx.fillStyle = '#6f8d52';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 3.0, 1.5, 0, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(42,64,36,.5)';
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(-2.2, 0);
-  ctx.lineTo(2.4, 0);
-  ctx.stroke();
+  if (wadeClamped > 0.02) {
+    ctx.beginPath();
+    ctx.rect(p.x - 52, p.y - 80, 104, waterline - (p.y - 80));
+    ctx.clip();
+  }
+  ctx.translate(p.x, p.y + bob + sink);
+  ctx.rotate(p.dir);
+  ctx.scale(1.18, 1.18);
+  drawPlayerBody(ctx, p, time, step);
   ctx.restore();
 
-  // hair peeking from under the brim
-  ctx.fillStyle = '#5a4433';
-  ctx.beginPath();
-  ctx.ellipse(4.7, 0, 3.5, 4.1, 0, 0, TAU);
-  ctx.fill();
+  if (wadeClamped > 0.02) {
+    drawWading(ctx, p, time, wadeClamped, waterline);
+  }
 
-  // face
-  ctx.fillStyle = '#edcda7';
-  ctx.beginPath();
-  ctx.ellipse(5.8, 0, 3.6, 4.05, 0, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(150,104,70,.35)';
-  ctx.lineWidth = 0.7;
-  ctx.stroke();
-
-  // eyes and nose
-  ctx.fillStyle = '#4b3a2c';
-  ctx.beginPath();
-  ctx.arc(6.9, -1.45, 0.62, 0, TAU);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(6.9, 1.45, 0.62, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(190,132,92,.75)';
-  ctx.beginPath();
-  ctx.arc(8.5, 0, 0.55, 0, TAU);
-  ctx.fill();
-
-  ctx.restore(); // hat sway
+  // head stays above the surface and sinks only slightly
+  ctx.save();
+  ctx.translate(p.x, p.y + bob + sink * 0.32);
+  ctx.rotate(p.dir);
+  ctx.scale(1.18, 1.18);
+  drawPlayerHead(ctx, time, sway);
   ctx.restore();
 }
 
@@ -673,20 +932,60 @@ export function drawTargetRing(ctx, o, time) {
   ctx.restore();
 }
 
-export function drawSparkles(ctx, sparkles, view, time) {
+export function drawWater(ctx, water, view, time) {
+  const { sparkles, waterLines, shoreRipples } = water;
   ctx.save();
+  ctx.lineCap = 'round';
+
+  // slow drifting current lines
+  for (const w of waterLines) {
+    if (w.x < view.x1 - 20 || w.x > view.x2 + 20 || w.y < view.y1 - 20 || w.y > view.y2 + 20) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(time * w.speed + w.phase);
+    ctx.globalAlpha = w.a * (0.28 + pulse * 0.72);
+    ctx.strokeStyle = 'rgba(208,238,228,1)';
+    ctx.lineWidth = 0.85;
+    const x = w.x + Math.sin(time * 0.3 + w.phase) * 2.4;
+    const y = w.y + Math.sin(time * 0.42 + w.phase) * 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x - w.len * 0.5, y);
+    ctx.quadraticCurveTo(x, y - 1.1 - w.tilt * 3.2, x + w.len * 0.5, y + w.tilt * 1.8);
+    ctx.stroke();
+  }
+
+  // expanding rings near the shoreline
+  for (const r of shoreRipples) {
+    if (r.x < view.x1 - 20 || r.x > view.x2 + 20 || r.y < view.y1 - 20 || r.y > view.y2 + 20) continue;
+    const t = (time * r.speed + r.phase) % 1;
+    const rad = r.r + t * 10;
+    ctx.globalAlpha = r.a * (1 - t) * 1.5;
+    ctx.strokeStyle = 'rgba(226,244,233,1)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(r.x, r.y, rad, rad * 0.42, 0, 0, TAU);
+    ctx.stroke();
+  }
+
+  // glints on the surface
   for (const s of sparkles) {
     if (s.x < view.x1 || s.x > view.x2 || s.y < view.y1 || s.y > view.y2) continue;
     const pulse = 0.5 + 0.5 * Math.sin(time * s.speed + s.phase);
-    ctx.globalAlpha = s.a * (0.3 + pulse * 0.7);
-    ctx.strokeStyle = 'rgba(230,244,233,1)';
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
+    ctx.globalAlpha = s.a * (0.32 + pulse * 0.68);
+    ctx.strokeStyle = 'rgba(235,247,236,1)';
+    ctx.lineWidth = 1.0;
     const y = s.y + Math.sin(time * 0.5 + s.phase) * 1.5;
+    ctx.beginPath();
     ctx.moveTo(s.x - s.len * 0.5, y);
     ctx.quadraticCurveTo(s.x, y - 1.6, s.x + s.len * 0.5, y);
     ctx.stroke();
+    if (pulse > 0.82) {
+      ctx.globalAlpha *= 0.8;
+      ctx.fillStyle = 'rgba(250,255,247,1)';
+      ctx.beginPath();
+      ctx.arc(s.x + s.len * 0.18, y - 0.8, 0.75, 0, TAU);
+      ctx.fill();
+    }
   }
+
   ctx.restore();
 }
 

@@ -2,7 +2,7 @@ import { TAU, clamp, lerp, smoothstep } from './util.js';
 import { createWorld, WORLD, RESOURCE_META } from './world.js';
 import {
   drawPine, drawRock, drawBush, drawFireGlow, drawCampfire, drawPlayer,
-  drawTargetRing, drawSparkles, drawFirefly, drawParticle, drawDarkness,
+  drawTargetRing, drawWater, drawFirefly, drawParticle, drawDarkness,
   drawDecor, drawButterfly,
 } from './art.js';
 import { Soundscape } from './audio.js';
@@ -76,7 +76,7 @@ const state = {
   elapsed: 0,
   daylight: 1,
   nearFire: false,
-  player: { x: 0, y: 0, dir: -Math.PI / 2, moving: false, walk: 0 },
+  player: { x: 0, y: 0, dir: -Math.PI / 2, moving: false, walk: 0, wade: 0, wadePhase: 0 },
   cam: { x: 0, y: 0 },
   inventory: { wood: 0, stone: 0, food: 0 },
   tools: { axe: false, pick: false },
@@ -788,6 +788,12 @@ function updateButterflies(dt, time) {
   }
 }
 
+function waterDepthAt(x, y) {
+  const e = world.heightAt(x, y);
+  if (e >= 0.012) return 0;
+  return clamp((0.012 - e) / 0.34, 0, 1) * 0.62;
+}
+
 function findTarget() {
   const p = state.player;
   let best = null;
@@ -896,7 +902,7 @@ function update(dt) {
   p.moving = moving;
 
   if (moving) {
-    const speed = 170 * (state.survival.stamina <= 0 ? 0.58 : 1);
+    const speed = 170 * (state.survival.stamina <= 0 ? 0.58 : 1) * (1 - p.wade * 0.34);
     p.x += ix * speed * dt;
     p.y += iy * speed * dt;
     p.dir = Math.atan2(iy, ix);
@@ -905,6 +911,10 @@ function update(dt) {
   resolveCollisions();
   p.x = clamp(p.x, 30, WORLD - 30);
   p.y = clamp(p.y, 30, WORLD - 30);
+
+  const depth = waterDepthAt(p.x, p.y);
+  p.wade = lerp(p.wade, depth, 1 - Math.exp(-dt * 7));
+  p.wadePhase += dt * (0.7 + p.wade * 1.3);
 
   const fireDist = distanceToFire(p.x, p.y);
   state.nearFire = fireDist < 240;
@@ -1042,7 +1052,7 @@ function render(time) {
     ctx.drawImage(world.terrain, sx, sy, sw, sh, sx, sy, sw, sh);
   }
 
-  drawSparkles(ctx, world.sparkles, view, time);
+  drawWater(ctx, world, view, time);
 
   if (state.target && !state.uiOpen && !state.fainting) {
     drawTargetRing(ctx, state.target, time);
@@ -1073,7 +1083,7 @@ function render(time) {
     if (f.x < view.x1 - 80 || f.x > view.x2 + 80 || f.y < view.y1 - 80 || f.y > view.y2 + 80) continue;
     items.push({ y: f.y, draw: () => drawCampfire(ctx, f, time, darkness) });
   }
-  items.push({ y: state.player.y, draw: () => drawPlayer(ctx, state.player, time, darkness) });
+  items.push({ y: state.player.y, draw: () => drawPlayer(ctx, state.player, time, darkness, state.player.wade) });
   items.sort((a, b) => a.y - b.y);
   for (const item of items) item.draw();
 
@@ -1299,7 +1309,7 @@ function init() {
         survival: { ...state.survival },
         nearFire: state.nearFire,
         target: state.target ? { kind: state.target.kind, x: state.target.x, y: state.target.y } : null,
-        player: { x: state.player.x, y: state.player.y },
+        player: { x: state.player.x, y: state.player.y, wade: state.player.wade },
         zoom,
         viewport: { width: vw, height: vh },
         objects: world.objects.length,

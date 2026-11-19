@@ -43,10 +43,10 @@ export const RESOURCE_META = {
   },
 };
 
-const WATER_DEEP = [20, 68, 84];
-const WATER_MID = [38, 108, 120];
-const WATER_SHALLOW = [92, 168, 158];
-const FOAM = [203, 224, 207];
+const WATER_DEEP = [14, 58, 80];
+const WATER_MID = [33, 107, 123];
+const WATER_SHALLOW = [88, 160, 150];
+const FOAM = [210, 230, 218];
 const WET_SAND = [181, 164, 124];
 const SAND = [211, 190, 146];
 const SAND_LIGHT = [224, 205, 162];
@@ -69,12 +69,14 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
       x: center.x - 195,
       y: center.y - 305,
       r: 78 + rand() * 18,
+      phase: rand() * TAU,
       near: true,
     },
     {
       x: center.x + Math.cos(rand() * TAU) * (560 + rand() * 120),
       y: center.y + Math.sin(rand() * TAU) * (470 + rand() * 120),
       r: 82 + rand() * 46,
+      phase: rand() * TAU,
     },
   ];
 
@@ -97,7 +99,15 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
       const wx = (gx / (GRID - 1)) * WORLD;
       const wy = (gy / (GRID - 1)) * WORLD;
       for (const pond of ponds) {
-        const pd = Math.hypot(wx - pond.x, wy - pond.y) / pond.r;
+        const pdx = wx - pond.x;
+        const pdy = wy - pond.y;
+        const pa = Math.atan2(pdy, pdx);
+        const wobble =
+          1 +
+          0.075 * Math.sin(pa * 3 + pond.phase) +
+          0.045 * Math.sin(pa * 5 - pond.phase * 1.7) +
+          0.028 * Math.sin(pa * 8 + pond.phase * 2.3);
+        const pd = Math.hypot(pdx, pdy) / (pond.r * wobble);
         if (pd < 1.45) e -= 0.98 * (1 - smoothstep(0.5, 1.45, pd));
       }
 
@@ -129,7 +139,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
     x > 12 && y > 12 && x < WORLD - 12 && y < WORLD - 12 && heightAt(x, y) > min;
 
   /* ---------- painted terrain base ---------- */
-  const BASE = 1024;
+  const BASE = 1280;
   const baseCanvas = document.createElement('canvas');
   baseCanvas.width = BASE;
   baseCanvas.height = BASE;
@@ -157,9 +167,9 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
         b += w;
         if (e > -0.045) {
           const f = smoothstep(-0.045, 0.012, e);
-          r = lerp(r, FOAM[0], f * 0.42);
-          g = lerp(g, FOAM[1], f * 0.42);
-          b = lerp(b, FOAM[2], f * 0.42);
+          r = lerp(r, FOAM[0], f * 0.3);
+          g = lerp(g, FOAM[1], f * 0.3);
+          b = lerp(b, FOAM[2], f * 0.3);
         }
       } else if (e < 0.088) {
         const t = smoothstep(0.012, 0.088, e);
@@ -168,9 +178,9 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
         b = lerp(WET_SAND[2], SAND[2], t);
         if (e < 0.034) {
           const f = smoothstep(0.034, 0.012, e);
-          r = lerp(r, FOAM[0], f * 0.5);
-          g = lerp(g, FOAM[1], f * 0.5);
-          b = lerp(b, FOAM[2], f * 0.5);
+          r = lerp(r, FOAM[0], f * 0.38);
+          g = lerp(g, FOAM[1], f * 0.38);
+          b = lerp(b, FOAM[2], f * 0.38);
         } else {
           const dry = smoothstep(0.04, 0.09, e);
           r = lerp(r, SAND_LIGHT[0], dry * 0.5);
@@ -233,32 +243,71 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
   }
   bctx.globalAlpha = 1;
 
+  // painterly depth blooms inside the water
+  for (let i = 0; i < 340; i++) {
+    const bx = rand() * BASE;
+    const by = rand() * BASE;
+    const wx = (bx / BASE) * WORLD;
+    const wy = (by / BASE) * WORLD;
+    const e = sampleField(height, wx, wy);
+    if (e > 0.004) continue;
+    const deep = smoothstep(-0.08, -0.5, e);
+    const col = deep > 0.45
+      ? (rand() < 0.6 ? WATER_DEEP : WATER_MID)
+      : (rand() < 0.55 ? WATER_MID : WATER_SHALLOW);
+    bctx.globalAlpha = 0.035 + rand() * 0.055;
+    bctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+    bctx.beginPath();
+    const rad = 10 + rand() * 46;
+    bctx.ellipse(bx, by, rad, rad * (0.5 + rand() * 0.7), rand() * TAU, 0, TAU);
+    bctx.fill();
+  }
+  bctx.globalAlpha = 1;
+
   const terrain = document.createElement('canvas');
   terrain.width = WORLD;
   terrain.height = WORLD;
   const tctx = terrain.getContext('2d');
   tctx.imageSmoothingEnabled = true;
   tctx.imageSmoothingQuality = 'high';
+  tctx.filter = 'blur(1px)';
   tctx.drawImage(baseCanvas, 0, 0, WORLD, WORLD);
+  tctx.filter = 'none';
 
   /* ---------- hand-painted detail pass ---------- */
   const detail = mulberry32(seed ^ 0x51ed270b);
 
   // soft shore foam and ripples
-  for (let i = 0; i < 7200; i++) {
+  for (let i = 0; i < 12000; i++) {
     const x = detail() * WORLD;
     const y = detail() * WORLD;
     const e = heightAt(x, y);
-    if (e > -0.055 && e < 0.062) {
-      const a = 0.1 + detail() * 0.3;
-      tctx.strokeStyle = `rgba(232,241,224,${a})`;
-      tctx.lineWidth = 0.7 + detail() * 1.4;
+    if (e > -0.06 && e < 0.07) {
+      const patch = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(x * 0.013 + Math.sin(y * 0.009) * 2.0));
+      const a = (0.06 + detail() * 0.3) * patch;
+      tctx.strokeStyle = `rgba(236,245,229,${a})`;
+      tctx.lineWidth = 0.7 + detail() * 1.5;
       tctx.beginPath();
-      const rr = 1.5 + detail() * 5.5;
-      tctx.arc(x, y, rr, Math.PI * (0.1 + detail() * 0.35), Math.PI * (0.6 + detail() * 0.45));
+      const rr = 1.4 + detail() * 6;
+      const start = Math.PI * (0.08 + detail() * 0.36);
+      tctx.arc(x, y, rr, start, start + Math.PI * (0.3 + detail() * 0.4));
       tctx.stroke();
+      if (detail() < 0.32) {
+        tctx.strokeStyle = `rgba(225,241,228,${a * 0.5})`;
+        tctx.lineWidth = 0.6 + detail() * 0.8;
+        tctx.beginPath();
+        tctx.arc(x + (detail() - 0.5) * 8, y + (detail() - 0.5) * 6, rr * 0.55, start, start + Math.PI * 0.5);
+        tctx.stroke();
+      }
+      if (e > -0.024 && detail() < 0.55) {
+        tctx.strokeStyle = `rgba(24,78,84,${0.1 + detail() * 0.12})`;
+        tctx.lineWidth = 0.7 + detail() * 0.7;
+        tctx.beginPath();
+        tctx.arc(x, y, rr * 0.9, start + Math.PI * 0.2, start + Math.PI * (0.9 + detail() * 0.3));
+        tctx.stroke();
+      }
     } else if (e > -0.42 && e < -0.06) {
-      const a = 0.035 + detail() * 0.075;
+      const a = 0.03 + detail() * 0.075;
       tctx.strokeStyle = `rgba(220,238,226,${a})`;
       tctx.lineWidth = 0.6 + detail() * 1.2;
       const len = 3 + detail() * 12;
@@ -268,6 +317,26 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
       tctx.quadraticCurveTo(x, yy - 1.5 - detail() * 2, x + len, yy);
       tctx.stroke();
     }
+  }
+
+  // underwater caustics and soft current lines
+  for (let i = 0; i < 4400; i++) {
+    const x = detail() * WORLD;
+    const y = detail() * WORLD;
+    const e = heightAt(x, y);
+    if (e > -0.035 || e < -0.62) continue;
+    const len = 4 + detail() * 22;
+    const ang = (detail() - 0.5) * 0.42;
+    const bright = detail() < 0.62;
+    const a = (bright ? 0.02 : 0.028) + detail() * (bright ? 0.06 : 0.038);
+    tctx.strokeStyle = bright ? `rgba(191,233,222,${a})` : `rgba(10,50,66,${a})`;
+    tctx.lineWidth = 0.6 + detail() * 1.1;
+    const dx = Math.cos(ang) * len * 0.5;
+    const dy = Math.sin(ang) * len * 0.5;
+    tctx.beginPath();
+    tctx.moveTo(x - dx, y - dy);
+    tctx.quadraticCurveTo(x, y - 1.2 - detail() * 3, x + dx, y + dy);
+    tctx.stroke();
   }
 
   // grass strokes
@@ -360,20 +429,53 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
     }
   }
 
-  /* ---------- water sparkle points (animated at runtime) ---------- */
+  /* ---------- water surface detail (animated at runtime) ---------- */
   const sparkles = [];
-  for (let i = 0; i < 1100; i++) {
+  for (let i = 0; i < 4200; i++) {
     const x = detail() * WORLD;
     const y = detail() * WORLD;
     const e = heightAt(x, y);
-    if (e > 0.008 || e < -0.36) continue;
+    if (e > 0.006 || e < -0.52) continue;
     sparkles.push({
       x,
       y,
-      len: 2 + detail() * 8,
+      len: 2 + detail() * 10,
       phase: detail() * TAU,
       speed: 0.4 + detail() * 0.9,
-      a: 0.04 + detail() * 0.1,
+      a: 0.045 + detail() * 0.115,
+    });
+  }
+
+  const waterLines = [];
+  for (let i = 0; i < 5200; i++) {
+    const x = detail() * WORLD;
+    const y = detail() * WORLD;
+    const e = heightAt(x, y);
+    if (e > -0.03 || e < -0.6) continue;
+    waterLines.push({
+      x,
+      y,
+      len: 5 + detail() * 20,
+      tilt: (detail() - 0.5) * 0.55,
+      phase: detail() * TAU,
+      speed: 0.22 + detail() * 0.55,
+      a: 0.018 + detail() * 0.065,
+    });
+  }
+
+  const shoreRipples = [];
+  for (let i = 0; i < 1500; i++) {
+    const x = detail() * WORLD;
+    const y = detail() * WORLD;
+    const e = heightAt(x, y);
+    if (e > -0.012 || e < -0.16) continue;
+    shoreRipples.push({
+      x,
+      y,
+      r: 3 + detail() * 8,
+      phase: detail() * TAU,
+      speed: 0.12 + detail() * 0.22,
+      a: 0.03 + detail() * 0.075,
     });
   }
 
@@ -585,6 +687,8 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
     fires,
     decor,
     sparkles,
+    waterLines,
+    shoreRipples,
     addFire(x, y) {
       const fire = {
         id: fires.length + 1,
