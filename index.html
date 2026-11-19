@@ -20,6 +20,7 @@
     <symbol id="icon-wood" viewBox="0 0 24 24"><path d="M4.5 8.5 12 5l7.5 3.5v3.2L12 15.2 4.5 11.7V8.5Z"/><path d="M4.5 13.2 12 16.7l7.5-3.5v3.1L12 19.8l-7.5-3.5v-3.1Z"/></symbol>
     <symbol id="icon-stone" viewBox="0 0 24 24"><path d="m5.2 14.7 2-6.1 5-2.8 6.2 2.6 1.4 6.4-4.6 4.1-6.8-.6-3.2-3.6Z"/></symbol>
     <symbol id="icon-berry" viewBox="0 0 24 24"><path d="M12 8.4c1.6-2.3 4.2-3.2 6.4-2.2-.4 2.5-2.6 4.3-5.1 4.2"/><circle cx="9.2" cy="13" r="3.1"/><circle cx="14.8" cy="13.4" r="3.4"/><circle cx="12" cy="17.7" r="3"/></symbol>
+    <symbol id="icon-stick" viewBox="0 0 24 24"><path d="M3.4 19.8c-.7-.7-.7-1.8 0-2.5L15.9 4.8c.7-.7 1.8-.7 2.5 0s.7 1.8 0 2.5L5.9 19.8c-.7.7-1.8.7-2.5 0Z"/><path d="m12.2 11 4.1-2.6 1.3 2-4.1 2.6Z"/><path d="m14.6 6.2-1.2-3.1 2-.8 1.2 3.1Z"/></symbol>
     <symbol id="icon-axe" viewBox="0 0 24 24"><path d="M5.8 21.6 11.2 10.8 13.6 12 8.2 22.8Z"/><path d="M11.2 11.4 10 4.2 18.8 2.2 22 7.2 16.4 13.4 12.6 13.8Z"/></symbol>
     <symbol id="icon-pick" viewBox="0 0 24 24"><path d="m6.4 20.6 8.4-10.9"/><path d="M5.2 7.3c3.9-2.7 9.2-2.4 12.7.6-3.6 2.7-8.9 2.5-12.3-.1"/><path d="m11.1 4.8-1 4.1"/></symbol>
     <symbol id="icon-fire" viewBox="0 0 24 24"><path d="M12.2 3.3c.4 3.4-2.5 4.6-2.5 7.1 0 1 .6 1.7 1.4 1.9-.1-1.8 1.2-3 2.4-3.8.2 1.5 2.8 2.6 2.8 5.6 0 3-2.2 5.3-5.1 5.3-3.2 0-5.3-2.3-5.3-5.3 0-4.6 4.4-6.2 6.3-10.8Z"/></symbol>
@@ -42,6 +43,17 @@
     <div class="hud-left">
       <div class="meters" id="meters" aria-label="Survival meters"></div>
       <div class="inventory" id="inventory" aria-label="Gathered resources"></div>
+      <div class="quest-card" id="questCard" aria-live="polite">
+        <span class="quest-step" id="questStep">1/6</span>
+        <div class="quest-body">
+          <div class="quest-top">
+            <span class="quest-title" id="questTitle">Gather sticks</span>
+            <span class="quest-count" id="questCount">0/5</span>
+          </div>
+          <p class="quest-text" id="questText">Pick up fallen branches</p>
+          <span class="quest-bar" aria-hidden="true"><i id="questFill"></i></span>
+        </div>
+      </div>
     </div>
     <div class="hud-right">
       <div class="daydial" id="daydial" aria-label="Time of day">
@@ -107,7 +119,7 @@
     <div class="faint-card">
       <p class="eyebrow">The island is patient</p>
       <h2>You grew weak.</h2>
-      <p>You wake beside the fire, a little wiser.</p>
+      <p>You wake somewhere safe, a little wiser.</p>
       <button class="primary" id="wakeBtn">Wake up</button>
     </div>
   </div>

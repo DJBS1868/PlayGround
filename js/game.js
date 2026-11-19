@@ -1,7 +1,7 @@
 import { TAU, clamp, lerp, smoothstep } from './util.js';
 import { createWorld, WORLD, RESOURCE_META } from './world.js';
 import {
-  drawPine, drawRock, drawBush, drawFireGlow, drawCampfire, drawPlayer,
+  drawPine, drawRock, drawBush, drawStick, drawFireGlow, drawCampfire, drawPlayer,
   drawTargetRing, drawWater, drawFirefly, drawParticle, drawDarkness,
   drawDecor, drawButterfly,
 } from './art.js';
@@ -14,19 +14,28 @@ const GATHER_RING = 283;
 const RECIPES = [
   {
     id: 'axe', name: 'Stone Axe', tag: 'Tool', icon: 'axe', once: true,
-    desc: 'Chop pines faster and carry home more wood.',
-    cost: { wood: 4, stone: 2 },
+    desc: 'Bind a sharp stone to a stick. Chop pines for wood.',
+    cost: { stick: 5 },
   },
   {
-    id: 'pick', name: 'Stone Pick', tag: 'Tool', icon: 'pick', once: true,
-    desc: 'Break boulders faster and gather more stone.',
-    cost: { wood: 2, stone: 4 },
+    id: 'pick', name: 'Stone Pickaxe', tag: 'Tool', icon: 'pick', once: true,
+    desc: 'A stone head on a wooden handle. Break boulders for stone.',
+    cost: { wood: 8, stick: 3 },
   },
   {
     id: 'campfire', name: 'Campfire', tag: 'Light', icon: 'fire',
     desc: 'A warm circle of safety against the dark.',
-    cost: { wood: 5, stone: 3 },
+    cost: { wood: 6, stone: 4 },
   },
+];
+
+const QUESTS = [
+  { id: 'sticks', title: 'Gather sticks', text: 'Pick up fallen branches', goal: 5 },
+  { id: 'axe', title: 'Craft an axe', text: 'Open the hammer tab', goal: 1 },
+  { id: 'wood', title: 'Chop pines', text: 'Gather 8 wood with the axe', goal: 8 },
+  { id: 'pick', title: 'Craft a pickaxe', text: 'Use 8 wood and 3 sticks', goal: 1 },
+  { id: 'stone', title: 'Mine boulders', text: 'Gather 4 stone', goal: 4 },
+  { id: 'fire', title: 'Build a campfire', text: 'Craft it on open ground', goal: 1 },
 ];
 
 const METERS = [
@@ -78,7 +87,9 @@ const state = {
   nearFire: false,
   player: { x: 0, y: 0, dir: -Math.PI / 2, moving: false, walk: 0, wade: 0, wadePhase: 0 },
   cam: { x: 0, y: 0 },
-  inventory: { wood: 0, stone: 0, food: 0 },
+  inventory: { stick: 0, wood: 0, stone: 0, food: 0 },
+  totals: { stick: 0, wood: 0, stone: 0, food: 0, fire: 0 },
+  quest: { index: 0 },
   tools: { axe: false, pick: false },
   survival: { health: 100, hunger: 100, stamina: 100 },
   target: null,
@@ -88,7 +99,7 @@ const state = {
   floaters: [],
   fireflies: [],
   butterflies: [],
-  hints: { food: false, craft: false, stamina: false, moved: false, hunger: false },
+  hints: { food: false, craft: false, stamina: false, moved: false, hunger: false, axe: false, pick: false },
   lastToolsKey: '',
 };
 
@@ -109,6 +120,7 @@ metersEl.innerHTML = METERS.map((m) => `
 
 const inventoryEl = $('inventory');
 inventoryEl.innerHTML = `
+  <span class="res-chip" style="--c:#c9a06d"><svg aria-hidden="true"><use href="#icon-stick"></use></svg><span class="count" id="count-stick">0</span></span>
   <span class="res-chip" style="--c:#c79a6b"><svg aria-hidden="true"><use href="#icon-wood"></use></svg><span class="count" id="count-wood">0</span></span>
   <span class="res-chip" style="--c:#b0aea0"><svg aria-hidden="true"><use href="#icon-stone"></use></svg><span class="count" id="count-stone">0</span></span>
   <button class="res-chip food-chip" id="foodChip" style="--c:#d07b70" aria-label="Eat berries"><svg aria-hidden="true"><use href="#icon-berry"></use></svg><span class="count" id="count-food">0</span></button>
@@ -138,6 +150,12 @@ const actionProgress = $('actionProgress');
 const craftDot = $('craftDot');
 const foodChip = $('foodChip');
 const toolBadgesEl = $('toolBadges');
+const questCardEl = $('questCard');
+const questStepEl = $('questStep');
+const questTitleEl = $('questTitle');
+const questTextEl = $('questText');
+const questCountEl = $('questCount');
+const questFillEl = $('questFill');
 const dialMarker = $('dialMarker');
 const dialLabel = $('dialLabel');
 const dialFace = document.querySelector('.dial-face');
@@ -248,6 +266,56 @@ function gatherDuration(o) {
   return d;
 }
 
+function questProgress(q) {
+  if (q.id === 'sticks') return state.totals.stick;
+  if (q.id === 'axe') return state.tools.axe ? 1 : 0;
+  if (q.id === 'wood') return state.totals.wood;
+  if (q.id === 'pick') return state.tools.pick ? 1 : 0;
+  if (q.id === 'stone') return state.totals.stone;
+  if (q.id === 'fire') return state.totals.fire;
+  return 0;
+}
+
+function updateQuestHud() {
+  if (!questCardEl) return;
+  const q = QUESTS[state.quest.index];
+  if (!q) {
+    questStepEl.textContent = '✓';
+    questTitleEl.textContent = 'All quests complete';
+    questTextEl.textContent = 'Keep the fire burning';
+    questCountEl.textContent = '';
+    questFillEl.style.width = '100%';
+    return;
+  }
+  const p = Math.min(questProgress(q), q.goal);
+  questStepEl.textContent = `${state.quest.index + 1}/${QUESTS.length}`;
+  questTitleEl.textContent = q.title;
+  questTextEl.textContent = q.text;
+  questCountEl.textContent = `${p}/${q.goal}`;
+  questFillEl.style.width = `${(p / q.goal) * 100}%`;
+}
+
+function checkQuests() {
+  if (!state.started) return;
+  let advanced = false;
+  while (state.quest.index < QUESTS.length) {
+    const q = QUESTS[state.quest.index];
+    if (questProgress(q) < q.goal) break;
+    state.quest.index++;
+    advanced = true;
+    const next = QUESTS[state.quest.index];
+    if (next) {
+      showToast(`Quest complete · <b>${q.title}</b><br><span class="toast-sub">Next: ${next.title} — ${next.text}</span>`, 3800);
+    } else {
+      showToast('<b>All quests complete.</b><br><span class="toast-sub">Keep the fire burning.</span>', 5000);
+    }
+    questCardEl.classList.remove('flash');
+    void questCardEl.offsetWidth;
+    questCardEl.classList.add('flash');
+  }
+  if (advanced) updateHud(true);
+}
+
 function updateHud(force = false) {
   const s = state.survival;
   const C = 157.08;
@@ -261,6 +329,7 @@ function updateHud(force = false) {
     if (meter) meter.classList.toggle('low', v < 28);
   }
 
+  $('count-stick').textContent = String(state.inventory.stick);
   $('count-wood').textContent = String(state.inventory.wood);
   $('count-stone').textContent = String(state.inventory.stone);
   $('count-food').textContent = String(state.inventory.food);
@@ -290,11 +359,13 @@ function updateHud(force = false) {
     showToast('You have enough materials to <b>craft</b>. Open the hammer tab.', 3400);
   }
 
+  updateQuestHud();
   if (state.uiOpen) updateCraftUI();
 }
 
 function updateCraftUI() {
   sheetResEl.innerHTML = `
+    <span class="res-chip" style="--c:#c9a06d"><svg aria-hidden="true"><use href="#icon-stick"></use></svg><span class="count">${state.inventory.stick}</span></span>
     <span class="res-chip" style="--c:#c79a6b"><svg aria-hidden="true"><use href="#icon-wood"></use></svg><span class="count">${state.inventory.wood}</span></span>
     <span class="res-chip" style="--c:#b0aea0"><svg aria-hidden="true"><use href="#icon-stone"></use></svg><span class="count">${state.inventory.stone}</span></span>
     <span class="res-chip" style="--c:#d07b70"><svg aria-hidden="true"><use href="#icon-berry"></use></svg><span class="count">${state.inventory.food}</span></span>`;
@@ -307,7 +378,7 @@ function updateCraftUI() {
     const owned = isOwned(r);
     const afford = canAfford(r);
     costEl.innerHTML = Object.entries(r.cost).map(([k, v]) => {
-      const icon = k === 'wood' ? 'wood' : k === 'stone' ? 'stone' : 'berry';
+      const icon = k === 'wood' ? 'wood' : k === 'stone' ? 'stone' : k === 'stick' ? 'stick' : 'berry';
       const short = state.inventory[k] < v;
       return `<span class="${short ? 'short' : ''}"><svg aria-hidden="true"><use href="#icon-${icon}"></use></svg>${v}</span>`;
     }).join('');
@@ -556,7 +627,7 @@ function craft(id) {
   if (!recipe || isOwned(recipe)) return;
   if (!canAfford(recipe)) {
     showToast('Not enough materials yet.', 2000);
-    showSheetNotice('Not enough materials yet. Gather more wood, stone, or berries.');
+    showSheetNotice('Not enough materials yet. Gather sticks, wood, or stone.');
     return;
   }
   const p = state.player;
@@ -569,6 +640,7 @@ function craft(id) {
     }
     spend(recipe.cost);
     const fire = world.addFire(spot.x, spot.y);
+    state.totals.fire += 1;
     for (let i = 0; i < 16; i++) spawnEmber(fire);
     sound.build();
     haptic(14);
@@ -581,11 +653,13 @@ function craft(id) {
     sound.craft();
     haptic(10);
     addFloater(recipe.name, p.x, p.y - 32, '#f3d69b');
-    showToast(`Crafted <b>${recipe.name}</b>. ${id === 'axe' ? 'Pines now give more wood.' : 'Boulders now give more stone.'}`, 3200);
-    showSheetNotice(`Crafted ${recipe.name}. ${id === 'axe' ? 'Pines now give more wood.' : 'Boulders now give more stone.'}`, 'ok');
+    const msg = id === 'axe' ? 'Pines can now be chopped for wood.' : 'Boulders can now be mined for stone.';
+    showToast(`Crafted <b>${recipe.name}</b>. ${msg}`, 3200);
+    showSheetNotice(`Crafted ${recipe.name}. ${msg}`, 'ok');
   }
   updateHud(true);
   updateCraftUI();
+  checkQuests();
 }
 
 function begin() {
@@ -600,10 +674,11 @@ function begin() {
   titleEl.classList.add('hidden');
   setTimeout(() => { titleEl.style.display = 'none'; }, 1000);
   sound.start().then(() => updateSoundIcon()).catch(() => {});
-  showToast('Move with the joystick. Action appears near trees, rocks, and berries.', 4200);
+  showToast('Move with the joystick. Gather the fallen sticks around the clearing.', 4400);
   setTimeout(() => {
-    if (state.started) showToast('Craft a campfire before the night.', 3200);
-  }, 4600);
+    if (state.started) showToast('Craft a campfire before nightfall. It takes wood and stone.', 3400);
+  }, 4800);
+  updateQuestHud();
   lastFrame = 0;
 }
 
@@ -800,6 +875,8 @@ function findTarget() {
   let bestD = Infinity;
   for (const o of world.objects) {
     if (!o.ready) continue;
+    if (o.kind === 'tree' && !state.tools.axe) continue;
+    if (o.kind === 'rock' && !state.tools.pick) continue;
     const reach = RESOURCE_META[o.kind].reach;
     const dx = o.x - p.x;
     const dy = o.y - p.y;
@@ -812,10 +889,35 @@ function findTarget() {
   return best;
 }
 
+function updateLockedHints() {
+  const p = state.player;
+  if (!state.tools.axe && !state.hints.axe) {
+    for (const o of world.objects) {
+      if (o.kind !== 'tree' || !o.ready) continue;
+      if (Math.hypot(o.x - p.x, o.y - p.y) < 118) {
+        state.hints.axe = true;
+        showToast('Pines need an axe. Gather sticks and craft one.', 3400);
+        break;
+      }
+    }
+  }
+  if (!state.tools.pick && !state.hints.pick) {
+    for (const o of world.objects) {
+      if (o.kind !== 'rock' || !o.ready) continue;
+      if (Math.hypot(o.x - p.x, o.y - p.y) < 118) {
+        state.hints.pick = true;
+        showToast('Boulders need a pickaxe. Chop pines for wood first.', 3400);
+        break;
+      }
+    }
+  }
+}
+
 function resolveCollisions() {
   const p = state.player;
   for (let pass = 0; pass < 2; pass++) {
     for (const o of world.objects) {
+      if (o.kind === 'stick') continue;
       const meta = RESOURCE_META[o.kind];
       const dx = p.x - o.x;
       const dy = p.y - o.y;
@@ -846,11 +948,12 @@ function completeGather(o) {
   const tooled = (o.kind === 'tree' && state.tools.axe) || (o.kind === 'rock' && state.tools.pick);
   const amount = tooled ? 2 : 1;
   state.inventory[meta.resource] += amount;
+  state.totals[meta.resource] = (state.totals[meta.resource] || 0) + amount;
   o.hits -= 1;
   if (o.hits <= 0) {
     o.ready = false;
     o.hits = meta.hits;
-    o.respawnAt = state.elapsed + meta.respawn;
+    o.respawnAt = meta.respawn > 0 ? state.elapsed + meta.respawn : Infinity;
     o.growth = 0;
   }
   state.survival.stamina = Math.max(0, state.survival.stamina - 3.5);
@@ -865,6 +968,7 @@ function completeGather(o) {
     showToast('Tap the berry count in the corner to eat.', 3200);
   }
   updateHud(true);
+  checkQuests();
 }
 
 function update(dt) {
@@ -911,6 +1015,7 @@ function update(dt) {
   resolveCollisions();
   p.x = clamp(p.x, 30, WORLD - 30);
   p.y = clamp(p.y, 30, WORLD - 30);
+  updateLockedHints();
 
   const depth = waterDepthAt(p.x, p.y);
   p.wade = lerp(p.wade, depth, 1 - Math.exp(-dt * 7));
@@ -1012,6 +1117,7 @@ function update(dt) {
   hudAccum += dt;
   if (hudAccum > 0.1) {
     hudAccum = 0;
+    checkQuests();
     updateHud();
   }
   if (state.uiOpen) {
@@ -1069,12 +1175,14 @@ function render(time) {
     items.push({ y: d.y, draw: () => drawDecor(ctx, d, time) });
   }
   for (const o of world.objects) {
+    if (o.kind === 'stick' && !o.ready) continue;
     if (o.x < view.x1 - 90 || o.x > view.x2 + 90 || o.y < view.y1 - 90 || o.y > view.y2 + 90) continue;
     items.push({
       y: o.y,
       draw: () => {
         if (o.kind === 'tree') drawPine(ctx, o, time);
         else if (o.kind === 'rock') drawRock(ctx, o, time);
+        else if (o.kind === 'stick') drawStick(ctx, o, time);
         else drawBush(ctx, o, time);
       },
     });
@@ -1236,12 +1344,18 @@ function init() {
     },
     setNight() { this.setTime(0.76); },
     setDay() { this.setTime(0.18); },
-    give(wood = 20, stone = 20, food = 10) {
+    give(wood = 20, stone = 20, food = 10, sticks = 0) {
       state.inventory.wood += wood;
       state.inventory.stone += stone;
       state.inventory.food += food;
+      state.inventory.stick += sticks;
+      state.totals.wood += wood;
+      state.totals.stone += stone;
+      state.totals.food += food;
+      state.totals.stick += sticks;
       updateHud(true);
       if (state.uiOpen) updateCraftUI();
+      checkQuests();
     },
     refill() {
       state.survival.health = 100;
@@ -1292,6 +1406,16 @@ function init() {
     },
     openCraft: openSheet,
     closeCraft: closeSheet,
+    quest() {
+      const q = QUESTS[state.quest.index];
+      return {
+        index: state.quest.index,
+        total: QUESTS.length,
+        id: q ? q.id : 'done',
+        progress: q ? Math.min(questProgress(q), q.goal) : 1,
+        goal: q ? q.goal : 1,
+      };
+    },
     addFire() {
       const spot = world.findFireSpot(state.player.x, state.player.y, state.player.dir);
       if (spot) world.addFire(spot.x, spot.y);
@@ -1305,6 +1429,11 @@ function init() {
         time: state.time,
         daylight: state.daylight,
         inventory: { ...state.inventory },
+        totals: { ...state.totals },
+        quest: {
+          index: state.quest.index,
+          id: QUESTS[state.quest.index] ? QUESTS[state.quest.index].id : 'done',
+        },
         tools: { ...state.tools },
         survival: { ...state.survival },
         nearFire: state.nearFire,
