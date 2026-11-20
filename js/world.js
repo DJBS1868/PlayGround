@@ -494,6 +494,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
   /* ---------- objects ---------- */
   const objects = [];
   const fires = [];
+  const tents = [];
   const placed = [];
   let nextId = 1;
 
@@ -710,6 +711,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
     ponds,
     objects,
     fires,
+    tents,
     decor,
     sparkles,
     waterLines,
@@ -724,6 +726,50 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
       };
       fires.push(fire);
       return fire;
+    },
+    addTent(x, y) {
+      const tent = {
+        id: tents.length + 1,
+        x,
+        y,
+        seed: (Math.random() * 1e9) | 0,
+        builtAt: performance.now() / 1000,
+      };
+      tents.push(tent);
+      return tent;
+    },
+    findTentSpot(px, py, dir) {
+      for (let ring = 0; ring < 10; ring++) {
+        const dist = 66 + ring * 14;
+        for (let k = 0; k < 12; k++) {
+          const a = dir + (k % 2 === 0 ? 1 : -1) * Math.ceil(k / 2) * 0.44;
+          const x = clamp(px + Math.cos(a) * dist, 60, WORLD - 60);
+          const y = clamp(py + Math.sin(a) * dist, 60, WORLD - 60);
+          if (!isLand(x, y, 0.12)) continue;
+          let ok = true;
+          for (const o of objects) {
+            const dx = o.x - x;
+            const dy = o.y - y;
+            if (dx * dx + dy * dy < 56 * 56) { ok = false; break; }
+          }
+          if (ok) {
+            for (const f of fires) {
+              const dx = f.x - x;
+              const dy = f.y - y;
+              if (dx * dx + dy * dy < 92 * 92) { ok = false; break; }
+            }
+          }
+          if (ok) {
+            for (const t of tents) {
+              const dx = t.x - x;
+              const dy = t.y - y;
+              if (dx * dx + dy * dy < 130 * 130) { ok = false; break; }
+            }
+          }
+          if (ok) return { x, y };
+        }
+      }
+      return null;
     },
     findFireSpot(px, py, dir) {
       for (let ring = 0; ring < 9; ring++) {
@@ -744,6 +790,13 @@ export function createWorld(seed = (Math.random() * 1e9) | 0) {
               const dx = f.x - x;
               const dy = f.y - y;
               if (dx * dx + dy * dy < 110 * 110) { ok = false; break; }
+            }
+          }
+          if (ok) {
+            for (const t of tents) {
+              const dx = t.x - x;
+              const dy = t.y - y;
+              if (dx * dx + dy * dy < 82 * 82) { ok = false; break; }
             }
           }
           if (ok) return { x, y };
