@@ -484,8 +484,13 @@
       <main class="museum-main">
         <div class="museum-hall" id="museumHall">
           <div class="hall-arches" aria-hidden="true"><i></i><i></i><i></i></div>
-          <div class="hall-label"><span>Gallery of the Sun</span><b id="museumCount">0 / 12</b></div>
+          <div class="hall-label"><span>Gallery of the Sun</span><b id="museumCount">0 / 24</b></div>
           <div class="museum-display" id="museumDisplay"></div>
+          <button class="collection-book-btn" id="openCollectionBook" type="button">
+            <svg><use href="#i-museum"></use></svg>
+            <span>Collection book</span>
+            <b id="bookCount">0 / 24</b>
+          </button>
         </div>
         <div class="museum-strip-head">
           <span class="mini-label">Recent acquisitions</span>
@@ -498,6 +503,14 @@
           <div><span>Total value</span><strong id="museumValue">$0</strong></div>
         </div>
       </main>
+      <div class="collection-book" id="collectionBook" hidden aria-label="Collection book">
+        <header class="collection-book-head">
+          <button class="collection-back" id="closeCollectionBook" type="button" aria-label="Close collection book">←</button>
+          <div><span>Atlas society</span><strong>Collection book</strong></div>
+          <b id="collectionBookCount">0 / 24</b>
+        </header>
+        <main class="collection-book-list" id="collectionBookList"></main>
+      </div>
       <nav class="tabbar" aria-label="Main navigation">
         <button class="tab" data-nav="home"><svg><use href="#i-field"></use></svg><span>Field</span><i class="tab-dot"></i></button>
         <button class="tab" data-nav="lab"><span class="tab-badge" id="labBadge3" hidden></span><svg><use href="#i-brush"></use></svg><span>Lab</span><i class="tab-dot"></i></button>

@@ -38,7 +38,7 @@ export const SITES = [
       far: '#d19757', mid: '#ba783f', near: '#8e512c', deep: '#5a321d',
       accent: '#f0c476'
     },
-    artifacts: ['dinar', 'lamp', 'bell'],
+    artifacts: ['dinar', 'lamp', 'bell', 'caravan-key', 'camel-seal', 'woven-talisman'],
     flavor: 'The dune moves eleven metres a year. Somewhere beneath it, a caravan still waits.'
   },
   {
@@ -56,7 +56,7 @@ export const SITES = [
       far: '#cfc7ab', mid: '#e1d8bf', near: '#b7a681', deep: '#756448',
       accent: '#69a89a'
     },
-    artifacts: ['scarab', 'amphora', 'ibis'],
+    artifacts: ['scarab', 'amphora', 'ibis', 'salt-censer', 'pharaoh-scarab', 'priests-seal'],
     flavor: 'Salt preserves everything — including the curses the priests carved into the door.'
   },
   {
@@ -74,7 +74,7 @@ export const SITES = [
       far: '#c47d4d', mid: '#a65e38', near: '#7e4328', deep: '#4d291b',
       accent: '#e3a45a'
     },
-    artifacts: ['tooth', 'ammonite', 'pendant'],
+    artifacts: ['tooth', 'ammonite', 'pendant', 'whale-vertebra', 'marine-coin', 'reed-comb'],
     flavor: 'Forty million years ago this was a sea. The whales never learned to leave.'
   },
   {
@@ -92,7 +92,7 @@ export const SITES = [
       far: '#5c4033', mid: '#3e2b23', near: '#241a16', deep: '#120d0b',
       accent: '#b47a3d'
     },
-    artifacts: ['mask', 'ring', 'disc'],
+    artifacts: ['mask', 'ring', 'disc', 'black-stela', 'sun-bracer', 'obsidian-dagger'],
     flavor: 'The doorway was sealed from the inside. The expedition has decided not to discuss this.'
   }
 ];
@@ -277,6 +277,54 @@ export const ARTIFACTS = {
     tint: '#9b7e45',
     desc: 'A perforated bronze disc mapping stars that no longer sit where they should. One hole has been drilled later, by a different hand.',
     provenance: 'Mounted above the tomb door, aimed at the western horizon.'
+  },
+  'caravan-key': {
+    id: 'caravan-key', name: 'Merchant Caravan Key', shortName: 'Iron key', type: 'Tool', era: '12th century · Sahara', material: 'Wrought iron', rarity: 2, value: 260, fragility: 2, art: 'ring', tint: '#65594a',
+    desc: 'An oversized iron key with a trade guild mark filed into the bow.', provenance: 'Hanging by a rusted chain in the wrecked camel gear.'
+  },
+  'camel-seal': {
+    id: 'camel-seal', name: 'Camel Caravan Seal', shortName: 'Clay seal', type: 'Official', era: '9th century · Maghreb', material: 'Stamped clay', rarity: 3, value: 330, fragility: 3, art: 'disc', tint: '#9e6f47',
+    desc: 'A palm-sized clay sealing impressed with a kneeling camel and eight-point star.', provenance: 'Still fixed beneath the rim of a trader’s chest.'
+  },
+  'woven-talisman': {
+    id: 'woven-talisman', name: 'Red-Woven Talisman', shortName: 'Woven talisman', type: 'Adornment', era: '11th century · Trans-Saharan', material: 'Wool & copper', rarity: 3, value: 350, fragility: 3, art: 'pendant', tint: '#bd6847',
+    desc: 'A red wool cord knotted around a tiny hammered-copper charm.', provenance: 'Twisted around a pack frame buried in dune wash.'
+  },
+  'salt-censer': {
+    id: 'salt-censer', name: 'Salt Priest Censer', shortName: 'Salt censer', type: 'Ceremonial', era: '18th dynasty · Sinai', material: 'Alabaster', rarity: 3, value: 610, fragility: 3, art: 'lamp', tint: '#d1d0ba',
+    desc: 'A shallow carved censer whose inner bowl is still veined with incense resin.', provenance: 'Found under a collapsed salt wall beside the altar.'
+  },
+  'pharaoh-scarab': {
+    id: 'pharaoh-scarab', name: 'Crowned Scarab', shortName: 'Crowned scarab', type: 'Amulet', era: '18th dynasty · New Kingdom', material: 'Faience & gold', rarity: 4, value: 760, fragility: 2, art: 'scarab', tint: '#45a397',
+    desc: 'A turquoise scarab crowned with a small gold solar disk.', provenance: 'Placed at the foot of a painted limestone guardian.'
+  },
+  'priests-seal': {
+    id: 'priests-seal', name: 'White Temple Seal', shortName: 'Temple seal', type: 'Official', era: 'Ptolemaic · Sinai', material: 'Calcite', rarity: 4, value: 690, fragility: 3, art: 'ring', tint: '#d9cfaa',
+    desc: 'A calcite stamp ring engraved with the names of two temple priests.', provenance: 'Recovered from a drain channel beneath the shrine.'
+  },
+  'whale-vertebra': {
+    id: 'whale-vertebra', name: 'Fossil Whale Vertebra', shortName: 'Whale vertebra', type: 'Fossil', era: '36 million years · Eocene', material: 'Fossilised bone', rarity: 3, value: 670, fragility: 3, art: 'tooth', tint: '#a89470',
+    desc: 'A weathered vertebral disc, polished by aeons of wind and silt.', provenance: 'Exposed in a bone bed at the valley’s western edge.'
+  },
+  'marine-coin': {
+    id: 'marine-coin', name: 'Drowned Nautical Coin', shortName: 'Nautical coin', type: 'Coin', era: 'Roman · Wadi Fayum', material: 'Silver', rarity: 3, value: 520, fragility: 2, art: 'coin', tint: '#aeb4ad',
+    desc: 'A silver coin stamped with a dolphin, greened by ancient mineral salts.', provenance: 'Loose beneath a long-vanished shoreline marker.'
+  },
+  'reed-comb': {
+    id: 'reed-comb', name: 'Papyrus Reed Comb', shortName: 'Bone comb', type: 'Personal', era: 'Neolithic · Fayum', material: 'Carved bone', rarity: 2, value: 450, fragility: 3, art: 'pendant', tint: '#c2ad83',
+    desc: 'A fine-toothed comb carved with a border of curling reeds.', provenance: 'Found in a reed mat at the remains of a lakeside camp.'
+  },
+  'black-stela': {
+    id: 'black-stela', name: 'Shard of the Black Stela', shortName: 'Obsidian stela', type: 'Inscription', era: 'Unknown · Pre-dynastic', material: 'Obsidian', rarity: 5, value: 1320, fragility: 4, art: 'mask', tint: '#282527',
+    desc: 'A sliver of polished black stone engraved with a map of the sealed tomb.', provenance: 'Split from the stela laid beside the inner doorway.'
+  },
+  'sun-bracer': {
+    id: 'sun-bracer', name: 'Gold Sun Bracer', shortName: 'Sun bracer', type: 'Jewellery', era: 'Unknown · Solar cult', material: 'Gold', rarity: 5, value: 1180, fragility: 3, art: 'ring', tint: '#d6a13f',
+    desc: 'A broad spiral bracelet whose terminals curl into opposing sun discs.', provenance: 'Wrapped around the arm of a stone burial guardian.'
+  },
+  'obsidian-dagger': {
+    id: 'obsidian-dagger', name: 'Ritual Obsidian Dagger', shortName: 'Obsidian dagger', type: 'Ceremonial', era: 'Unknown · Bronze Age', material: 'Obsidian & bronze', rarity: 5, value: 1400, fragility: 4, art: 'disc', tint: '#30272d',
+    desc: 'A razor-edged ceremonial blade fixed in a tarnished bronze hilt.', provenance: 'Placed across the threshold of the tomb’s last chamber.'
   }
 };
 
@@ -345,7 +393,7 @@ export const RANKS = [
   { at: 90, name: 'Legend' }
 ];
 
-export const TOTAL_RELICS = 12;
+export const TOTAL_RELICS = 24;
 
 export function rankFor(renown) {
   let rank = RANKS[0].name;
