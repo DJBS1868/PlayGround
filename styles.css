@@ -605,6 +605,11 @@ svg { display: block; }
 .stat-value strong { font-family: var(--font-display); font-size: 21px; line-height: 1; font-weight: 600; color: #2b1d0f; }
 .stat-value span { font-size: 7px; color: #9b7d57; font-weight: 700; letter-spacing: .04em; }
 .stat-divider { width: 1px; height: 24px; background: rgba(87, 59, 28, .13); }
+.field-collection-btn { flex: 0 0 36px; min-height: 36px; border-radius: 12px; border: 1px solid rgba(108,75,38,.16); background: linear-gradient(105deg, rgba(255,252,244,.58), rgba(235,216,179,.44)); color: #65472b; display: flex; align-items: center; gap: 7px; padding: 0 10px; }
+.field-collection-btn svg { width: 15px; height: 15px; color: #8d693d; }
+.field-collection-btn span { flex: 1; text-align: left; font-size: 7px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.field-collection-btn b { font-size: 7px; color: #967548; }
+.field-collection-btn:active { transform: scale(.985); }
 .dispatch-card {
   height: 48px;
   border-radius: 15px;

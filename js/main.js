@@ -284,6 +284,7 @@ function renderHome() {
   $('#statRecovered').textContent = state.collection.length;
   $('#statRenown').textContent = state.renown;
   $('#statRank').textContent = '· ' + rankFor(state.renown);
+  $('#fieldBookCount').textContent = `${new Set(state.collection.map(item => item.artifactId)).size} / ${TOTAL_RELICS}`;
 
   const dispatch = nextObjective();
   $('#dispatchText').textContent = dispatch.text;
@@ -1003,11 +1004,14 @@ function bind() {
     else startDig(SITES[state.selectedSite]);
   });
 
-  $('#openCollectionBook').addEventListener('click', () => {
+  const openCollectionBook = () => {
     audio.click();
     renderCollectionBook();
     $('#collectionBook').hidden = false;
-  });
+  };
+
+  $('#openCollectionBook').addEventListener('click', openCollectionBook);
+  $('#openFieldCollectionBook').addEventListener('click', openCollectionBook);
   $('#closeCollectionBook').addEventListener('click', () => {
     audio.click();
     $('#collectionBook').hidden = true;
