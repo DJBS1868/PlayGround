@@ -256,7 +256,7 @@ function renderHome() {
   $('#heroLockText').textContent = `Requires ${site.unlock} renown`;
   const cta = $('#heroCtaText');
   if (state.currentRelic) {
-    cta.textContent = state.currentRelic.condition != null ? 'Appraise your find' : 'Resume restoration';
+    cta.textContent = state.currentRelic.condition != null ? 'Appraise your find' : 'Clean your find';
   } else if (locked) {
     cta.textContent = `Reach ${site.unlock} renown`;
   } else {
@@ -297,7 +297,7 @@ function nextObjective() {
   if (state.currentRelic) return { text: 'Finish restoring your latest find', reward: 'LAB' };
   if (state.collection.length === 0) return { text: 'Recover your first relic', reward: '+150' };
   if (state.renown < SITES[1].unlock) return { text: `Reach ${SITES[1].unlock} renown to open the Salt Temple`, reward: 'RENOWN' };
-  if (state.collection.length < 3) return { text: 'Recover three relics for the gallery', reward: '+200' };
+  if (state.collection.length < 3) return { text: 'Deliver three relics to the gallery', reward: '+200' };
   if (state.renown < SITES[2].unlock) return { text: `Reach ${SITES[2].unlock} renown for the Bone Valley`, reward: 'RENOWN' };
   return { text: 'Bring home a museum-grade treasure', reward: '★' };
 }
@@ -322,7 +322,7 @@ function beginDig() {
   const site = SITES[state.selectedSite];
   if (state.renown < site.unlock) {
     audio.error();
-    toast(`The ${site.name} opens at ${site.unlock} renown. Sell a find to the museum.`, 3200);
+    toast(`${site.name} opens at ${site.unlock} renown. Sell a find to the museum.`, 3200);
     return;
   }
   startDig(site);
@@ -590,6 +590,11 @@ function renderAppraisal() {
   $('#appraiseEra').textContent = a.era;
   $('#appraiseDesc').textContent = a.desc;
   $('#appraiseProvenance').textContent = a.provenance;
+  $('#appraisePulse').textContent = offers.condition >= 95
+    ? 'Exceptional condition · collector interest high'
+    : a.rarity >= 4
+      ? 'Museum-tier rarity · demand rising'
+      : 'Steady demand · comparable sales this season';
   $('#appraiseCondition').textContent = `${offers.condition}%`;
   $('#appraiseMarket').textContent = money(o.market);
   $('#appraiseGrade').textContent = gradeText(offers.condition);
@@ -598,9 +603,9 @@ function renderAppraisal() {
   $('#appraiseRarity').innerHTML = Array.from({ length: 5 }, (_, i) =>
     `<svg class="star ${i < a.rarity ? '' : 'empty'}"><use href="#i-star"></use></svg>`
   ).join('') + `<span class="rarity-text">${['', 'Common', 'Notable', 'Rare', 'Museum', 'Masterwork'][a.rarity]}</span>`;
-  $('#museumValue').textContent = money(o.museum);
+  $('#museumOfferValue').textContent = money(o.museum);
   $('#collectorValue').textContent = money(o.collector);
-  $('#museumRenown').textContent = `+${o.renown}`;
+  $('#museumOfferRenown').textContent = `+${o.renown}`;
   $('#soldOverlay').hidden = true;
 }
 
@@ -611,12 +616,19 @@ function sellRelic(buyer) {
   const offers = relic.offers;
   const amount = buyer === 'museum' ? offers.museum : offers.collector;
   let grant = 0;
+  let grantNote = '';
   if (!state.flags.firstRelic) {
-    grant = 150;
+    grant += 150;
     state.flags.firstRelic = true;
+    grantNote = `The Society adds a first-find grant of ${money(150)}.`;
+  }
+  if (!state.flags.galleryBonus && state.collection.length + 1 >= 3) {
+    grant += 200;
+    state.flags.galleryBonus = true;
+    grantNote = `${grantNote ? grantNote + ' ' : ''}A gallery milestone adds ${money(200)}.`;
   }
   state.coins += amount + grant;
-  state.totalEarned += amount;
+  state.totalEarned += amount + grant;
   if (buyer === 'museum') state.renown += offers.renown;
   state.flags.firstSale = true;
   state.collection.push({
@@ -638,9 +650,10 @@ function sellRelic(buyer) {
   $('#soldTitle').innerHTML = isMuseum ? 'A new treasure<br>enters the archive.' : 'The deal is<br>done, quietly.';
   $('#soldAmount').textContent = money(amount + grant);
   $('#soldRenown').textContent = isMuseum ? `+${offers.renown}` : '—';
-  $('#soldFlavor').textContent = grant
-    ? `The Society adds a first-find grant of ${money(grant)}. ${isMuseum ? 'Curator Hana places it in the sunrise gallery.' : 'The buyer asks that you do not mention the tomb.'}`
-    : (isMuseum ? 'Curator Hana places it in the sunrise gallery.' : 'The buyer asks that you do not mention the tomb.');
+  const buyerNote = isMuseum
+    ? 'Curator Hana places it in the sunrise gallery.'
+    : 'The buyer asks that you do not mention the tomb.';
+  $('#soldFlavor').textContent = grantNote ? `${grantNote} ${buyerNote}` : buyerNote;
   $('#soldOverlay').hidden = false;
   audio.coin();
   vibrate([20, 40, 30]);
@@ -670,7 +683,7 @@ function renderLab() {
       eyebrow.textContent = 'A find on the table';
       title.textContent = 'Finish the restoration.';
       text.textContent = `${artifact.shortName} is still encrusted. The lab is set up and waiting.`;
-      cta.querySelector('span').textContent = 'Resume restoration';
+      cta.querySelector('span').textContent = 'Clean the find';
       tip.textContent = 'Tip: dry brush lifts grime, water dissolves salt, cloth restores lustre.';
     }
   } else {
@@ -894,7 +907,7 @@ function bind() {
     openModal({
       kicker: 'The bench can wait',
       title: 'Leave the restoration?',
-      text: 'Your find will stay in the lab. You can resume the cleaning from the Lab tab.',
+      text: 'Your find will stay safe in the lab. You can return to the bench whenever you are ready.',
       actions: [
         { label: 'Stay at the bench', style: 'ghost' },
         { label: 'Go to the lab', style: 'primary', onClick: () => { stopClean(); showScreen('lab'); } }

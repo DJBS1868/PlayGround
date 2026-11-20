@@ -420,7 +420,7 @@ export class CleanScene {
         this.spawnDust(x, y, radius, 'rgba(105, 82, 54,');
         this.haptic(5);
       }
-      if (this.dirtCount / this.dirtTotal > .28 && this.saltCount / this.saltTotal < .3) {
+      if (this.dirtCount / this.dirtTotal <= .28 && this.saltCount / this.saltTotal > .3) {
         this.hint('Salt crust remains. Switch to the water tool.', 1500);
       }
     } else if (this.tool === 'water') {
@@ -436,7 +436,7 @@ export class CleanScene {
         this.spawnWater(x, y, radius);
         this.haptic(4);
       }
-      if (this.saltCount / this.saltTotal > .28 && this.dirtCount / this.dirtTotal < .3) {
+      if (this.saltCount / this.saltTotal <= .28 && this.dirtCount / this.dirtTotal > .3) {
         this.hint('The grime needs a dry brush first.', 1500);
       }
     } else {

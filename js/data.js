@@ -16,6 +16,7 @@ export const STARTING_STATE = {
   flags: {
     firstRelic: false,
     firstSale: false,
+    galleryBonus: false,
     tutorialDig: false,
     tutorialClean: false
   }

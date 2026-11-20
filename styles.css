@@ -3,15 +3,50 @@
    ========================================================= */
 @font-face {
   font-family: 'Fraunces';
+  src: url('assets/fonts/fraunces-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fraunces';
   src: url('assets/fonts/fraunces-600.woff2') format('woff2');
-  font-weight: 100 900;
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fraunces';
+  src: url('assets/fonts/fraunces-700.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Manrope';
   src: url('assets/fonts/manrope-400.woff2') format('woff2');
-  font-weight: 100 900;
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Manrope';
+  src: url('assets/fonts/manrope-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Manrope';
+  src: url('assets/fonts/manrope-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Manrope';
+  src: url('assets/fonts/manrope-700.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -389,7 +424,19 @@ svg { display: block; }
   color: #fff8e8;
   text-shadow: 0 2px 18px rgba(29,16,4,.35);
 }
-.hero-copy .eyebrow { color: #e7c486; margin-bottom: 6px; display: block; }
+.hero-copy .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  margin-bottom: 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 236, 198, .16);
+  background: rgba(30, 18, 7, .4);
+  color: #f4dca8;
+  text-shadow: 0 1px 8px rgba(28, 15, 3, .62);
+  backdrop-filter: blur(6px);
+}
 .hero-copy h1 {
   font-family: var(--font-display);
   font-size: clamp(30px, 8.2vw, 38px);
@@ -584,7 +631,7 @@ svg { display: block; }
    ========================================================= */
 .tabbar {
   flex: 0 0 auto;
-  height: calc(var(--tab-h) + var(--safe-bottom));
+  height: var(--tab-h);
   margin: 0 12px calc(7px + var(--safe-bottom));
   border-radius: 21px;
   background: linear-gradient(180deg, #241a11 0%, #18110b 100%);
@@ -961,7 +1008,7 @@ svg { display: block; }
   gap: 9px;
 }
 .appraise-stage {
-  height: clamp(230px, 32vh, 292px);
+  height: clamp(250px, 42vh, 390px);
   flex: 0 0 auto;
   position: relative;
   overflow: hidden;
@@ -1005,8 +1052,9 @@ svg { display: block; }
 #appraiseImg {
   position: relative;
   z-index: 2;
-  width: 205px;
-  height: 205px;
+  width: clamp(205px, 26vh, 232px);
+  aspect-ratio: 1;
+  height: auto;
   object-fit: contain;
   filter: drop-shadow(0 16px 20px rgba(0,0,0,.42)) drop-shadow(0 0 18px rgba(255,225,163,.12));
   animation: relicFloat 5s ease-in-out infinite;
@@ -1066,6 +1114,40 @@ svg { display: block; }
 .prov-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .prov-label { font-size: 5.8px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #7f998d; }
 .prov-copy span:last-child { font-size: 7.4px; line-height: 1.35; color: #a99a82; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.market-pulse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  border: 1px dashed rgba(200, 226, 213, .12);
+  background: linear-gradient(90deg, rgba(216, 164, 77, .055), rgba(255,255,255,.012) 65%, transparent);
+}
+.pulse-label {
+  font-size: 5.8px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #80958b;
+  flex: 0 0 auto;
+}
+.pulse-bars { display: flex; align-items: flex-end; gap: 2px; height: 18px; flex: 0 0 auto; }
+.pulse-bars i {
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #d7b471, #7e9a8e);
+  opacity: .8;
+}
+.pulse-copy {
+  font-size: 7.2px;
+  line-height: 1.35;
+  color: #a99a82;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .offer-block { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
 .offer-block > .mini-label { color: #80958b; margin-bottom: 1px; }
 .offer-card {
@@ -1404,7 +1486,7 @@ svg { display: block; }
   .home-lower { gap: 5px; }
   .stat-pair { height: 45px; }
   .dispatch-card { height: 43px; }
-  .tabbar { height: calc(var(--tab-h) + var(--safe-bottom)); }
+  .tabbar { height: var(--tab-h); }
   .game-head { height: 58px; }
   .dig-panel { height: 144px; }
   .clean-panel { height: 202px; }
@@ -1412,7 +1494,6 @@ svg { display: block; }
   .appraise-stage { height: 218px; }
   #appraiseImg { width: 178px; height: 178px; }
   .appraise-detail h2 { font-size: 22px; }
-  .appraise-desc { display: none; }
   .offer-card { height: 52px; }
   .page-head { height: 64px; }
   .page-head h1 { font-size: 25px; }
@@ -1434,7 +1515,6 @@ svg { display: block; }
   .clean-hint { bottom: 12px; }
   .appraise-stage { height: 192px; }
   #appraiseImg { width: 158px; height: 158px; }
-  .provenance-card { display: none; }
   .appraise-desc { display: none; }
   .appraise-stats { margin-top: 5px; }
   .offer-card { height: 49px; }
@@ -1460,6 +1540,31 @@ svg { display: block; }
   .field-note { display: none; }
   .appraise-main { padding-left: 12px; padding-right: 12px; }
   .museum-main, .shop-main, .lab-main { padding-left: 11px; padding-right: 11px; }
+}
+
+@media (max-height: 590px) {
+  :root { --tab-h: 54px; }
+  .topbar { height: 54px; }
+  .brand-title { font-size: 19px; }
+  .brand-seal { width: 32px; height: 32px; }
+  .brand-seal svg { width: 19px; height: 19px; }
+  .home-main { gap: 6px; padding-top: 3px; }
+  .hero { height: 238px; min-height: 224px; }
+  .hero-copy { bottom: 56px; left: 15px; right: 15px; }
+  .hero-copy .eyebrow { font-size: 7.5px; margin-bottom: 3px; }
+  .hero-copy h1 { font-size: 25px; margin-bottom: 0; }
+  .hero-cta { height: 40px; bottom: 9px; border-radius: 12px; }
+  .hero-top { top: 10px; left: 10px; right: 10px; }
+  .site-rail { height: 38px; gap: 5px; }
+  .site-chip { height: 38px; padding: 4px 8px; }
+  .site-chip .site-name { font-size: 10.5px; }
+  .home-lower { gap: 5px; padding-bottom: 0; }
+  .journal-card { min-height: 42px; padding: 6px 9px; }
+  .journal-text { font-size: 10.5px; -webkit-line-clamp: 1; }
+  .stat-pair { height: 34px; }
+  .dispatch-card { height: 34px; }
+  .market-pulse { display: none; }
+  .tabbar { margin-bottom: calc(5px + var(--safe-bottom)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
