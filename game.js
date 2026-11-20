@@ -25,6 +25,57 @@
 
   const STORE_BANK = 'goldenAce.bankroll.v1';
   const STORE_SOUND = 'goldenAce.sound.v1';
+  const STORE_COSMETICS = 'goldenAce.cosmetics.v1';
+
+  const COSMETIC_SETS = {
+    chips: [
+      { id:'classic', name:'Classic', price:0, className:'chip-classic' },
+      { id:'royal', name:'Royal', price:150, className:'chip-royal' },
+      { id:'ruby', name:'Ruby', price:200, className:'chip-ruby' },
+      { id:'ocean', name:'Ocean', price:250, className:'chip-ocean' },
+      { id:'gold', name:'Gold', price:350, className:'chip-gold' },
+      { id:'midnight', name:'Midnight', price:500, className:'chip-midnight' },
+    ],
+    cards: [
+      { id:'classic', name:'Classic', price:0, className:'cards-classic' },
+      { id:'noir', name:'Noir', price:180, className:'cards-noir' },
+      { id:'rose', name:'Rose Gold', price:220, className:'cards-rose' },
+      { id:'emerald', name:'Emerald', price:300, className:'cards-emerald' },
+      { id:'blue', name:'Atlantic', price:350, className:'cards-blue' },
+      { id:'royal', name:'Royal', price:500, className:'cards-royal' },
+    ],
+    felts: [
+      { id:'classic', name:'Emerald', price:0, className:'felt-classic' },
+      { id:'black', name:'Onyx', price:180, className:'felt-black' },
+      { id:'burgundy', name:'Burgundy', price:220, className:'felt-burgundy' },
+      { id:'blue', name:'Blue', price:300, className:'felt-blue' },
+      { id:'violet', name:'Violet', price:350, className:'felt-violet' },
+      { id:'champagne', name:'Champagne', price:500, className:'felt-champagne' },
+    ],
+    floors: [
+      { id:'classic', name:'Casino Crest', price:0, className:'floor-classic' },
+      { id:'diamond', name:'Diamonds', price:150, className:'floor-diamond' },
+      { id:'checker', name:'Checkered', price:220, className:'floor-checker' },
+      { id:'art', name:'Art Deco', price:300, className:'floor-art' },
+      { id:'red', name:'Red Mosaic', price:400, className:'floor-red' },
+      { id:'neon', name:'Neon Grid', price:500, className:'floor-neon' },
+    ],
+  };
+
+  function loadCosmetics() {
+    try {
+      const saved = JSON.parse(readStore(STORE_COSMETICS, '{}'));
+      return {
+        purchased: Array.isArray(saved.purchased) ? saved.purchased : [],
+        equipped: {
+          chips: saved.equipped?.chips || 'classic', cards: saved.equipped?.cards || 'classic',
+          felts: saved.equipped?.felts || 'classic', floors: saved.equipped?.floors || 'classic'
+        }
+      };
+    } catch { return { purchased: [], equipped:{ chips:'classic', cards:'classic', felts:'classic', floors:'classic' } }; }
+  }
+  const cosmetics = loadCosmetics();
+  function saveCosmetics() { writeStore(STORE_COSMETICS, JSON.stringify(cosmetics)); }
 
   function readStore(key, fallback) {
     try {
@@ -907,7 +958,64 @@
   /* ------------------------------------------------------------
      shop + sound
      ------------------------------------------------------------ */
+  function applyCosmetics() {
+    document.body.className = document.body.className
+      .split(' ').filter(c => !/^cosmetic-|^(chips-|cards-|felt-|floor-)/.test(c)).join(' ').trim();
+    Object.entries(COSMETIC_SETS).forEach(([category, options]) => {
+      const selected = options.find(o => o.id === cosmetics.equipped[category]) || options[0];
+      document.body.classList.add(selected.className);
+    });
+  }
+
+  function shopKey(category, id) { return `${category}:${id}`; }
+  function isPurchased(category, id) {
+    return id === 'classic' || cosmetics.purchased.includes(shopKey(category, id));
+  }
+
+  function renderShop() {
+    const targets = { chips:'shopChips', cards:'shopCards', felts:'shopFelts', floors:'shopFloors' };
+    Object.entries(targets).forEach(([category, targetId]) => {
+      const target = $(targetId);
+      if (!target) return;
+      target.innerHTML = COSMETIC_SETS[category].map((option, i) => {
+        const owned = isPurchased(category, option.id);
+        const equipped = cosmetics.equipped[category] === option.id;
+        const previewClass = option.className;
+        return `<button type="button" class="shop-option ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}" data-category="${category}" data-id="${option.id}">
+          <span class="cosmetic-preview ${previewClass}"><i></i><i></i><i></i></span>
+          <b>${option.name}</b>
+          <small>${equipped ? 'Equipped' : owned ? 'Equip' : `$${option.price}`}</small>
+          ${equipped ? '<span class="equip-check">✓</span>' : ''}
+        </button>`;
+      }).join('');
+    });
+  }
+
+  function handleShopSelection(category, id) {
+    const option = COSMETIC_SETS[category].find(o => o.id === id);
+    if (!option) return;
+    if (!isPurchased(category, id)) {
+      if (state.bankroll < option.price) {
+        showToast(`Need $${option.price} — you have $${money(state.bankroll)}`);
+        Sound.err();
+        haptic(18);
+        return;
+      }
+      state.bankroll = Math.round((state.bankroll - option.price) * 100) / 100;
+      cosmetics.purchased.push(shopKey(category, id));
+      writeStore(STORE_BANK, String(state.bankroll));
+      renderBankroll();
+      showToast(`${option.name} purchased for $${option.price}`);
+      Sound.win();
+    }
+    cosmetics.equipped[category] = id;
+    saveCosmetics();
+    applyCosmetics();
+    renderShop();
+  }
+
   function openShop() {
+    renderShop();
     els.sheet.classList.add('open');
     els.sheet.setAttribute('aria-hidden', 'false');
     haptic(6);
@@ -953,6 +1061,11 @@
   $('shopClose').addEventListener('click', closeShop);
   $('shopDone').addEventListener('click', closeShop);
   els.sheet.querySelector('[data-close]').addEventListener('click', closeShop);
+  els.sheet.addEventListener('click', event => {
+    const option = event.target.closest('.shop-option');
+    if (!option) return;
+    handleShopSelection(option.dataset.category, option.dataset.id);
+  });
   els.soundBtn.addEventListener('click', toggleSound);
 
   document.addEventListener('keydown', event => {
@@ -971,6 +1084,7 @@
      boot
      ------------------------------------------------------------ */
   function boot() {
+    applyCosmetics();
     if (state.bankroll < 1) state.bankroll = 500;
     updateBank();
     buildChipRail();
