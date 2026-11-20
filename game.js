@@ -353,6 +353,8 @@
   function refreshChipStates() {
     const betting = state.phase === 'bet';
     const available = Math.max(0, state.bankroll - (betting ? state.playerBet : 0));
+    els.chipRail.classList.toggle('away', !betting);
+    els.chipRail.setAttribute('aria-hidden', String(!betting));
     els.chipRail.querySelectorAll('.rail-chip').forEach(btn => {
       const value = Number(btn.dataset.value);
       const canAfford = value <= available;
@@ -392,13 +394,13 @@
       btn.dataset.value = String(value);
       btn.setAttribute('aria-label', `Add a $${value} chip to your bet`);
       btn.innerHTML = chipMarkup(value);
-      btn.addEventListener('click', () => addBet(value));
+      btn.addEventListener('click', () => addBet(value, btn));
       els.chipRail.appendChild(btn);
     });
     layoutChipRail();
   }
 
-  function addBet(value) {
+  function addBet(value, sourceBtn) {
     if (state.phase !== 'bet' || state.busy) return;
     if (state.playerBet + value > state.bankroll) {
       showToast('Not enough chips in the bank');
@@ -410,6 +412,7 @@
       spot.classList.add('shake');
       return;
     }
+    launchChipFlight(sourceBtn);
     state.playerBet += value;
     state.bets.player = state.playerBet;
     state.busy = false;
