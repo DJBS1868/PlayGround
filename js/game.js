@@ -3,7 +3,7 @@ import { createWorld, WORLD, RESOURCE_META } from './world.js';
 import {
   drawPine, drawRock, drawBush, drawStick, drawFireGlow, drawCampfire, drawPlayer,
   drawTargetRing, drawWater, drawFirefly, drawParticle, drawDarkness,
-  drawDecor, drawButterfly,
+  drawDecor, drawButterfly, drawTent,
 } from './art.js';
 import { Soundscape } from './audio.js';
 
@@ -44,6 +44,11 @@ const RECIPES = [
     desc: 'A warm circle of safety against the dark.',
     cost: { wood: 6, stone: 4 },
   },
+  {
+    id: 'tent', name: 'Tent', tag: 'Shelter', icon: 'tent', once: true,
+    desc: 'A hide shelter for the night. Sleep here to greet the morning.',
+    cost: { wood: 8, stick: 4 },
+  },
 ];
 
 const QUESTS = [
@@ -55,6 +60,8 @@ const QUESTS = [
   { id: 'stoneaxe', title: 'Craft a stone axe', text: 'Use 4 sticks and 5 stone', goal: 1 },
   { id: 'stonepick', title: 'Craft a stone pickaxe', text: 'Use 4 sticks and 5 stone', goal: 1 },
   { id: 'fire', title: 'Build a campfire', text: 'Craft it on open ground', goal: 1 },
+  { id: 'tent', title: 'Build a tent', text: 'Use 8 wood and 4 sticks', goal: 1 },
+  { id: 'sleep', title: 'Sleep until morning', text: 'Tap Sleep at the tent', goal: 1 },
 ];
 
 const METERS = [
@@ -107,11 +114,15 @@ const state = {
   player: { x: 0, y: 0, dir: -Math.PI / 2, moving: false, walk: 0, wade: 0, wadePhase: 0 },
   cam: { x: 0, y: 0 },
   inventory: { stick: 0, wood: 0, stone: 0, food: 0 },
-  totals: { stick: 0, wood: 0, stone: 0, food: 0, fire: 0 },
+  totals: { stick: 0, wood: 0, stone: 0, food: 0, fire: 0, tent: 0, sleep: 0 },
   quest: { index: 0 },
   tools: { axe: 0, pick: 0 },
   survival: { health: 100, hunger: 100, stamina: 100 },
   target: null,
+  tentNear: null,
+  sleeping: false,
+  sleepT: 0,
+  sleepDone: false,
   actionHeld: false,
   gather: { targetId: 0, progress: 0, particleTimer: 0 },
   particles: [],
@@ -262,8 +273,9 @@ function canAfford(recipe) {
 
 function isOwned(recipe) {
   const tier = TOOL_TIERS[recipe.id];
-  if (!tier) return false;
-  return state.tools[tier[0]] >= tier[1];
+  if (tier) return state.tools[tier[0]] >= tier[1];
+  if (recipe.id === 'tent') return world.tents.length > 0;
+  return false;
 }
 
 function spend(cost) {
@@ -303,6 +315,8 @@ function questProgress(q) {
   if (q.id === 'stoneaxe') return state.tools.axe >= 2 ? 1 : 0;
   if (q.id === 'stonepick') return state.tools.pick >= 2 ? 1 : 0;
   if (q.id === 'fire') return state.totals.fire;
+  if (q.id === 'tent') return state.totals.tent;
+  if (q.id === 'sleep') return state.totals.sleep;
   return 0;
 }
 
@@ -444,11 +458,32 @@ function hideSheetNotice() {
   sheetNoticeEl.hidden = true;
 }
 
+function tentActionPreferred() {
+  const tent = state.tentNear;
+  if (!tent) return false;
+  const p = state.player;
+  const tentDist = Math.hypot(tent.x - p.x, tent.y - p.y);
+  if (tentDist > 64) return false;
+  const target = state.target;
+  if (!target) return true;
+  const targetDist = Math.hypot(target.x - p.x, target.y - p.y);
+  return tentDist <= targetDist;
+}
+
 function updateActionUI() {
   const target = state.target;
-  const visible = !!target && state.started && !state.uiOpen && !state.fainting;
+  const tent = state.tentNear;
+  const visible = (!!target || !!tent) && state.started && !state.uiOpen && !state.fainting && !state.sleeping;
   actionWrap.classList.toggle('visible', visible);
   if (!visible) {
+    actionProgress.style.strokeDashoffset = String(GATHER_RING);
+    return;
+  }
+  if (tent && (!target || tentActionPreferred())) {
+    actionLabel.textContent = 'Sleep';
+    actionIconUse.setAttribute('href', '#icon-moon');
+    actionIcon.classList.remove('solid-icon');
+    actionBtn.setAttribute('aria-label', 'Sleep in the tent until morning');
     actionProgress.style.strokeDashoffset = String(GATHER_RING);
     return;
   }
@@ -530,7 +565,12 @@ function bindInput() {
 
   actionBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (!state.target || state.uiOpen || state.fainting) return;
+    if (state.sleeping || state.uiOpen || state.fainting) return;
+    if (state.tentNear && (!state.target || tentActionPreferred())) {
+      startSleep();
+      return;
+    }
+    if (!state.target) return;
     state.actionHeld = true;
     actionPointer = e.pointerId;
     try { actionBtn.setPointerCapture(e.pointerId); } catch {}
@@ -577,7 +617,10 @@ function bindInput() {
     const k = e.key.toLowerCase();
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
     keys.add(k);
-    if ((k === ' ' || k === 'e') && state.started && !state.uiOpen && !state.fainting) state.actionHeld = true;
+    if ((k === ' ' || k === 'e') && state.started && !state.uiOpen && !state.fainting && !state.sleeping) {
+      if (state.tentNear && (!state.target || tentActionPreferred())) startSleep();
+      else state.actionHeld = true;
+    }
     if (k === 'escape') closeSheet();
   });
   window.addEventListener('keyup', (e) => {
@@ -683,6 +726,21 @@ function craft(id) {
     addFloater('Campfire', fire.x, fire.y - 34, '#f3d69b');
     showToast('Campfire built. Its light will hold back the night.', 3200);
     closeSheet();
+  } else if (id === 'tent') {
+    const spot = world.findTentSpot(p.x, p.y, p.dir);
+    if (!spot) {
+      showToast('Find open, solid ground for a tent.', 2400);
+      showSheetNotice('No room here. Step onto clear grass, away from trees, rocks, and the fire.');
+      return;
+    }
+    spend(recipe.cost);
+    const tent = world.addTent(spot.x, spot.y);
+    state.totals.tent += 1;
+    sound.build();
+    haptic(14);
+    addFloater('Tent', tent.x, tent.y - 46, '#f3d69b');
+    showToast('Tent raised. Sleep here to wake at morning.', 3400);
+    closeSheet();
   } else {
     spend(recipe.cost);
     const tier = TOOL_TIERS[id];
@@ -709,6 +767,9 @@ function begin() {
   state.started = true;
   state.time = START_TIME;
   state.day = 1;
+  state.sleeping = false;
+  state.sleepT = 0;
+  state.sleepDone = false;
   state.cam.x = state.player.x;
   state.cam.y = state.player.y;
   clampCamera();
@@ -737,9 +798,11 @@ function faint() {
 
 function wake() {
   const p = state.player;
+  const tent = world.tents[0];
   const starter = world.fires.find((f) => f.starter) || world.fires[0];
-  p.x = (starter?.x ?? world.spawn.x) + 26;
-  p.y = (starter?.y ?? world.spawn.y) + 26;
+  const base = tent || starter || world.spawn;
+  p.x = base.x + 26;
+  p.y = base.y + 26;
   p.dir = Math.PI / 2;
   state.survival.health = 62;
   state.survival.hunger = 48;
@@ -911,6 +974,33 @@ function waterDepthAt(x, y) {
   return clamp((0.012 - e) / 0.34, 0, 1) * 0.62;
 }
 
+function nearestTent() {
+  const p = state.player;
+  let best = null;
+  let bestD = 96 * 96;
+  for (const t of world.tents) {
+    const dx = t.x - p.x;
+    const dy = t.y - p.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < bestD) {
+      best = t;
+      bestD = d2;
+    }
+  }
+  return best;
+}
+
+function startSleep() {
+  if (state.sleeping || !state.tentNear) return;
+  state.sleeping = true;
+  state.sleepT = 0;
+  state.sleepDone = false;
+  state.actionHeld = false;
+  state.gather.progress = 0;
+  state.gather.targetId = 0;
+  haptic(12);
+}
+
 function findTarget() {
   const p = state.player;
   let best = null;
@@ -982,6 +1072,17 @@ function resolveCollisions() {
         p.y = f.y + (dy / d) * rr;
       }
     }
+    for (const t of world.tents) {
+      const dx = p.x - t.x;
+      const dy = p.y - t.y;
+      const rr = 27;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 0.001 && d2 < rr * rr) {
+        const d = Math.sqrt(d2);
+        p.x = t.x + (dx / d) * rr;
+        p.y = t.y + (dy / d) * rr;
+      }
+    }
   }
 }
 
@@ -1015,6 +1116,33 @@ function completeGather(o) {
 
 function update(dt) {
   if (!state.started || state.fainting) return;
+
+  if (state.sleeping) {
+    state.sleepT += dt;
+    if (!state.sleepDone && state.sleepT >= 0.62) {
+      state.sleepDone = true;
+      state.day += 1;
+      state.time = 0.065;
+      state.daylight = clamp(0.5 + 1.15 * Math.sin(state.time * TAU), 0, 1);
+      nightNotified = false;
+      state.survival.stamina = 100;
+      state.survival.health = Math.min(100, state.survival.health + 28);
+      state.survival.hunger = Math.max(0, state.survival.hunger - 6);
+      state.totals.sleep += 1;
+      state.actionHeld = false;
+      state.gather.progress = 0;
+      state.gather.targetId = 0;
+      updateHud(true);
+      checkQuests();
+    }
+    if (state.sleepT >= 1.35) {
+      state.sleeping = false;
+      state.sleepT = 0;
+      showToast(`Day ${state.day}. The morning is cool and quiet.`, 3200);
+    }
+    return;
+  }
+
   state.elapsed += dt;
   state.time += dt / DAY_LENGTH;
   if (state.time >= 1) {
@@ -1095,7 +1223,11 @@ function update(dt) {
   }
 
   state.target = state.uiOpen ? null : findTarget();
+  state.tentNear = state.uiOpen ? null : nearestTent();
   if (state.target && gathering) {
+    const wantDir = Math.atan2(state.target.y - p.y, state.target.x - p.x);
+    let diff = ((wantDir - p.dir + Math.PI * 3) % TAU) - Math.PI;
+    p.dir += diff * Math.min(1, dt * 14);
     if (state.gather.targetId !== state.target.id) {
       state.gather.targetId = state.target.id;
       state.gather.progress = 0;
@@ -1173,6 +1305,16 @@ function update(dt) {
 
 /* ---------------- rendering ---------------- */
 
+function heldTool() {
+  if (!state.actionHeld || !state.target || state.uiOpen || state.fainting || state.sleeping) return null;
+  const kind = state.target.kind;
+  if (kind !== 'tree' && kind !== 'rock') return null;
+  const tier = kind === 'tree' ? state.tools.axe : state.tools.pick;
+  if (!tier) return null;
+  const progress = state.gather.targetId === state.target.id ? state.gather.progress : 0;
+  return { kind: kind === 'tree' ? 'axe' : 'pick', tier, progress };
+}
+
 function render(time) {
   const darkness = 1 - state.daylight;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1233,7 +1375,12 @@ function render(time) {
     if (f.x < view.x1 - 80 || f.x > view.x2 + 80 || f.y < view.y1 - 80 || f.y > view.y2 + 80) continue;
     items.push({ y: f.y, draw: () => drawCampfire(ctx, f, time, darkness) });
   }
-  items.push({ y: state.player.y, draw: () => drawPlayer(ctx, state.player, time, darkness, state.player.wade) });
+  for (const t of world.tents) {
+    if (t.x < view.x1 - 90 || t.x > view.x2 + 90 || t.y < view.y1 - 90 || t.y > view.y2 + 90) continue;
+    items.push({ y: t.y, draw: () => drawTent(ctx, t, time, darkness) });
+  }
+  const tool = heldTool();
+  items.push({ y: state.player.y, draw: () => drawPlayer(ctx, state.player, time, darkness, state.player.wade, tool) });
   items.sort((a, b) => a.y - b.y);
   for (const item of items) item.draw();
 
@@ -1317,6 +1464,27 @@ function render(time) {
         drawFirefly(ctx, f, time);
       }
       ctx.restore();
+    }
+  }
+
+  // sleep transition: fade out, hold on the new morning, fade back
+  if (state.sleeping) {
+    const t = state.sleepT;
+    const a = t < 0.62 ? smoothstep(0, 0.62, t) : 1 - smoothstep(0.78, 1.35, t);
+    const alpha = clamp(a, 0, 1);
+    ctx.fillStyle = `rgba(6,11,16,${alpha})`;
+    ctx.fillRect(0, 0, vw, vh);
+    if (alpha > 0.6) {
+      ctx.globalAlpha = clamp((alpha - 0.6) / 0.4, 0, 1);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(245,238,219,.92)';
+      ctx.font = '600 13px ui-rounded, "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(`Day ${state.day} · Morning`, vw / 2, vh / 2);
+      ctx.font = '500 10.5px ui-rounded, "Segoe UI", system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(245,238,219,.5)';
+      ctx.fillText('You rest until first light', vw / 2, vh / 2 + 20);
+      ctx.globalAlpha = 1;
     }
   }
 }
@@ -1448,6 +1616,19 @@ function init() {
     },
     openCraft: openSheet,
     closeCraft: closeSheet,
+    nearTent() {
+      const t = world.tents[0];
+      if (!t) return null;
+      const p = state.player;
+      p.x = t.x;
+      p.y = t.y + 34;
+      p.dir = -Math.PI / 2;
+      state.cam.x = p.x;
+      state.cam.y = p.y;
+      clampCamera();
+      return { x: t.x, y: t.y };
+    },
+    sleep() { startSleep(); },
     quest() {
       const q = QUESTS[state.quest.index];
       return {
@@ -1485,6 +1666,7 @@ function init() {
         viewport: { width: vw, height: vh },
         objects: world.objects.length,
         fires: world.fires.length,
+        tents: world.tents.length,
       };
     },
   };

@@ -907,7 +907,540 @@ function drawWading(ctx, p, time, wade, waterline) {
   ctx.restore();
 }
 
-export function drawPlayer(ctx, p, time, night = 0, wade = 0) {
+function easeOutQuad(t) {
+  return 1 - (1 - t) * (1 - t);
+}
+
+function swingAngle(progress) {
+  const p = clamp(progress, 0, 1);
+  if (p < 0.4) return lerp(0.36, -0.98, easeOutQuad(p / 0.4));
+  if (p < 0.7) {
+    const t = (p - 0.4) / 0.3;
+    return lerp(-0.98, 1.32, Math.pow(t, 1.35));
+  }
+  return lerp(1.32, 0.36, easeOutQuad((p - 0.7) / 0.3));
+}
+
+function drawHeldTool(ctx, tool) {
+  const swing = swingAngle(tool.progress);
+  const gx = -3.6;
+  const gy = 11.1;
+
+  // faint swing trail through the strike
+  if (tool.progress > 0.4 && tool.progress < 0.74) {
+    ctx.save();
+    ctx.translate(gx, gy);
+    ctx.strokeStyle = 'rgba(255,247,222,.16)';
+    ctx.lineWidth = 3.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(0, 0, 23, -0.98, swing);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(gx, gy);
+  ctx.rotate(swing);
+  ctx.shadowColor = 'rgba(12,20,14,.32)';
+  ctx.shadowBlur = 2.2;
+  ctx.shadowOffsetX = 0.8;
+  ctx.shadowOffsetY = 1.4;
+  if (tool.kind === 'axe') drawAxeModel(ctx, tool.tier);
+  else drawPickModel(ctx, tool.tier);
+  drawGripHand(ctx);
+  ctx.restore();
+}
+
+function drawToolHandle(ctx) {
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(38,27,18,.55)';
+  ctx.lineWidth = 3.6;
+  ctx.beginPath();
+  ctx.moveTo(-3.4, 0);
+  ctx.lineTo(20.6, 0);
+  ctx.stroke();
+  ctx.strokeStyle = '#7a5a3a';
+  ctx.lineWidth = 2.6;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(214,176,122,.55)';
+  ctx.lineWidth = 0.85;
+  ctx.beginPath();
+  ctx.moveTo(-2.8, -0.85);
+  ctx.lineTo(20.0, -0.85);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(70,48,30,.85)';
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-2.8 + i * 1.4, -1.3);
+    ctx.lineTo(-2.0 + i * 1.4, 1.3);
+    ctx.stroke();
+  }
+}
+
+function drawGripHand(ctx) {
+  ctx.fillStyle = '#eac9a3';
+  ctx.beginPath();
+  ctx.arc(0.2, 0, 2.2, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(112,76,46,.55)';
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(150,104,66,.55)';
+  ctx.lineWidth = 0.55;
+  ctx.beginPath();
+  ctx.moveTo(-1.2, -0.8);
+  ctx.lineTo(0.9, -0.8);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,242,218,.4)';
+  ctx.beginPath();
+  ctx.arc(-0.5, -0.7, 0.65, 0, TAU);
+  ctx.fill();
+}
+
+function drawAxeModel(ctx, tier) {
+  const stone = tier >= 2;
+  drawToolHandle(ctx);
+
+  // poll at the back of the head
+  ctx.fillStyle = stone ? '#7f8478' : '#8a6440';
+  roundRect(ctx, 14.6, -2.8, 3.2, 5.6, 1.2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(38,32,24,.5)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // head silhouette and fill
+  const head = ctx.createLinearGradient(17, -7, 29, 7);
+  if (stone) {
+    head.addColorStop(0, '#c3c6b7');
+    head.addColorStop(0.5, '#989c8f');
+    head.addColorStop(1, '#6b7066');
+  } else {
+    head.addColorStop(0, '#d0a36a');
+    head.addColorStop(0.5, '#ab7d47');
+    head.addColorStop(1, '#7b5832');
+  }
+  ctx.beginPath();
+  ctx.moveTo(16.4, -2.5);
+  ctx.lineTo(20.2, -3.6);
+  ctx.quadraticCurveTo(25.8, -5.2, 28.4, -6.2);
+  ctx.quadraticCurveTo(30.0, 0, 28.4, 6.2);
+  ctx.quadraticCurveTo(25.8, 5.2, 20.2, 3.6);
+  ctx.lineTo(16.4, 2.5);
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(38,30,22,.55)';
+  ctx.lineWidth = 2.0;
+  ctx.stroke();
+  ctx.fillStyle = head;
+  ctx.fill();
+
+  // cutting edge bevel
+  ctx.strokeStyle = stone ? 'rgba(240,242,226,.8)' : 'rgba(246,222,176,.7)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(27.2, -5.6);
+  ctx.quadraticCurveTo(29.0, 0, 27.2, 5.6);
+  ctx.stroke();
+
+  // cheek line from eye to edge
+  ctx.strokeStyle = stone ? 'rgba(78,84,72,.45)' : 'rgba(122,84,46,.4)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(20.6, -3.2);
+  ctx.quadraticCurveTo(24.2, -1.0, 26.6, 0.2);
+  ctx.stroke();
+
+  // grain on the wooden head
+  if (!stone) {
+    ctx.strokeStyle = 'rgba(110,76,40,.3)';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(21.0, -2.4);
+    ctx.quadraticCurveTo(24.4, -1.4, 27.0, -0.2);
+    ctx.stroke();
+  }
+
+  // lashing over the eye
+  ctx.strokeStyle = stone ? '#6d5436' : '#5b4027';
+  ctx.lineWidth = 1.0;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(17.2 + i * 1.15, -2.4);
+    ctx.lineTo(16.3 + i * 1.15, 2.4);
+    ctx.stroke();
+  }
+
+  // glint along the edge
+  ctx.strokeStyle = 'rgba(255,250,232,.5)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(27.6, -4.4);
+  ctx.quadraticCurveTo(28.6, -1.0, 28.3, 1.6);
+  ctx.stroke();
+}
+
+function drawPickModel(ctx, tier) {
+  const stone = tier >= 2;
+  drawToolHandle(ctx);
+
+  // double-pointed head
+  const head = ctx.createLinearGradient(18, -9, 25, 9);
+  if (stone) {
+    head.addColorStop(0, '#c6c9ba');
+    head.addColorStop(0.5, '#999d90');
+    head.addColorStop(1, '#696e64');
+  } else {
+    head.addColorStop(0, '#cd9f66');
+    head.addColorStop(0.5, '#a97b46');
+    head.addColorStop(1, '#77542f');
+  }
+  ctx.beginPath();
+  ctx.moveTo(21.7, -8.8);
+  ctx.quadraticCurveTo(19.8, -5.4, 19.3, -2.6);
+  ctx.lineTo(19.3, 2.6);
+  ctx.quadraticCurveTo(19.8, 5.4, 21.7, 8.8);
+  ctx.quadraticCurveTo(23.6, 5.4, 24.1, 2.6);
+  ctx.lineTo(24.1, -2.6);
+  ctx.quadraticCurveTo(23.6, -5.4, 21.7, -8.8);
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(38,30,22,.55)';
+  ctx.lineWidth = 2.0;
+  ctx.stroke();
+  ctx.fillStyle = head;
+  ctx.fill();
+
+  // eye band where the handle passes through
+  ctx.fillStyle = stone ? '#7c8175' : '#8a6440';
+  roundRect(ctx, 18.9, -2.4, 5.6, 4.8, 1.2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(38,32,24,.5)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // bevels along both points
+  ctx.strokeStyle = stone ? 'rgba(240,242,226,.78)' : 'rgba(246,222,176,.66)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(21.0, -7.6);
+  ctx.quadraticCurveTo(20.0, -4.6, 19.7, -2.4);
+  ctx.moveTo(21.0, 7.6);
+  ctx.quadraticCurveTo(20.0, 4.6, 19.7, 2.4);
+  ctx.stroke();
+
+  // sharpened dark tips
+  ctx.strokeStyle = stone ? 'rgba(62,68,58,.9)' : 'rgba(92,62,34,.85)';
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(21.7, -8.7);
+  ctx.lineTo(21.1, -6.9);
+  ctx.moveTo(21.7, 8.7);
+  ctx.lineTo(21.1, 6.9);
+  ctx.stroke();
+
+  // grain on the wooden head
+  if (!stone) {
+    ctx.strokeStyle = 'rgba(110,76,40,.3)';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(20.6, -3.8);
+    ctx.quadraticCurveTo(21.9, 0, 20.6, 3.8);
+    ctx.stroke();
+  }
+
+  // lashing at the junction
+  ctx.strokeStyle = '#5b4027';
+  ctx.lineWidth = 1.0;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(17.8 + i * 1.15, -2.2);
+    ctx.lineTo(16.9 + i * 1.15, 2.2);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(255,250,232,.42)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(22.4, -7.8);
+  ctx.quadraticCurveTo(21.5, -4.4, 21.2, -2.6);
+  ctx.stroke();
+}
+
+export function drawTent(ctx, t, time, night = 0) {
+  const sway = Math.sin(time * 0.7 + t.seed) * 0.6;
+  const flap = Math.sin(time * 1.4 + t.seed * 0.7) * 1.1;
+  const mirror = t.seed % 2 === 0 ? 1 : -1;
+
+  ctx.save();
+  ctx.translate(t.x, t.y);
+
+  // ground shadow and worn floor
+  ctx.fillStyle = 'rgba(17,32,23,.26)';
+  ctx.beginPath();
+  ctx.ellipse(3, 10, 36, 13, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(83,69,48,.22)';
+  ctx.beginPath();
+  ctx.ellipse(1, 8, 28, 9.5, 0, 0, TAU);
+  ctx.fill();
+
+  // guy ropes and pegs, behind the canvas
+  ctx.strokeStyle = 'rgba(226,211,176,.5)';
+  ctx.lineWidth = 0.9;
+  for (const side of [-1, 1]) {
+    const px = side * 44;
+    ctx.beginPath();
+    ctx.moveTo(0, -43);
+    ctx.quadraticCurveTo(side * 20, -18, px, 11);
+    ctx.stroke();
+    ctx.fillStyle = '#7b5c3a';
+    ctx.beginPath();
+    ctx.ellipse(px, 11.5, 2.4, 1.1, side * 0.4, 0, TAU);
+    ctx.fill();
+  }
+
+  // canvas body
+  const canvas = ctx.createLinearGradient(-30, -44, 30, 10);
+  canvas.addColorStop(0, '#eadcb6');
+  canvas.addColorStop(0.45, '#ddcb9f');
+  canvas.addColorStop(1, '#b8a074');
+  ctx.fillStyle = canvas;
+  ctx.beginPath();
+  ctx.moveTo(0, -43);
+  ctx.quadraticCurveTo(-16, -24, -31, 7);
+  ctx.quadraticCurveTo(-14, 12.5, 0, 12.5);
+  ctx.quadraticCurveTo(14, 12.5, 31, 7);
+  ctx.quadraticCurveTo(16, -24, 0, -43);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(92,72,45,.5)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // shaded far side
+  ctx.fillStyle = 'rgba(120,94,58,.16)';
+  ctx.beginPath();
+  ctx.moveTo(0, -43);
+  ctx.quadraticCurveTo(16, -24, 31, 7);
+  ctx.quadraticCurveTo(14, 12.5, 0, 12.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // fabric folds
+  ctx.strokeStyle = 'rgba(120,95,58,.2)';
+  ctx.lineWidth = 1;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * 4, -36);
+    ctx.quadraticCurveTo(side * 13, -16, side * 22, 5);
+    ctx.stroke();
+  }
+
+  // stitched seams
+  ctx.save();
+  ctx.strokeStyle = 'rgba(246,235,205,.42)';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([1.4, 2.2]);
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(0, -41);
+    ctx.quadraticCurveTo(side * 15, -23, side * 29, 6);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // dark doorway with a hint of warm interior
+  const door = ctx.createLinearGradient(0, -37, 0, 10);
+  door.addColorStop(0, '#353829');
+  door.addColorStop(0.55, '#262a20');
+  door.addColorStop(1, '#1d211a');
+  ctx.fillStyle = door;
+  ctx.beginPath();
+  ctx.moveTo(0, -37);
+  ctx.quadraticCurveTo(-7.5, -16, -11.5, 8);
+  ctx.quadraticCurveTo(0, 11.5, 11.5, 8);
+  ctx.quadraticCurveTo(7.5, -16, 0, -37);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(198,142,80,.1)';
+  ctx.beginPath();
+  ctx.moveTo(0, -28);
+  ctx.quadraticCurveTo(-5.5, -13, -8.5, 7);
+  ctx.quadraticCurveTo(0, 9.6, 8.5, 7);
+  ctx.quadraticCurveTo(5.5, -13, 0, -28);
+  ctx.closePath();
+  ctx.fill();
+
+  // bedding inside
+  ctx.fillStyle = 'rgba(122,96,62,.9)';
+  roundRect(ctx, -7.5, 3.2, 15, 5.4, 2.6);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(196,160,108,.85)';
+  roundRect(ctx, -6.8, 2.6, 6.2, 5.2, 2.2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(158,92,72,.9)';
+  roundRect(ctx, 0.2, 3.4, 6.6, 3.6, 1.6);
+  ctx.fill();
+
+  // warm interior light at night
+  if (night > 0.12) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const glow = ctx.createRadialGradient(0, -8, 1, 0, -8, 30);
+    glow.addColorStop(0, `rgba(255,196,120,${0.26 * night})`);
+    glow.addColorStop(1, 'rgba(255,180,100,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 22, 26, 0, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // woven mat at the entrance
+  ctx.fillStyle = 'rgba(126,101,66,.72)';
+  ctx.beginPath();
+  ctx.ellipse(0, 14.5, 10.5, 3.4, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(84,63,40,.55)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(0, 14.5, 10.5, 3.4, 0, 0, TAU);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(198,170,122,.35)';
+  ctx.lineWidth = 0.6;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * 3.2, 12.4);
+    ctx.lineTo(i * 3.2, 16.6);
+    ctx.stroke();
+  }
+
+  // rolled-back door flap
+  ctx.save();
+  ctx.translate(12.2 * mirror, -3);
+  ctx.rotate(0.12 * mirror);
+  ctx.fillStyle = '#e5d6b0';
+  roundRect(ctx, -2.6, -14, 5.2, 25, 2.6);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120,95,58,.4)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(140,112,74,.5)';
+  ctx.beginPath();
+  ctx.ellipse(0, -13.4, 2.2, 1.1, 0, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, 10.4, 2.2, 1.1, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(150,96,72,.75)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-2.6, 2 + flap * 0.2);
+  ctx.quadraticCurveTo(0, 3.4 + flap * 0.3, 2.6, 2 + flap * 0.2);
+  ctx.stroke();
+  ctx.restore();
+
+  // small woodpile beside the shelter
+  ctx.save();
+  ctx.translate(-29, 5.5);
+  ctx.rotate(-0.12);
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i === 1 ? '#7d5b3a' : '#6c4d31';
+    roundRect(ctx, -7, i * 3.1 - 1.4, 14, 2.8, 1.4);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(212,176,124,.55)';
+    ctx.beginPath();
+    ctx.arc(6.5, i * 3.1, 1.35, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(70,48,30,.5)';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.arc(6.5, i * 3.1, 1.35, 0, TAU);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // A-frame poles
+  for (const side of [-1, 1]) {
+    ctx.strokeStyle = '#6f5134';
+    ctx.lineWidth = 2.1;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(side * 12.5, 9);
+    ctx.quadraticCurveTo(side * 6, -20, 0, -47);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(196,158,108,.55)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(side * 11.8, 8.4);
+    ctx.quadraticCurveTo(side * 5.2, -20, -0.5, -45.6);
+    ctx.stroke();
+  }
+
+  // ridge cap
+  ctx.fillStyle = '#5f452c';
+  roundRect(ctx, -3.4, -47.5, 6.8, 3.2, 1.6);
+  ctx.fill();
+
+  // pennant
+  ctx.save();
+  ctx.translate(0, -47);
+  ctx.rotate(sway * 0.05);
+  ctx.fillStyle = '#b0654a';
+  ctx.beginPath();
+  ctx.moveTo(0.6, -1);
+  ctx.quadraticCurveTo(7 + sway, -6, 13.5 + sway * 1.4, -3.6);
+  ctx.quadraticCurveTo(8.5 + sway, -1.2, 0.6, 2.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(84,44,33,.4)';
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(236,214,178,.55)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(1, -0.6);
+  ctx.lineTo(0, -9.5);
+  ctx.stroke();
+  ctx.restore();
+
+  // lantern hanging from the front pole
+  const lx = 10.5 * mirror;
+  ctx.strokeStyle = 'rgba(74,55,36,.7)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(8.8 * mirror, -18);
+  ctx.lineTo(lx, -14.5);
+  ctx.stroke();
+  ctx.fillStyle = '#4c4234';
+  roundRect(ctx, lx - 2.1, -14.5, 4.2, 6.6, 1.8);
+  ctx.fill();
+  ctx.fillStyle = `rgba(246,190,104,${0.72 + night * 0.28})`;
+  roundRect(ctx, lx - 1.2, -13.7, 2.4, 4.8, 1.1);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,236,186,.9)';
+  ctx.beginPath();
+  ctx.arc(lx, -11.3, 0.9, 0, TAU);
+  ctx.fill();
+  if (night > 0.15) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const lantern = ctx.createRadialGradient(lx, -11, 1, lx, -11, 22);
+    lantern.addColorStop(0, `rgba(255,198,118,${0.28 * night})`);
+    lantern.addColorStop(1, 'rgba(255,180,90,0)');
+    ctx.fillStyle = lantern;
+    ctx.beginPath();
+    ctx.arc(lx, -11, 22, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+export function drawPlayer(ctx, p, time, night = 0, wade = 0, tool = null) {
   const walking = p.moving;
   const wadeClamped = clamp(wade, 0, 0.62);
   const stride = 11.5 * (1 - wadeClamped * 0.3);
@@ -967,6 +1500,16 @@ export function drawPlayer(ctx, p, time, night = 0, wade = 0) {
   ctx.scale(1.18, 1.18);
   drawPlayerHead(ctx, time, sway);
   ctx.restore();
+
+  // tool in hand, drawn above the body so the swing reads clearly
+  if (tool) {
+    ctx.save();
+    ctx.translate(p.x, p.y + bob + sink);
+    ctx.rotate(p.dir);
+    ctx.scale(1.18, 1.18);
+    drawHeldTool(ctx, tool);
+    ctx.restore();
+  }
 }
 
 export function drawTargetRing(ctx, o, time) {
