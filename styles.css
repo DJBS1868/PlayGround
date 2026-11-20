@@ -423,8 +423,16 @@ button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; 
   box-shadow:inset 0 0 1.4cqw rgba(0,0,0,.30);
   display:grid; place-items:center;
 }
-.player-bet{ margin-bottom:2.3cqw; }
-.player-bet .bet-label{ top:-1.6em; bottom:auto; }
+.player-bet{
+  position:absolute;
+  width:12.8cqw; height:12.8cqw;
+  left:calc(50% + 19cqw);
+  top:3cqw;
+  margin:0;
+  transform:translate(-50%,-50%);
+  z-index:2;
+}
+.player-bet .bet-label{ top:-1.75em; bottom:auto; }
 .betspot .bet-chips{ position:absolute; inset:0; }
 .betspot.empty::after{
   content:"BET";
@@ -467,6 +475,19 @@ button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; 
 .betspot .chip-pop{ animation:chipPop .22s ease-out; }
 @keyframes chipPop{ 0%{ transform:translateX(-50%) translateY(-18%) scale(1.2); } 100%{ transform:translateX(-50%) translateY(0) scale(1); } }
 .betspot.shake{ animation:shake .4s; }
+.betspot.landed .bet-chips{ animation:betLand .3s ease-out; }
+@keyframes betLand{
+  0%{ transform:translateY(-5%) scale(1.07); }
+  55%{ transform:translateY(0) scale(.97); }
+  100%{ transform:translateY(0) scale(1); }
+}
+.flying-chip{
+  position:absolute !important;
+  z-index:40;
+  pointer-events:none;
+  will-change:transform;
+  filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));
+}
 @keyframes shake{
   0%,100%{ transform:translateX(0); }
   20%{ transform:translateX(-3px); } 40%{ transform:translateX(3px); }
@@ -520,6 +541,13 @@ button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; 
   position:absolute; inset:0;
   z-index:6;
   pointer-events:none;
+  transition:opacity .24s ease, transform .24s ease, visibility 0s;
+}
+.chip-rail.away{
+  opacity:0;
+  transform:translateY(4.5%) scale(.97);
+  visibility:hidden;
+  transition:opacity .2s ease, transform .24s ease, visibility 0s linear .24s;
 }
 .rail-chip{
   position:absolute;
