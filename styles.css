@@ -1384,8 +1384,7 @@ svg { display: block; }
 .book-card img { width: 42px; height: 42px; object-fit: contain; }
 .book-card strong { max-width: 100%; height: 14px; overflow: hidden; text-overflow: ellipsis; font-size: 5.5px; line-height: 1.25; color: #aa9f82; text-align: center; }
 .book-card.is-found { border-color: rgba(207,177,110,.18); background: radial-gradient(circle at 50% 40%, rgba(211,183,121,.13), rgba(7,17,14,.28)); }
-.black-silhouette { width: 42px; height: 42px; border-radius: 50%; background: #020303; box-shadow: inset 0 0 12px #000, 0 3px 8px rgba(0,0,0,.38); position: relative; }
-.black-silhouette i { position: absolute; left: 50%; top: 50%; width: 20px; height: 26px; transform: translate(-50%, -50%); border-radius: 50% 50% 35% 35%; background: #000; box-shadow: 5px 3px 0 #000, -5px 4px 0 #000; }
+.book-card.is-undiscovered img { filter: none; }
 .book-card.is-undiscovered strong { color: #586d64; }
 
 /* Shop */
