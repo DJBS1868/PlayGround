@@ -792,23 +792,12 @@ function artifactSilhouette(id, size = 180) {
   c.width = size;
   c.height = size;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#050706';
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size * .31, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.save();
-  ctx.translate(size / 2, size / 2);
-  ctx.scale(size / 200, size / 200);
-  ctx.translate(-100, -100);
-  ctx.globalCompositeOperation = 'source-over';
-  drawArtifact(ctx, artifactFor(id).art, 100, 100, 176);
-  ctx.restore();
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = 'rgba(0,0,0,1)';
+  drawArtifact(ctx, artifactFor(id).art, size / 2, size / 2, size * .88);
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, size, size);
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#050706';
-  const url = c.toDataURL('image/webp', .92);
+  const url = c.toDataURL('image/png');
   imageCache.set(key, url);
   return url;
 }
@@ -831,7 +820,7 @@ function renderCollectionBook() {
         </button>`;
       }
       return `<div class="book-card is-undiscovered" aria-label="Undiscovered relic">
-        <span class="black-silhouette"><i></i></span>
+        <img src="${artifactSilhouette(id, 180)}" alt="Undiscovered artifact silhouette">
         <strong>Undiscovered</strong>
       </div>`;
     }).join('');
