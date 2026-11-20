@@ -780,7 +780,78 @@ function renderMuseum() {
   $('#museumRenown').textContent = state.renown;
   $('#museumGrade').textContent = collection.length ? gradeLetter(avg) : '—';
   $('#museumValue').textContent = money(total);
+  $('#bookCount').textContent = `${collection.length} / ${TOTAL_RELICS}`;
   updateWallet();
+}
+
+function artifactSilhouette(id, size = 180) {
+  const key = `silhouette_${id}_${size}`;
+  if (imageCache.has(key)) return imageCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#050706';
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size * .31, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  ctx.translate(size / 2, size / 2);
+  ctx.scale(size / 200, size / 200);
+  ctx.translate(-100, -100);
+  ctx.globalCompositeOperation = 'source-over';
+  drawArtifact(ctx, artifactFor(id).art, 100, 100, 176);
+  ctx.restore();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  ctx.fillRect(0, 0, size, size);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#050706';
+  const url = c.toDataURL('image/webp', .92);
+  imageCache.set(key, url);
+  return url;
+}
+
+function renderCollectionBook() {
+  const discovered = new Set(state.collection.map(item => item.artifactId));
+  const list = $('#collectionBookList');
+  const uniqueCount = discovered.size;
+  $('#collectionBookCount').textContent = `${uniqueCount} / ${TOTAL_RELICS}`;
+
+  list.innerHTML = SITES.map(site => {
+    const found = site.artifacts.filter(id => discovered.has(id)).length;
+    const cards = site.artifacts.map(id => {
+      const artifact = artifactFor(id);
+      const foundEntry = state.collection.find(item => item.artifactId === id);
+      if (foundEntry) {
+        return `<button class="book-card is-found" type="button" data-artifact="${id}">
+          <img src="${artifactImage(id, 180)}" alt="${artifact.name}">
+          <strong>${artifact.shortName}</strong>
+        </button>`;
+      }
+      return `<div class="book-card is-undiscovered" aria-label="Undiscovered relic">
+        <span class="black-silhouette"><i></i></span>
+        <strong>Undiscovered</strong>
+      </div>`;
+    }).join('');
+    return `<section class="book-site">
+      <header><div><span>${site.shortName}</span><strong>${site.name}</strong></div><b>${found} / ${site.artifacts.length}</b></header>
+      <div class="book-grid">${cards}</div>
+    </section>`;
+  }).join('');
+
+  list.querySelectorAll('[data-artifact]').forEach(card => {
+    card.addEventListener('click', () => {
+      const entry = state.collection.find(item => item.artifactId === card.dataset.artifact);
+      const artifact = artifactFor(card.dataset.artifact);
+      openModal({
+        kicker: 'Collection record',
+        title: artifact.name,
+        text: `${artifact.era}\n\n${artifact.desc}\n\nCondition ${entry.condition}% · ${money(entry.value)} · ${entry.buyer}.`,
+        actions: [{ label: 'Close', style: 'primary' }]
+      });
+    });
+  });
 }
 
 /* ---------------------------------------------------------
@@ -930,6 +1001,16 @@ function bind() {
     audio.click();
     if (state.currentRelic) routeCurrentRelic();
     else startDig(SITES[state.selectedSite]);
+  });
+
+  $('#openCollectionBook').addEventListener('click', () => {
+    audio.click();
+    renderCollectionBook();
+    $('#collectionBook').hidden = false;
+  });
+  $('#closeCollectionBook').addEventListener('click', () => {
+    audio.click();
+    $('#collectionBook').hidden = true;
   });
 
   $$('.seg').forEach(seg => seg.addEventListener('click', () => {

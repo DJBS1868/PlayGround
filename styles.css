@@ -1354,7 +1354,34 @@ svg { display: block; }
 .museum-stats > div:first-child { padding-left: 2px; }
 .museum-stats > div + div { border-left: 1px solid rgba(185,216,202,.1); }
 .museum-stats span { font-size: 5.8px; text-transform: uppercase; letter-spacing: .15em; color: #779086; font-weight: 700; }
-.museum-stats strong { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: #dfc48e; }
+ .museum-stats strong { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: #dfc48e; }
+.collection-book-btn { position: absolute; right: 10px; bottom: 10px; z-index: 4; height: 30px; border-radius: 9px; border: 1px solid rgba(205,180,119,.24); background: rgba(7,23,19,.82); color: #d9bd82; display: flex; align-items: center; gap: 5px; padding: 0 7px; }
+.collection-book-btn svg { width: 12px; height: 12px; }
+.collection-book-btn span { font-size: 6.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; }
+.collection-book-btn b { font-size: 6px; color: #91a99e; }
+.collection-book { position: absolute; z-index: 70; inset: 0; background: linear-gradient(155deg, #102d27 0%, #071713 100%); display: flex; flex-direction: column; }
+.collection-book[hidden] { display: none; }
+.collection-book-head { flex: 0 0 64px; display: flex; align-items: center; gap: 9px; padding: calc(6px + var(--safe-top)) 13px 6px; border-bottom: 1px solid rgba(185,216,202,.1); }
+.collection-back { width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(185,216,202,.12); background: rgba(255,255,255,.04); color: #d6c39c; font-size: 18px; }
+.collection-book-head div { flex: 1; display: flex; flex-direction: column; }
+.collection-book-head div span { font-size: 6px; text-transform: uppercase; letter-spacing: .16em; color: #829f93; }
+.collection-book-head div strong { font-family: var(--font-display); font-size: 17px; color: #f1e2c4; }
+.collection-book-head > b { font-size: 8px; color: #c9a76b; }
+.collection-book-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px calc(14px + var(--safe-bottom)); -webkit-overflow-scrolling: touch; }
+.book-site { border: 1px solid rgba(185,216,202,.1); border-radius: 14px; background: rgba(255,255,255,.025); padding: 8px; margin-bottom: 8px; }
+.book-site header { height: 31px; display: flex; align-items: center; justify-content: space-between; }
+.book-site header div { display: flex; flex-direction: column; }
+.book-site header span { font-size: 5.5px; text-transform: uppercase; letter-spacing: .14em; color: #7f9b8f; }
+.book-site header strong { font-family: var(--font-display); font-size: 12px; color: #e5d3ad; }
+.book-site header b { font-size: 7px; color: #bea36d; }
+.book-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.book-card { min-width: 0; height: 69px; border-radius: 9px; border: 1px solid rgba(185,216,202,.09); background: rgba(7,17,14,.34); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 3px; }
+.book-card img { width: 42px; height: 42px; object-fit: contain; }
+.book-card strong { max-width: 100%; height: 14px; overflow: hidden; text-overflow: ellipsis; font-size: 5.5px; line-height: 1.25; color: #aa9f82; text-align: center; }
+.book-card.is-found { border-color: rgba(207,177,110,.18); background: radial-gradient(circle at 50% 40%, rgba(211,183,121,.13), rgba(7,17,14,.28)); }
+.black-silhouette { width: 42px; height: 42px; border-radius: 50%; background: #020303; box-shadow: inset 0 0 12px #000, 0 3px 8px rgba(0,0,0,.38); position: relative; }
+.black-silhouette i { position: absolute; left: 50%; top: 50%; width: 20px; height: 26px; transform: translate(-50%, -50%); border-radius: 50% 50% 35% 35%; background: #000; box-shadow: 5px 3px 0 #000, -5px 4px 0 #000; }
+.book-card.is-undiscovered strong { color: #586d64; }
 
 /* Shop */
 .shop-main { flex: 1; min-height: 0; padding: 4px 15px 2px; display: flex; flex-direction: column; gap: 9px; }
