@@ -353,6 +353,8 @@
   function refreshChipStates() {
     const betting = state.phase === 'bet';
     const available = Math.max(0, state.bankroll - (betting ? state.playerBet : 0));
+    els.chipRail.classList.toggle('away', !betting);
+    els.chipRail.setAttribute('aria-hidden', String(!betting));
     els.chipRail.querySelectorAll('.rail-chip').forEach(btn => {
       const value = Number(btn.dataset.value);
       const canAfford = value <= available;
@@ -392,13 +394,56 @@
       btn.dataset.value = String(value);
       btn.setAttribute('aria-label', `Add a $${value} chip to your bet`);
       btn.innerHTML = chipMarkup(value);
-      btn.addEventListener('click', () => addBet(value));
+      btn.addEventListener('click', () => addBet(value, btn));
       els.chipRail.appendChild(btn);
     });
     layoutChipRail();
   }
 
-  function addBet(value) {
+  function launchChipFlight(sourceBtn) {
+    if (!sourceBtn) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const source = sourceBtn.querySelector('.chip');
+    const target = els.betspots.player;
+    const table = els.table;
+    if (!source || !target || !table || typeof source.animate !== 'function') return;
+
+    const s = source.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+    const box = table.getBoundingClientRect();
+
+    const clone = source.cloneNode(true);
+    clone.classList.add('flying-chip');
+    clone.style.width = `${s.width}px`;
+    clone.style.height = `${s.height}px`;
+    clone.style.left = `${s.left + s.width / 2 - box.left}px`;
+    clone.style.top = `${s.top + s.height / 2 - box.top}px`;
+    table.appendChild(clone);
+
+    const dx = (t.left + t.width / 2) - (s.left + s.width / 2);
+    const dy = (t.top + t.height / 2) - (s.top + s.height / 2);
+    const lift = Math.min(120, 34 + Math.abs(dx) * 0.32 + Math.abs(dy) * 0.12);
+
+    const flight = clone.animate(
+      [
+        { transform: 'translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1)' },
+        { transform: `translate(-50%,-50%) translate(${dx * 0.48}px, ${dy * 0.18 - lift}px) rotate(190deg) scale(1.18)`, offset: 0.55 },
+        { transform: `translate(-50%,-50%) translate(${dx}px, ${dy}px) rotate(360deg) scale(.78)` },
+      ],
+      { duration: 480, easing: 'cubic-bezier(.3,.7,.32,1)' }
+    );
+
+    flight.onfinish = () => {
+      clone.remove();
+      target.classList.remove('landed');
+      void target.offsetWidth;
+      target.classList.add('landed');
+      setTimeout(() => target.classList.remove('landed'), 300);
+    };
+    flight.oncancel = () => clone.remove();
+  }
+
+  function addBet(value, sourceBtn) {
     if (state.phase !== 'bet' || state.busy) return;
     if (state.playerBet + value > state.bankroll) {
       showToast('Not enough chips in the bank');
@@ -410,6 +455,7 @@
       spot.classList.add('shake');
       return;
     }
+    launchChipFlight(sourceBtn);
     state.playerBet += value;
     state.bets.player = state.playerBet;
     state.busy = false;
