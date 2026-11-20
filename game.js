@@ -352,34 +352,50 @@
 
   function refreshChipStates() {
     const betting = state.phase === 'bet';
+    const available = Math.max(0, state.bankroll - (betting ? state.playerBet : 0));
     els.chipRail.querySelectorAll('.rail-chip').forEach(btn => {
       const value = Number(btn.dataset.value);
+      const canAfford = value <= available;
+      const wasHidden = btn.classList.contains('hide');
+      btn.classList.toggle('hide', !canAfford);
       btn.classList.toggle('locked', !betting);
-      btn.classList.toggle('unaffordable', betting && state.playerBet + value > state.bankroll);
+      if (wasHidden && canAfford) {
+        btn.classList.remove('return-in');
+        void btn.offsetWidth;
+        btn.classList.add('return-in');
+      } else if (!canAfford) {
+        btn.classList.remove('return-in');
+      }
+    });
+    layoutChipRail();
+  }
+
+  function layoutChipRail() {
+    const chips = [...els.chipRail.querySelectorAll('.rail-chip')].filter(btn => !btn.classList.contains('hide'));
+    const gap = 11.6;
+    const span = gap * Math.max(0, chips.length - 1);
+    chips.forEach((btn, i) => {
+      const x = chips.length === 1 ? 0 : -span / 2 + i * gap;
+      const y = 44.6 - 0.0136 * x * x;
+      btn.style.left = `calc(50% + ${x.toFixed(2)}%)`;
+      btn.style.top = `calc(50% + ${y.toFixed(2)}%)`;
     });
   }
 
   function buildChipRail() {
-    const layout = [
-      { value: 1, x: -35.9, y: 30.1 },
-      { value: 5, x: -21.3, y: 41.7 },
-      { value: 25, x: 0, y: 46.8 },
-      { value: 100, x: 21.3, y: 41.7 },
-      { value: 500, x: 35.9, y: 30.1 },
-    ];
+    const denominations = [1, 5, 25, 100, 500];
     els.chipRail.innerHTML = '';
-    layout.forEach(item => {
+    denominations.forEach(value => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'rail-chip hint';
-      btn.dataset.value = String(item.value);
-      btn.style.left = `calc(50% + ${item.x}%)`;
-      btn.style.top = `calc(50% + ${item.y}%)`;
-      btn.setAttribute('aria-label', `Add a $${item.value} chip to your bet`);
-      btn.innerHTML = chipMarkup(item.value);
-      btn.addEventListener('click', () => addBet(item.value));
+      btn.dataset.value = String(value);
+      btn.setAttribute('aria-label', `Add a $${value} chip to your bet`);
+      btn.innerHTML = chipMarkup(value);
+      btn.addEventListener('click', () => addBet(value));
       els.chipRail.appendChild(btn);
     });
+    layoutChipRail();
   }
 
   function addBet(value) {

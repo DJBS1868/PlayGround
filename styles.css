@@ -531,7 +531,7 @@ button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; 
   pointer-events:auto;
   cursor:pointer;
   transform:translate(-50%,-50%);
-  transition:transform .16s cubic-bezier(.2,.8,.3,1.4), opacity .2s, filter .2s;
+  transition:left .26s cubic-bezier(.2,.8,.3,1), top .26s cubic-bezier(.2,.8,.3,1), transform .16s cubic-bezier(.2,.8,.3,1.4), opacity .2s, filter .2s;
   -webkit-tap-highlight-color:transparent;
 }
 .rail-chip .chip{
@@ -550,7 +550,13 @@ button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; 
   z-index:-1;
 }
 .rail-chip:active{ transform:translate(-50%,-50%) scale(.9); }
-.rail-chip.unaffordable{ opacity:.42; filter:saturate(.55); }
+.rail-chip.hide{ display:none; }
+.rail-chip.return-in .chip{ animation:chipReturn .34s cubic-bezier(.2,.8,.3,1.4); }
+@keyframes chipReturn{
+  0%{ transform:scale(.35) translateY(16%); opacity:0; }
+  58%{ transform:scale(1.1) translateY(-5%); opacity:1; }
+  100%{ transform:scale(1) translateY(0); opacity:1; }
+}
 .rail-chip.locked{ opacity:.46; filter:saturate(.55); cursor:default; }
 .rail-chip.hint{ animation:railBreathe 2.4s ease-in-out infinite; }
 @keyframes railBreathe{
