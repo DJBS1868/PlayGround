@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#17110c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Dune & Dust — Relic Hunter</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232b1e11'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23d8a44d' stroke-width='2'/%3E%3Cpath d='M41 23l-6 12-12 6 6-12z' fill='%23f3cf84'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app">
+
+    <!-- Icon sprite -->
+    <svg class="svg-sprite" aria-hidden="true">
+      <defs>
+        <symbol id="i-compass" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M15.2 8.8l-1.9 4.5-4.5 1.9 1.9-4.5 4.5-1.9z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="1.1" fill="currentColor"/>
+        </symbol>
+        <symbol id="i-coin" viewBox="0 0 24 24">
+          <ellipse cx="12" cy="12" rx="8.5" ry="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <ellipse cx="12" cy="12" rx="6" ry="6" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/>
+          <path d="M9.1 9.2h5.8M9.1 14.8h5.8M12 7.6v8.8" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-brush" viewBox="0 0 24 24">
+          <path d="M8.1 13.7l-2.5 4.7c-.4.8.4 1.7 1.3 1.3l4.8-2.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M9.1 14.7l6.7-8.8c.8-1 2.2-1.2 3.2-.4 1 .8 1.2 2.2.4 3.2l-6.6 8.7c-.7.9-2 1.1-2.9.4l-.4-.3c-.8-.7-1-1.9-.4-2.8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M14.1 8l3 2.4" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        </symbol>
+        <symbol id="i-water" viewBox="0 0 24 24">
+          <path d="M9 3.5h6M10 3.5v2.1c0 .5-.3 1-.7 1.3L8.1 8c-.7.6-1.1 1.4-1.1 2.3v7.3c0 1.4 1.1 2.5 2.5 2.5h5c1.4 0 2.5-1.1 2.5-2.5v-7.3c0-.9-.4-1.7-1.1-2.3l-1.2-1.1c-.4-.3-.7-.8-.7-1.3V3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7.3 13.8h9.4M11.8 16.4l.1 0M14.4 17.9l.1 0M9.6 18l.1 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-cloth" viewBox="0 0 24 24">
+          <path d="M5.1 6.5c2.5-1.8 4.8-2.7 6.9-2.7 2.1 0 4.4.9 6.9 2.7-.2 5.5-1.3 9.7-3.4 12.6-1.1 1.5-2.3 2.2-3.5 2.2s-2.4-.7-3.5-2.2c-2.1-2.9-3.2-7.1-3.4-12.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M8.1 8.1c1.2 1.1 2.5 1.7 3.9 1.7 1.5 0 2.8-.6 3.9-1.7M7.8 14.1c1.3.8 2.7 1.2 4.2 1.2 1.4 0 2.8-.4 4.2-1.2" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".65"/>
+        </symbol>
+        <symbol id="i-museum" viewBox="0 0 24 24">
+          <path d="M3.5 9.3L12 4l8.5 5.3M5.4 10.3h13.2M6.5 10.3v7.3M10.1 10.3v7.3M13.9 10.3v7.3M17.5 10.3v7.3M4 20.2h16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+        <symbol id="i-shop" viewBox="0 0 24 24">
+          <path d="M4.2 9.2h15.6l-1 10.2c-.1 1-1 1.8-2 1.8H7.2c-1 0-1.9-.8-2-1.8L4.2 9.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M8.3 9.2V7.5a3.7 3.7 0 017.4 0v1.7M9.1 13.4h5.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-field" viewBox="0 0 24 24">
+          <path d="M3 19.2c2.2-2.4 4.7-3.6 7.4-3.6 2.8 0 5.2 1.2 7.4 3.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M3 19.2h18M5.4 15.2c1.4-4.7 3.3-7.7 5.7-9.1M18.8 15.2c-.6-2.7-1.6-4.8-3-6.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="15.9" cy="5.2" r="2.1" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        </symbol>
+        <symbol id="i-back" viewBox="0 0 24 24">
+          <path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+          <path d="M5 12h13M13.5 6.5L19 12l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24">
+          <path d="M9 5.5l6.5 6.5L9 18.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24">
+          <rect x="5" y="10" width="14" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8.4 10V7.8a3.6 3.6 0 017.2 0V10M12 14.2v2.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-star" viewBox="0 0 24 24">
+          <path d="M12 3.6l2.4 5 5.5.8-4 3.9.9 5.4-4.8-2.5-4.8 2.5.9-5.4-4-3.9 5.5-.8 2.4-5z" fill="currentColor"/>
+        </symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24">
+          <path d="M12 2.5l1.4 5.1L18.5 9l-5.1 1.4L12 15.5l-1.4-5.1L5.5 9l5.1-1.4L12 2.5zM19 14l.7 2.3L22 17l-2.3.7L19 20l-.7-2.3L16 17l2.3-.7L19 14zM5.5 15.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5z" fill="currentColor"/>
+        </symbol>
+        <symbol id="i-sound" viewBox="0 0 24 24">
+          <path d="M4.5 9.2h3.3l4.2-3.4v12.4l-4.2-3.4H4.5V9.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M15.2 8.7a4.7 4.7 0 010 6.6M17.8 6.2a8.2 8.2 0 010 11.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-mute" viewBox="0 0 24 24">
+          <path d="M4.5 9.2h3.3l4.2-3.4v12.4l-4.2-3.4H4.5V9.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M15.2 9.2l5.6 5.6M20.8 9.2l-5.6 5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="M4.5 12.5l4.7 4.7L19.5 6.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+        <symbol id="i-trowel" viewBox="0 0 24 24">
+          <path d="M5 19l6.7-6.7M10 13.5l5.6-9.1c.3-.5.9-.7 1.4-.4l1.2.7c.5.3.7.9.4 1.4l-5.1 9.4c-.3.6-1.1.7-1.6.3l-1.2-1.1c-.6-.5-.7-1.1-.7-1.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M3.8 20.2l2.4-2.4" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-scan" viewBox="0 0 24 24">
+          <path d="M4 8.5V5.5c0-.8.7-1.5 1.5-1.5h3M15.5 4h3c.8 0 1.5.7 1.5 1.5v3M20 15.5v3c0 .8-.7 1.5-1.5 1.5h-3M8.5 20h-3c-.8 0-1.5-.7-1.5-1.5v-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M12 6.5V9M12 15v2.5M6.5 12H9M15 12h2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-sieve" viewBox="0 0 24 24">
+          <path d="M4.2 10.2h15.6c0 5-3.3 8.6-7.8 8.6s-7.8-3.6-7.8-8.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M2.8 10.2h18.4M8 14h.1M12 15.8h.1M16 14h.1M9.5 7.3c.5-1.8 1.4-2.9 2.5-3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-target" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="12" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-info" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 10.5v5M12 7.7v.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </symbol>
+        <symbol id="i-bag" viewBox="0 0 24 24">
+          <path d="M5 8.5h14l-1 10.2c-.1.9-.8 1.5-1.7 1.5H7.7c-.9 0-1.6-.6-1.7-1.5L5 8.5zM8.5 8.5V7a3.5 3.5 0 017 0v1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="ambient-grain" aria-hidden="true"></div>
+
+    <!-- HOME -->
+    <section id="screen-home" class="screen screen-home is-active" aria-label="Expedition camp">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-seal"><svg><use href="#i-compass"></use></svg></span>
+          <span class="brand-copy">
+            <span class="brand-title">Dune <i>&amp;</i> Dust</span>
+            <span class="brand-sub">The Relic Hunter</span>
+          </span>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn sound-btn" id="homeSoundBtn" aria-label="Toggle sound"><svg><use href="#i-sound"></use></svg></button>
+          <button class="wallet" id="homeWallet" aria-label="Coins">
+            <svg><use href="#i-coin"></use></svg>
+            <span class="coin-value">620</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="home-main">
+        <div class="season-line">
+          <span>Field season III</span>
+          <span class="season-rule"></span>
+          <span class="weather"><i class="weather-sun"></i> 38° · clear</span>
+        </div>
+
+        <div class="hero" id="hero">
+          <div class="hero-art" id="heroArt"></div>
+          <div class="hero-vignette"></div>
+          <div class="hero-grain"></div>
+          <div class="hero-top">
+            <span class="tag tag-light" id="heroSiteTag">Site 01 · Sahara</span>
+            <span class="hero-coord" id="heroCoord">24°N · 12°E</span>
+          </div>
+          <button class="hero-arrow prev" id="prevSite" aria-label="Previous site"><svg><use href="#i-back"></use></svg></button>
+          <button class="hero-arrow next" id="nextSite" aria-label="Next site"><svg><use href="#i-chevron"></use></svg></button>
+          <div class="hero-copy">
+            <span class="eyebrow" id="heroEyebrow">Expedition 01 · 0 relics recovered</span>
+            <h1 id="heroTitle">The Sunken<br>Caravan</h1>
+            <p id="heroSub">A merchant train lost to the red wind, 1846.</p>
+          </div>
+          <div class="hero-locked" id="heroLocked" hidden>
+            <span class="lock-badge"><svg><use href="#i-lock"></use></svg></span>
+            <div>
+              <strong>Site restricted</strong>
+              <span id="heroLockText">Requires 20 renown</span>
+            </div>
+          </div>
+          <button class="primary-btn hero-cta" id="beginDigBtn">
+            <span id="heroCtaText">Begin excavation</span>
+            <svg><use href="#i-arrow"></use></svg>
+          </button>
+          <div class="hero-dust" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </div>
+
+        <div class="site-rail" id="siteRail" aria-label="Excavation sites"></div>
+
+        <div class="home-lower">
+          <div class="stat-pair">
+            <div class="stat-block">
+              <span class="stat-label">Recovered</span>
+              <div class="stat-value"><strong id="statRecovered">0</strong><span>/ 12</span></div>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="stat-block">
+              <span class="stat-label">Renown</span>
+              <div class="stat-value"><strong id="statRenown">12</strong><span id="statRank">· Curator</span></div>
+            </div>
+          </div>
+          <div class="journal-card">
+            <span class="journal-mark"><svg><use href="#i-compass"></use></svg></span>
+            <span class="journal-copy">
+              <span class="journal-kicker" id="journalKicker">Field note · Site 01</span>
+              <span class="journal-text" id="journalText">The dune moves eleven metres a year. Somewhere beneath it, a caravan still waits.</span>
+            </span>
+            <span class="journal-stamp">S III</span>
+          </div>
+          <button class="dispatch-card" id="dispatchCard">
+            <span class="dispatch-icon"><svg><use href="#i-target"></use></svg></span>
+            <span class="dispatch-copy">
+              <span class="dispatch-label">Next dispatch</span>
+              <strong id="dispatchText">Recover your first relic</strong>
+            </span>
+            <span class="dispatch-reward" id="dispatchReward">+150</span>
+            <svg class="dispatch-arrow"><use href="#i-chevron"></use></svg>
+          </button>
+        </div>
+      </main>
+
+      <nav class="tabbar" aria-label="Main navigation">
+        <button class="tab is-active" data-nav="home"><svg><use href="#i-field"></use></svg><span>Field</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="lab"><span class="tab-badge" id="labBadge" hidden></span><svg><use href="#i-brush"></use></svg><span>Lab</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="museum"><svg><use href="#i-museum"></use></svg><span>Museum</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="shop"><svg><use href="#i-shop"></use></svg><span>Supply</span><i class="tab-dot"></i></button>
+      </nav>
+    </section>
+
+    <!-- DIG -->
+    <section id="screen-dig" class="screen screen-game screen-dig" aria-label="Excavation">
+      <header class="game-head">
+        <button class="icon-btn game-back" id="digBack" aria-label="Leave excavation"><svg><use href="#i-back"></use></svg></button>
+        <div class="game-title">
+          <span id="digSiteLabel">Site 01 · Sahara</span>
+          <strong id="digSiteName">The Sunken Caravan</strong>
+        </div>
+        <div class="head-tools">
+          <button class="icon-btn sound-btn" data-sound aria-label="Toggle sound"><svg><use href="#i-sound"></use></svg></button>
+          <button class="icon-btn" id="digInfo" aria-label="How to dig"><svg><use href="#i-info"></use></svg></button>
+        </div>
+      </header>
+
+      <div class="dig-stage" id="digStage">
+        <canvas id="digCanvas"></canvas>
+        <div class="stage-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="dig-hud">
+          <span class="hud-chip"><i class="pulse-dot"></i><span id="digSignal">Signal 84%</span></span>
+          <span class="hud-chip hud-depth"><span id="digStratum">Stratum I</span><i></i><span id="digDepth">0.0 m</span></span>
+        </div>
+        <div class="dig-scan" id="digScan" aria-hidden="true"></div>
+        <div class="dig-tool-hint" id="digHint">
+          <span class="swipe-hand"><i></i></span>
+          <span>Drag to sweep the sand</span>
+        </div>
+        <div class="stage-scale" aria-hidden="true"><i></i><span>25 cm</span></div>
+      </div>
+
+      <div class="game-panel dig-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="mini-label" id="exposureLabel">Artifact exposure</span>
+            <strong class="panel-big" id="exposureValue">0%</strong>
+          </div>
+          <button class="scan-btn" id="scanBtn"><svg><use href="#i-scan"></use></svg><span>Pulse</span></button>
+        </div>
+        <div class="meter meter-exposure"><span id="exposureBar" style="width:0%"></span><i class="meter-notch" style="left:35%"></i><i class="meter-notch" style="left:70%"></i></div>
+        <div class="panel-foot">
+          <span class="field-note" id="digNote">Sweep the topsoil to find the signal</span>
+          <button class="primary-btn compact" id="liftBtn" disabled>
+            <span>Lift the find</span><svg><use href="#i-arrow"></use></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLEAN -->
+    <section id="screen-clean" class="screen screen-game screen-clean" aria-label="Restoration lab">
+      <header class="game-head game-head-light">
+        <button class="icon-btn game-back" id="cleanBack" aria-label="Leave lab"><svg><use href="#i-back"></use></svg></button>
+        <div class="game-title">
+          <span>Restoration lab</span>
+          <strong id="cleanRelicLabel">Unidentified find</strong>
+        </div>
+        <div class="head-tools">
+          <button class="icon-btn sound-btn" data-sound aria-label="Toggle sound"><svg><use href="#i-sound"></use></svg></button>
+          <button class="icon-btn" id="cleanInfo" aria-label="How to clean"><svg><use href="#i-info"></use></svg></button>
+        </div>
+      </header>
+
+      <div class="clean-stage" id="cleanStage">
+        <div class="clean-glow"></div>
+        <canvas id="cleanCanvas"></canvas>
+        <div class="clean-stage-top">
+          <span class="lab-tag">Find 01 · <span id="cleanFragility">Stable</span></span>
+          <span class="lab-tag lab-tag-right" id="cleanGrade">Field condition</span>
+        </div>
+        <div class="clean-complete" id="cleanComplete">
+          <span class="spark-ring"></span>
+          <strong>Conserved</strong>
+          <span>Ready for appraisal</span>
+        </div>
+        <div class="clean-hint" id="cleanHint">
+          <span class="hint-tool"><svg><use href="#i-brush"></use></svg></span>
+          <span>Scrub away the grime</span>
+        </div>
+      </div>
+
+      <div class="game-panel clean-panel">
+        <div class="clean-meters">
+          <div class="clean-meter-row">
+            <span class="meter-icon"><svg><use href="#i-trowel"></use></svg></span>
+            <div class="meter-body">
+              <span class="meter-name" id="grimeLabel">Grime</span>
+              <div class="meter"><span id="grimeBar" style="width:100%"></span></div>
+            </div>
+            <span class="meter-pct" id="grimePct">100%</span>
+          </div>
+          <div class="clean-meter-row">
+            <span class="meter-icon"><svg><use href="#i-sparkle"></use></svg></span>
+            <div class="meter-body">
+              <span class="meter-name" id="saltLabel">Salt crust</span>
+              <div class="meter meter-salt"><span id="saltBar" style="width:100%"></span></div>
+            </div>
+            <span class="meter-pct" id="saltPct">100%</span>
+          </div>
+        </div>
+        <div class="tool-dock" role="toolbar" aria-label="Cleaning tools">
+          <button class="tool-btn is-active" data-tool="brush">
+            <span class="tool-icon"><svg><use href="#i-brush"></use></svg></span>
+            <span class="tool-name">Brush</span>
+            <span class="tool-lv" id="brushLv">I</span>
+          </button>
+          <button class="tool-btn" data-tool="water">
+            <span class="tool-icon"><svg><use href="#i-water"></use></svg></span>
+            <span class="tool-name">Water</span>
+            <span class="tool-lv" id="waterLv">I</span>
+          </button>
+          <button class="tool-btn" data-tool="cloth">
+            <span class="tool-icon"><svg><use href="#i-cloth"></use></svg></span>
+            <span class="tool-name">Polish</span>
+            <span class="tool-lv" id="clothLv">I</span>
+          </button>
+        </div>
+        <div class="panel-foot clean-foot">
+          <span class="field-note" id="cleanNote">Dry-brush the grime first</span>
+          <button class="primary-btn compact" id="appraiseBtn" disabled>
+            <span>Appraise</span><svg><use href="#i-arrow"></use></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- APPRAISE -->
+    <section id="screen-appraise" class="screen screen-game screen-appraise" aria-label="Appraisal">
+      <header class="game-head game-head-dark">
+        <button class="icon-btn game-back" id="appraiseBack" aria-label="Return to lab"><svg><use href="#i-back"></use></svg></button>
+        <div class="game-title">
+          <span>Atelier appraisal</span>
+          <strong>Under the loupe</strong>
+        </div>
+        <span class="head-mark"><svg><use href="#i-compass"></use></svg></span>
+      </header>
+
+      <div class="appraise-main">
+        <div class="appraise-stage">
+          <div class="appraise-spot"></div>
+          <div class="appraise-rays"></div>
+          <img id="appraiseImg" alt="Restored artifact">
+          <div class="scan-line"></div>
+          <span class="appraise-stamp" id="appraiseStamp">Authenticated</span>
+          <span class="appraise-id" id="appraiseId">CAT. 000</span>
+        </div>
+        <div class="appraise-detail">
+          <span class="rarity-row" id="appraiseRarity"></span>
+          <h2 id="appraiseName">Umayyad Gold Dinar</h2>
+          <p class="appraise-era" id="appraiseEra">711 CE · Damascus mint</p>
+          <p class="appraise-desc" id="appraiseDesc"></p>
+          <div class="appraise-stats">
+            <span><i>Condition</i><strong id="appraiseCondition">94%</strong></span>
+            <span><i>Market</i><strong id="appraiseMarket">$ 320</strong></span>
+            <span><i>Grade</i><strong id="appraiseGrade">Museum</strong></span>
+          </div>
+          <div class="provenance-card">
+            <span class="prov-mark"><svg><use href="#i-compass"></use></svg></span>
+            <span class="prov-copy">
+              <span class="prov-label">Provenance</span>
+              <span id="appraiseProvenance">Recovered from the windward side of a collapsed tent ring.</span>
+            </span>
+          </div>
+        </div>
+        <div class="offer-block">
+          <span class="mini-label">Two offers on the table</span>
+          <button class="offer-card" id="museumOffer">
+            <span class="offer-icon"><svg><use href="#i-museum"></use></svg></span>
+            <span class="offer-copy">
+              <strong>Atlas Museum</strong>
+              <span>Permanent collection · <b id="museumRenown">+12</b> renown</span>
+            </span>
+            <span class="offer-value" id="museumValue">$ 410</span>
+          </button>
+          <button class="offer-card offer-private" id="collectorOffer">
+            <span class="offer-icon"><svg><use href="#i-bag"></use></svg></span>
+            <span class="offer-copy">
+              <strong>Private collector</strong>
+              <span>Immediate sale · no renown</span>
+            </span>
+            <span class="offer-value" id="collectorValue">$ 560</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sold-overlay" id="soldOverlay" hidden>
+        <div class="sold-card">
+          <span class="sold-seal"><svg><use href="#i-check"></use></svg></span>
+          <span class="eyebrow" id="soldEyebrow">Acquired by the Atlas Museum</span>
+          <h2 id="soldTitle">A new treasure<br>enters the archive.</h2>
+          <div class="sold-summary">
+            <span><i>Proceeds</i><strong id="soldAmount">$ 410</strong></span>
+            <span><i>Renown</i><strong id="soldRenown">+12</strong></span>
+          </div>
+          <p id="soldFlavor">Curator Hana will place it in the sunrise gallery.</p>
+          <button class="primary-btn" id="soldContinue"><span>Return to the dunes</span><svg><use href="#i-arrow"></use></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAB IDLE -->
+    <section id="screen-lab" class="screen screen-page screen-lab" aria-label="Restoration lab">
+      <header class="page-head">
+        <div>
+          <span class="page-kicker">The atelier</span>
+          <h1>Restoration lab</h1>
+        </div>
+        <button class="wallet" data-wallet aria-label="Coins"><svg><use href="#i-coin"></use></svg><span class="coin-value">620</span></button>
+      </header>
+      <main class="lab-main">
+        <div class="lab-window">
+          <div class="lab-shelf" aria-hidden="true">
+            <i class="bottle b1"></i><i class="bottle b2"></i><i class="bottle b3"></i>
+            <span class="shelf-line"></span>
+            <span class="shelf-line s2"></span>
+          </div>
+          <div class="lab-empty-art" id="labArt">
+            <svg viewBox="0 0 240 190" aria-hidden="true">
+              <defs>
+                <linearGradient id="trayGrad" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f3ead9"/><stop offset="1" stop-color="#d8c6a6"/></linearGradient>
+                <linearGradient id="boneGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a78a63"/><stop offset=".55" stop-color="#7f6748"/><stop offset="1" stop-color="#5d4933"/></linearGradient>
+              </defs>
+              <ellipse cx="120" cy="158" rx="74" ry="12" fill="#b79f7b" opacity=".32"/>
+              <path d="M55 76h130l-11 76H66L55 76z" fill="url(#trayGrad)" stroke="#b49d78" stroke-width="1.2"/>
+              <path d="M67 88h106l-8 52H75L67 88z" fill="#c8b18d" opacity=".55"/>
+              <path d="M93 112c8-13 20-20 33-20 12 0 20 4 28 14-4 14-16 23-31 23-13 0-23-6-30-17z" fill="url(#boneGrad)"/>
+              <path d="M95 105c-5-7-3-14 3-16 5-2 10 2 11 8M139 89c8-2 13 4 10 11-2 5-8 7-13 5" fill="none" stroke="#8e7552" stroke-width="5" stroke-linecap="round"/>
+              <path d="M96 113c8-5 17-8 26-8 9 0 17 2 25 6" fill="none" stroke="#c0a983" stroke-width="1.4" opacity=".7"/>
+              <path d="M70 88h100" stroke="#fff" stroke-width="1" opacity=".45"/>
+              <g transform="translate(184 48) rotate(18)">
+                <rect x="-2" y="0" width="4" height="54" rx="2" fill="#8e6d43"/>
+                <path d="M-8 55c0-8 16-8 16 0 0 8-16 8-16 0z" fill="#c5a16c"/>
+                <path d="M-4 57c0-4 8-4 8 0" stroke="#7d5f3b" stroke-width="1" fill="none"/>
+              </g>
+            </svg>
+          </div>
+          <span class="lab-window-tag">Station 01</span>
+        </div>
+        <div class="empty-copy">
+          <span class="eyebrow" id="labEyebrow">No find on the table</span>
+          <h2 id="labTitle">The lab is quiet.</h2>
+          <p id="labText">Bring a relic back from the dunes and the atelier will wake up.</p>
+          <button class="primary-btn" id="labCta"><span>Go to the excavation</span><svg><use href="#i-arrow"></use></svg></button>
+        </div>
+        <div class="lab-tip">
+          <svg><use href="#i-sparkle"></use></svg>
+          <span id="labTipText">Tip: water dissolves salt crust. Dry brushing lifts loose grime.</span>
+        </div>
+      </main>
+      <nav class="tabbar" aria-label="Main navigation">
+        <button class="tab" data-nav="home"><svg><use href="#i-field"></use></svg><span>Field</span><i class="tab-dot"></i></button>
+        <button class="tab is-active" data-nav="lab"><span class="tab-badge" id="labBadge2" hidden></span><svg><use href="#i-brush"></use></svg><span>Lab</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="museum"><svg><use href="#i-museum"></use></svg><span>Museum</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="shop"><svg><use href="#i-shop"></use></svg><span>Supply</span><i class="tab-dot"></i></button>
+      </nav>
+    </section>
+
+    <!-- MUSEUM -->
+    <section id="screen-museum" class="screen screen-page screen-museum" aria-label="Museum">
+      <header class="page-head page-head-light">
+        <div>
+          <span class="page-kicker">Atlas society</span>
+          <h1>The museum</h1>
+        </div>
+        <button class="wallet wallet-dark" data-wallet aria-label="Coins"><svg><use href="#i-coin"></use></svg><span class="coin-value">620</span></button>
+      </header>
+      <main class="museum-main">
+        <div class="museum-hall" id="museumHall">
+          <div class="hall-arches" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="hall-label"><span>Gallery of the Sun</span><b id="museumCount">0 / 12</b></div>
+          <div class="museum-display" id="museumDisplay"></div>
+        </div>
+        <div class="museum-strip-head">
+          <span class="mini-label">Recent acquisitions</span>
+          <span class="strip-count" id="stripCount">0 relics</span>
+        </div>
+        <div class="museum-strip" id="museumStrip"></div>
+        <div class="museum-stats">
+          <div><span>Renown</span><strong id="museumRenown">12</strong></div>
+          <div><span>Museum grade</span><strong id="museumGrade">—</strong></div>
+          <div><span>Total value</span><strong id="museumValue">$0</strong></div>
+        </div>
+      </main>
+      <nav class="tabbar" aria-label="Main navigation">
+        <button class="tab" data-nav="home"><svg><use href="#i-field"></use></svg><span>Field</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="lab"><span class="tab-badge" id="labBadge3" hidden></span><svg><use href="#i-brush"></use></svg><span>Lab</span><i class="tab-dot"></i></button>
+        <button class="tab is-active" data-nav="museum"><svg><use href="#i-museum"></use></svg><span>Museum</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="shop"><svg><use href="#i-shop"></use></svg><span>Supply</span><i class="tab-dot"></i></button>
+      </nav>
+    </section>
+
+    <!-- SHOP -->
+    <section id="screen-shop" class="screen screen-page screen-shop" aria-label="Supply depot">
+      <header class="page-head">
+        <div>
+          <span class="page-kicker">Field outfitters</span>
+          <h1>Supply depot</h1>
+        </div>
+        <button class="wallet" data-wallet aria-label="Coins"><svg><use href="#i-coin"></use></svg><span class="coin-value">620</span></button>
+      </header>
+      <main class="shop-main">
+        <div class="segmented" role="tablist" aria-label="Upgrade category">
+          <button class="seg is-active" data-shop-tab="field" role="tab">Field gear</button>
+          <button class="seg" data-shop-tab="lab" role="tab">Lab kit</button>
+        </div>
+        <div class="upgrade-list" id="upgradeList"></div>
+        <div class="shop-note">
+          <svg><use href="#i-info"></use></svg>
+          <span>Better gear reveals fragile finds with less risk — and lifts their appraisal grade.</span>
+        </div>
+      </main>
+      <nav class="tabbar" aria-label="Main navigation">
+        <button class="tab" data-nav="home"><svg><use href="#i-field"></use></svg><span>Field</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="lab"><span class="tab-badge" id="labBadge4" hidden></span><svg><use href="#i-brush"></use></svg><span>Lab</span><i class="tab-dot"></i></button>
+        <button class="tab" data-nav="museum"><svg><use href="#i-museum"></use></svg><span>Museum</span><i class="tab-dot"></i></button>
+        <button class="tab is-active" data-nav="shop"><svg><use href="#i-shop"></use></svg><span>Supply</span><i class="tab-dot"></i></button>
+      </nav>
+    </section>
+
+    <div class="toast-layer" id="toastLayer" aria-live="polite"></div>
+
+    <div class="modal" id="modal" hidden>
+      <div class="modal-scrim"></div>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <button class="modal-close" id="modalClose" aria-label="Close"><svg><use href="#i-close"></use></svg></button>
+        <span class="modal-kicker" id="modalKicker">A note from the field</span>
+        <h2 id="modalTitle">Leave the dig?</h2>
+        <p id="modalText">Your trench will be covered by the night wind.</p>
+        <div class="modal-actions" id="modalActions"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
