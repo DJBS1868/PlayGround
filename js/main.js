@@ -18,6 +18,8 @@ let cleanScene = null;
 let shopTab = 'field';
 let lastScreen = 'home';
 let modalActions = [];
+let auctionTimers = [];
+let auctionSale = null;
 const imageCache = new Map();
 
 /* ---------------------------------------------------------
@@ -647,17 +649,160 @@ function sellRelic(buyer) {
   updateBadges();
 
   const isMuseum = buyer === 'museum';
-  $('#soldEyebrow').textContent = isMuseum ? 'Acquired by the Atlas Museum' : 'Sold to a private collector';
-  $('#soldTitle').innerHTML = isMuseum ? 'A new treasure<br>enters the archive.' : 'The deal is<br>done, quietly.';
+  if (!isMuseum) {
+    $('#soldOverlay').hidden = true;
+    audio.click();
+    startPrivateAuction({
+      artifact,
+      amount,
+      grant,
+      grantNote,
+      lot: relic.cat || 101
+    });
+    return;
+  }
+
+  $('#soldEyebrow').textContent = 'Acquired by the Atlas Museum';
+  $('#soldTitle').innerHTML = 'A new treasure<br>enters the archive.';
   $('#soldAmount').textContent = money(amount + grant);
-  $('#soldRenown').textContent = isMuseum ? `+${offers.renown}` : '—';
-  const buyerNote = isMuseum
-    ? 'Curator Hana places it in the sunrise gallery.'
-    : 'The buyer asks that you do not mention the tomb.';
+  $('#soldRenown').textContent = `+${offers.renown}`;
+  const buyerNote = 'Curator Hana places it in the sunrise gallery.';
   $('#soldFlavor').textContent = grantNote ? `${grantNote} ${buyerNote}` : buyerNote;
   $('#soldOverlay').hidden = false;
   audio.coin();
   vibrate([20, 40, 30]);
+}
+
+/* ---------------------------------------------------------
+   Private collector auction
+   --------------------------------------------------------- */
+function clearAuctionTimers() {
+  auctionTimers.forEach(id => clearTimeout(id));
+  auctionTimers = [];
+}
+
+function scheduleAuction(fn, delay) {
+  const id = setTimeout(fn, delay);
+  auctionTimers.push(id);
+  return id;
+}
+
+function startPrivateAuction({ artifact, amount, grant, grantNote, lot }) {
+  clearAuctionTimers();
+  const overlay = $('#auctionOverlay');
+  const bidders = $$('.bidder', overlay);
+  const steps = 6;
+  const start = Math.max(1, Math.round(amount * .64));
+  const bids = Array.from({ length: steps }, (_, i) =>
+    i === steps - 1 ? amount : Math.round(start + (amount - start) * ((i + 1) / steps))
+  );
+  for (let i = 1; i < bids.length - 1; i++) {
+    if (bids[i] <= bids[i - 1]) bids[i] = bids[i - 1] + 1;
+  }
+  bids[bids.length - 1] = amount;
+
+  auctionSale = { artifact, amount, grant, grantNote, lot, bids, count: 0, lastBidder: -1 };
+  overlay.hidden = false;
+  $('#auctionSoldStamp').hidden = true;
+  $('#auctionSoldStamp').classList.remove('is-visible');
+  $('#auctionContinue').hidden = true;
+  $('#auctionSkip').hidden = false;
+  $('#auctionBidPanel').classList.remove('is-bump');
+  $('#auctionImg').src = artifactImage(artifact.id, 360);
+  $('#auctionImg').alt = artifact.name;
+  $('#auctionName').textContent = artifact.name;
+  $('#auctionLot').textContent = `LOT ${String(lot || 101).padStart(3, '0')}`;
+  $('#auctionBid').textContent = money(start);
+  $('#auctionBidCount').textContent = '0 bids';
+  $('#auctionStatus').textContent = 'The room is quiet. The first paddle goes up…';
+  $('#auctionGrant').hidden = true;
+  $('#auctionGrant').textContent = '';
+  bidders.forEach(bidder => {
+    bidder.classList.remove('is-bidding', 'is-winner');
+    bidder.querySelector('.bidder-sign').textContent = money(start);
+  });
+  scheduleAuction(() => auctionBid(bids, 0), 650);
+}
+
+function auctionBid(bids, index) {
+  if (!auctionSale) return;
+  if (index >= bids.length) {
+    finishPrivateAuction();
+    return;
+  }
+
+  const bidders = $$('.bidder', $('#auctionOverlay'));
+  let pick = Math.floor(Math.random() * bidders.length);
+  if (pick === auctionSale.lastBidder) {
+    pick = (pick + 1 + Math.floor(Math.random() * (bidders.length - 1))) % bidders.length;
+  }
+  auctionSale.lastBidder = pick;
+  auctionSale.count = index + 1;
+
+  const bidder = bidders[pick];
+  const value = bids[index];
+  bidder.querySelector('.bidder-sign').textContent = money(value);
+  bidder.classList.add('is-bidding');
+  $('#auctionBid').textContent = money(value);
+  $('#auctionBidCount').textContent = `${auctionSale.count} bid${auctionSale.count === 1 ? '' : 's'}`;
+  const panel = $('#auctionBidPanel');
+  panel.classList.remove('is-bump');
+  void panel.offsetWidth;
+  panel.classList.add('is-bump');
+
+  const calls = [
+    'A paddle lifts at the back.',
+    'A collector answers.',
+    'The room stirs.',
+    'Another hand goes up.',
+    'The bidding tightens.',
+    'One last raise.'
+  ];
+  $('#auctionStatus').textContent = calls[Math.min(index, calls.length - 1)];
+  audio.tone(480 + (index % 3) * 90, .07, .03, 'triangle');
+  audio.noiseBurst({ freq: 1500, q: 1.1, dur: .035, vol: .018 });
+
+  if (index === bids.length - 1) {
+    bidder.classList.add('is-winner');
+  } else {
+    scheduleAuction(() => bidder.classList.remove('is-bidding'), 720);
+  }
+  scheduleAuction(() => auctionBid(bids, index + 1), 560 + Math.random() * 220);
+}
+
+function finishPrivateAuction() {
+  if (!auctionSale) return;
+  clearAuctionTimers();
+  const sale = auctionSale;
+  const bidders = $$('.bidder', $('#auctionOverlay'));
+  bidders.forEach(bidder => bidder.classList.remove('is-bidding'));
+  if (sale.lastBidder >= 0) {
+    const winner = bidders[sale.lastBidder];
+    winner.classList.add('is-bidding', 'is-winner');
+    winner.querySelector('.bidder-sign').textContent = money(sale.amount);
+  }
+
+  $('#auctionBid').textContent = money(sale.amount);
+  $('#auctionBidCount').textContent = `${sale.count || 1} bid${(sale.count || 1) === 1 ? '' : 's'}`;
+  $('#auctionStatus').textContent = `Sold to the room for ${money(sale.amount)}.`;
+  $('#auctionSoldStamp').hidden = false;
+  requestAnimationFrame(() => $('#auctionSoldStamp').classList.add('is-visible'));
+  $('#auctionContinue').hidden = false;
+  $('#auctionSkip').hidden = true;
+  if (sale.grant > 0) {
+    $('#auctionGrant').hidden = false;
+    $('#auctionGrant').textContent = `${sale.grantNote || 'Society grant'} +${money(sale.grant)}.`;
+  }
+  audio.coin();
+  audio.tone(160, .22, .06, 'square');
+  audio.noiseBurst({ freq: 600, q: .6, dur: .18, vol: .07 });
+  vibrate([20, 40, 30]);
+}
+
+function closePrivateAuction() {
+  clearAuctionTimers();
+  auctionSale = null;
+  $('#auctionOverlay').hidden = true;
 }
 
 /* ---------------------------------------------------------
@@ -985,6 +1130,15 @@ function bind() {
     $('#soldOverlay').hidden = true;
     goHome();
     toast('The dunes are waiting.', 1500);
+  });
+  $('#auctionSkip').addEventListener('click', () => {
+    if (auctionSale) auctionSale.count = auctionSale.bids.length;
+    finishPrivateAuction();
+  });
+  $('#auctionContinue').addEventListener('click', () => {
+    closePrivateAuction();
+    goHome();
+    toast('The collector’s money is in your purse.', 1800);
   });
 
   $('#labCta').addEventListener('click', () => {
