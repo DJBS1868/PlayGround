@@ -29,12 +29,12 @@
 
   const COSMETIC_SETS = {
     chips: [
-      { id:'classic', name:'Classic', price:0, className:'chip-classic' },
-      { id:'royal', name:'Royal', price:150, className:'chip-royal' },
-      { id:'ruby', name:'Ruby', price:200, className:'chip-ruby' },
-      { id:'ocean', name:'Ocean', price:250, className:'chip-ocean' },
-      { id:'gold', name:'Gold', price:350, className:'chip-gold' },
-      { id:'midnight', name:'Midnight', price:500, className:'chip-midnight' },
+      { id:'classic', name:'Classic', price:0, className:'chips-classic' },
+      { id:'royal', name:'Royal', price:150, className:'chips-royal' },
+      { id:'ruby', name:'Ruby', price:200, className:'chips-ruby' },
+      { id:'ocean', name:'Ocean', price:250, className:'chips-ocean' },
+      { id:'gold', name:'Gold', price:350, className:'chips-gold' },
+      { id:'midnight', name:'Midnight', price:500, className:'chips-midnight' },
     ],
     cards: [
       { id:'classic', name:'Classic', price:0, className:'cards-classic' },
@@ -63,16 +63,19 @@
   };
 
   function loadCosmetics() {
+    const fallback = { purchased: [], equipped:{ chips:'classic', cards:'classic', felts:'classic', floors:'classic' } };
     try {
       const saved = JSON.parse(readStore(STORE_COSMETICS, '{}'));
-      return {
-        purchased: Array.isArray(saved.purchased) ? saved.purchased : [],
-        equipped: {
-          chips: saved.equipped?.chips || 'classic', cards: saved.equipped?.cards || 'classic',
-          felts: saved.equipped?.felts || 'classic', floors: saved.equipped?.floors || 'classic'
-        }
-      };
-    } catch { return { purchased: [], equipped:{ chips:'classic', cards:'classic', felts:'classic', floors:'classic' } }; }
+      const purchased = Array.isArray(saved.purchased) ? saved.purchased.filter(v => typeof v === 'string') : [];
+      const equipped = {};
+      Object.keys(fallback.equipped).forEach(category => {
+        const id = saved.equipped?.[category];
+        const valid = COSMETIC_SETS[category]?.some(o => o.id === id);
+        const owned = id === 'classic' || purchased.includes(`${category}:${id}`);
+        equipped[category] = valid && owned ? id : 'classic';
+      });
+      return { purchased, equipped };
+    } catch { return fallback; }
   }
   const cosmetics = loadCosmetics();
   function saveCosmetics() { writeStore(STORE_COSMETICS, JSON.stringify(cosmetics)); }
@@ -981,22 +984,29 @@
         const owned = isPurchased(category, option.id);
         const equipped = cosmetics.equipped[category] === option.id;
         const previewClass = option.className;
-        return `<button type="button" class="shop-option ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}" data-category="${category}" data-id="${option.id}">
-          <span class="cosmetic-preview ${previewClass}"><i></i><i></i><i></i></span>
+        const label = equipped ? `${option.name}, equipped` : owned ? `${option.name}, owned, equip` : `${option.name}, buy for $${option.price}`;
+        return `<button type="button" class="shop-option ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}" data-category="${category}" data-id="${option.id}" aria-pressed="${equipped}" aria-label="${label}">
+          <span class="cosmetic-preview ${previewClass}" aria-hidden="true"><i></i><i></i><i></i></span>
           <b>${option.name}</b>
           <small>${equipped ? 'Equipped' : owned ? 'Equip' : `$${option.price}`}</small>
-          ${equipped ? '<span class="equip-check">✓</span>' : ''}
+          ${equipped ? '<span class="equip-check" aria-hidden="true">✓</span>' : ''}
         </button>`;
       }).join('');
     });
+  }
+
+  function availableFunds() {
+    const committed = state.phase === 'bet' ? state.playerBet : 0;
+    return Math.max(0, Math.round((state.bankroll - committed) * 100) / 100);
   }
 
   function handleShopSelection(category, id) {
     const option = COSMETIC_SETS[category].find(o => o.id === id);
     if (!option) return;
     if (!isPurchased(category, id)) {
-      if (state.bankroll < option.price) {
-        showToast(`Need $${option.price} — you have $${money(state.bankroll)}`);
+      const available = availableFunds();
+      if (available < option.price) {
+        showToast(`Need $${option.price} — $${money(available)} available`);
         Sound.err();
         haptic(18);
         return;
@@ -1004,7 +1014,8 @@
       state.bankroll = Math.round((state.bankroll - option.price) * 100) / 100;
       cosmetics.purchased.push(shopKey(category, id));
       writeStore(STORE_BANK, String(state.bankroll));
-      renderBankroll();
+      updateBank();
+      refreshChipStates();
       showToast(`${option.name} purchased for $${option.price}`);
       Sound.win();
     }
@@ -1062,7 +1073,7 @@
   $('shopDone').addEventListener('click', closeShop);
   els.sheet.querySelector('[data-close]').addEventListener('click', closeShop);
   els.sheet.addEventListener('click', event => {
-    const option = event.target.closest('.shop-option');
+    const option = event.target.closest?.('.shop-option');
     if (!option) return;
     handleShopSelection(option.dataset.category, option.dataset.id);
   });

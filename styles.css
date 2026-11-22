@@ -491,17 +491,18 @@ button:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; 
 /* ---------- cosmetic shop variants ---------- */
 body.chips-royal .chip{ --edge:#d8c5ff; } body.chips-ruby .chip{ --edge:#ffd0d0; } body.chips-ocean .chip{ --edge:#bdefff; }
 body.chips-gold .chip{ --edge:#fff0a8; } body.chips-midnight .chip{ --edge:#bfc4e8; }
-body.chips-royal .chip-1,body.chips-royal .chip-5,body.chips-royal .chip-25,body.chips-royal .chip-100,body.chips-royal .chip-500{ --base:#6337a6; }
-body.chips-ruby .chip-1,body.chips-ruby .chip-5,body.chips-ruby .chip-25,body.chips-ruby .chip-100,body.chips-ruby .chip-500{ --base:#b0183a; }
-body.chips-ocean .chip-1,body.chips-ocean .chip-5,body.chips-ocean .chip-25,body.chips-ocean .chip-100,body.chips-ocean .chip-500{ --base:#176fa4; }
+body.chips-royal .chip-1,body.chips-royal .chip-5,body.chips-royal .chip-25,body.chips-royal .chip-100,body.chips-royal .chip-500{ --base:#6337a6; --label:#fff7e6; }
+body.chips-ruby .chip-1,body.chips-ruby .chip-5,body.chips-ruby .chip-25,body.chips-ruby .chip-100,body.chips-ruby .chip-500{ --base:#b0183a; --label:#fff7e6; }
+body.chips-ocean .chip-1,body.chips-ocean .chip-5,body.chips-ocean .chip-25,body.chips-ocean .chip-100,body.chips-ocean .chip-500{ --base:#176fa4; --label:#fff7e6; }
 body.chips-gold .chip-1,body.chips-gold .chip-5,body.chips-gold .chip-25,body.chips-gold .chip-100,body.chips-gold .chip-500{ --base:#b88724; --label:#fff4ba; }
-body.chips-midnight .chip-1,body.chips-midnight .chip-5,body.chips-midnight .chip-25,body.chips-midnight .chip-100,body.chips-midnight .chip-500{ --base:#20243b; --edge:#9fa6c9; }
+body.chips-midnight .chip-1,body.chips-midnight .chip-5,body.chips-midnight .chip-25,body.chips-midnight .chip-100,body.chips-midnight .chip-500{ --base:#20243b; --edge:#9fa6c9; --label:#fff7e6; }
+body.chips-royal .chip-1 span,body.chips-ruby .chip-1 span,body.chips-ocean .chip-1 span,body.chips-gold .chip-1 span,body.chips-midnight .chip-1 span{ color:#fff7e6; text-shadow:0 1px 1px rgba(0,0,0,.55); }
 
-body.cards-noir .card:not(.back){ background:linear-gradient(145deg,#30343b,#111318); color:#f4eee0; } body.cards-noir .card.back{ background:radial-gradient(circle,#262a31,#090a0d); }
-body.cards-rose .card:not(.back){ background:linear-gradient(145deg,#fff1f3,#dfb6bd); } body.cards-rose .card.back{ background:radial-gradient(circle,#cb7f91,#63243a 70%,#32121f); }
-body.cards-emerald .card:not(.back){ background:linear-gradient(145deg,#eff9ec,#bfdabb); } body.cards-emerald .card.back{ background:radial-gradient(circle,#23956a,#0b553a 65%,#083725); }
-body.cards-blue .card:not(.back){ background:linear-gradient(145deg,#eff8ff,#bdd5e8); } body.cards-blue .card.back{ background:radial-gradient(circle,#3487bd,#17476d 65%,#102d47); }
-body.cards-royal .card:not(.back){ background:linear-gradient(145deg,#fff7dc,#dfca91); } body.cards-royal .card.back{ background:radial-gradient(circle,#7257b7,#40256d 70%,#261640); }
+body.cards-noir .card:not(.back){ background:linear-gradient(145deg,#30343b,#111318); color:#f4eee0; } body.cards-noir .card.back{ background:radial-gradient(circle,#262a31,#090a0d); box-shadow:0 .5cqw 1.3cqw rgba(0,0,0,.42),inset 0 0 0 .28cqw #d8d4ca,inset 0 0 0 .55cqw #555a63; }
+body.cards-rose .card:not(.back){ background:linear-gradient(145deg,#fff1f3,#dfb6bd); } body.cards-rose .card.back{ background:radial-gradient(circle,#cb7f91,#63243a 70%,#32121f); box-shadow:0 .5cqw 1.3cqw rgba(0,0,0,.42),inset 0 0 0 .28cqw #ffe3e8,inset 0 0 0 .55cqw #a35d6c; }
+body.cards-emerald .card:not(.back){ background:linear-gradient(145deg,#eff9ec,#bfdabb); } body.cards-emerald .card.back{ background:radial-gradient(circle,#23956a,#0b553a 65%,#083725); box-shadow:0 .5cqw 1.3cqw rgba(0,0,0,.42),inset 0 0 0 .28cqw #d7ead2,inset 0 0 0 .55cqw #3c7a5b; }
+body.cards-blue .card:not(.back){ background:linear-gradient(145deg,#eff8ff,#bdd5e8); } body.cards-blue .card.back{ background:radial-gradient(circle,#3487bd,#17476d 65%,#102d47); box-shadow:0 .5cqw 1.3cqw rgba(0,0,0,.42),inset 0 0 0 .28cqw #d8eaf6,inset 0 0 0 .55cqw #3a6f92; }
+body.cards-royal .card:not(.back){ background:linear-gradient(145deg,#fff7dc,#dfca91); } body.cards-royal .card.back{ background:radial-gradient(circle,#7257b7,#40256d 70%,#261640); box-shadow:0 .5cqw 1.3cqw rgba(0,0,0,.42),inset 0 0 0 .28cqw #f3dda1,inset 0 0 0 .55cqw #8c6a2a; }
 body.cards-noir .card.back::after{ content:'◆'; } body.cards-rose .card.back::after{ content:'♥'; } body.cards-emerald .card.back::after{ content:'♣'; } body.cards-blue .card.back::after{ content:'✦'; } body.cards-royal .card.back::after{ content:'♛'; }
 
 body.felt-black .felt{ background:radial-gradient(circle at 50% 38%,#3a4248,#20272b 62%,#101417); }
@@ -516,9 +517,13 @@ body.floor-art .carpet{ background-color:#201825; background-image:radial-gradie
 body.floor-red .carpet{ background-color:#281417; background-image:repeating-linear-gradient(45deg,rgba(180,55,71,.18) 0 8px,transparent 8px 32px),repeating-linear-gradient(-45deg,rgba(235,201,124,.08) 0 3px,transparent 3px 28px); }
 body.floor-neon .carpet{ background-color:#07161d; background-image:linear-gradient(rgba(57,230,205,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(57,230,205,.12) 1px,transparent 1px),radial-gradient(circle at 50% 40%,rgba(224,54,159,.18),transparent 50%); background-size:34px 34px,34px 34px,100% 100%; }
 
-.cosmetic-preview.chip-royal i{ background:#6337a6; }.cosmetic-preview.chip-ruby i{ background:#b0183a; }.cosmetic-preview.chip-ocean i{ background:#176fa4; }.cosmetic-preview.chip-gold i{ background:#b88724; }.cosmetic-preview.chip-midnight i{ background:#20243b; }
+.cosmetic-preview.chips-classic i:nth-child(1){ background:#c8372f; }.cosmetic-preview.chips-classic i:nth-child(2){ background:#1c7a4e; }.cosmetic-preview.chips-classic i:nth-child(3){ background:#242525; border-color:#d8b45e; }
+.cosmetic-preview.chips-royal i{ background:#6337a6; }.cosmetic-preview.chips-ruby i{ background:#b0183a; }.cosmetic-preview.chips-ocean i{ background:#176fa4; }.cosmetic-preview.chips-gold i{ background:#b88724; }.cosmetic-preview.chips-midnight i{ background:#20243b; }
+.cosmetic-preview.cards-classic i{ background:linear-gradient(145deg,#fffdf6,#e9e0cc);border-radius:5px;border:2px solid #f3e8d1; }
 .cosmetic-preview.cards-noir i{ background:#272b31;border-radius:5px;border:2px solid #ddd; }.cosmetic-preview.cards-rose i{ background:#d9a1ad;border-radius:5px;border:2px solid #fff1f3; }.cosmetic-preview.cards-emerald i{ background:#2d8161;border-radius:5px;border:2px solid #cfe6c8; }.cosmetic-preview.cards-blue i{ background:#367aa2;border-radius:5px;border:2px solid #d7ecfa; }.cosmetic-preview.cards-royal i{ background:#7257b7;border-radius:5px;border:2px solid #f3dda1; }
-.cosmetic-preview.felt-classic i{ background:#08704a;border-radius:50%; }.cosmetic-preview.felt-black i{ background:#252b2e; }.cosmetic-preview.felt-burgundy i{ background:#76182d; }.cosmetic-preview.felt-blue i{ background:#1d6682; }.cosmetic-preview.felt-violet i{ background:#5a3a80; }.cosmetic-preview.felt-champagne i{ background:#a18a55; }
+.cosmetic-preview.felt-classic i{ background:#08704a; }.cosmetic-preview.felt-black i{ background:#252b2e; }.cosmetic-preview.felt-burgundy i{ background:#76182d; }.cosmetic-preview.felt-blue i{ background:#1d6682; }.cosmetic-preview.felt-violet i{ background:#5a3a80; }.cosmetic-preview.felt-champagne i{ background:#a18a55; }
+.cosmetic-preview[class*="felt-"] i:nth-child(2),.cosmetic-preview[class*="felt-"] i:nth-child(3){ display:none; }
+.cosmetic-preview[class*="felt-"] i:nth-child(1){ width:44px; height:34px; left:0; top:5px; border:2px solid rgba(255,255,255,.4); box-shadow:inset 0 0 0 2px rgba(235,201,124,.28), inset 0 0 12px rgba(0,0,0,.45); }
 .cosmetic-preview[class*="floor-"] i{ border-radius:4px;background:#19383a;border:3px double #cfae69; }.cosmetic-preview.floor-diamond i{ background:repeating-linear-gradient(45deg,#19383a 0 5px,#7b9b83 5px 7px); }.cosmetic-preview.floor-checker i{ background:conic-gradient(#09191a 25%,#19383a 0 50%,#09191a 0 75%,#19383a 0); }.cosmetic-preview.floor-art i{ background:#5b2437; }.cosmetic-preview.floor-red i{ background:#7b2634; }.cosmetic-preview.floor-neon i{ background:linear-gradient(45deg,#0a4d55,#3e1742); }
 
 @keyframes shake{
@@ -881,6 +886,18 @@ body.floor-neon .carpet{ background-color:#07161d; background-image:linear-gradi
   .status-row{ padding-bottom:5px; min-height:16px; }
   .status{ font-size:9px; }
   .controls{ grid-template-columns:46px 1fr 1.3fr; }
+  .sheet{ padding:6px 16px calc(8px + var(--safe-b)); border-radius:18px 18px 0 0; }
+  .sheet-grip{ margin:0 auto 8px; }
+  .eyebrow{ display:none; }
+  .sheet-copy{ margin:4px 0 6px; font-size:10.5px; line-height:1.35; }
+  .shop-scroll{ max-height:48dvh; margin-bottom:8px; }
+  .shop-category{ margin-top:8px; }
+  .shop-category-head{ margin-bottom:5px; }
+  .shop-option{ min-height:78px; padding:5px 4px 4px; }
+  .shop-options{ gap:6px; }
+  .sheet-btn{ height:42px; }
+  .sheet-head h2{ font-size:19px; }
+  .sheet-close{ width:30px; height:30px; font-size:19px; }
 }
 
 @media (prefers-reduced-motion: reduce){
