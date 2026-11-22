@@ -53,7 +53,7 @@
       { id:'neon', name:'Neon', price:900, className:'cards-cherry' },
     ],
     felts: [
-      { id:'classic', name:'Emerald', price:0, className:'felt-classic' },
+      { id:'classic', name:'Classic', price:0, className:'felt-classic' },
       { id:'sunset', name:'Sunset', price:150, className:'felt-sunset' },
       { id:'ocean', name:'Ocean', price:210, className:'felt-blue' },
       { id:'forest', name:'Forest', price:270, className:'felt-burgundy' },
@@ -65,7 +65,7 @@
       { id:'neon', name:'Neon', price:900, className:'felt-black' },
     ],
     floors: [
-      { id:'classic', name:'Casino Crest', price:0, className:'floor-classic' },
+      { id:'classic', name:'Classic', price:0, className:'floor-classic' },
       { id:'sunset', name:'Sunset', price:140, className:'floor-sunset' },
       { id:'ocean', name:'Ocean', price:200, className:'floor-neon' },
       { id:'forest', name:'Forest', price:260, className:'floor-diamond' },
