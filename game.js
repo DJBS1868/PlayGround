@@ -30,35 +30,51 @@
   const COSMETIC_SETS = {
     chips: [
       { id:'classic', name:'Classic', price:0, className:'chips-classic' },
-      { id:'royal', name:'Royal', price:150, className:'chips-royal' },
-      { id:'ruby', name:'Ruby', price:200, className:'chips-ruby' },
-      { id:'ocean', name:'Ocean', price:250, className:'chips-ocean' },
-      { id:'gold', name:'Gold', price:350, className:'chips-gold' },
-      { id:'midnight', name:'Midnight', price:500, className:'chips-midnight' },
+      { id:'sunset', name:'Sunset', price:120, className:'chips-sunset' },
+      { id:'ocean', name:'Ocean', price:180, className:'chips-ocean' },
+      { id:'forest', name:'Forest', price:240, className:'chips-forest' },
+      { id:'candy', name:'Candy', price:320, className:'chips-candy' },
+      { id:'royal', name:'Royal', price:400, className:'chips-royal' },
+      { id:'ruby', name:'Ruby', price:480, className:'chips-ruby' },
+      { id:'gold', name:'Gold', price:560, className:'chips-gold' },
+      { id:'midnight', name:'Midnight', price:680, className:'chips-midnight' },
+      { id:'neon', name:'Neon', price:850, className:'chips-neon' },
     ],
     cards: [
       { id:'classic', name:'Classic', price:0, className:'cards-classic' },
-      { id:'noir', name:'Noir', price:180, className:'cards-noir' },
+      { id:'noir', name:'Noir', price:160, className:'cards-noir' },
       { id:'rose', name:'Rose Gold', price:220, className:'cards-rose' },
-      { id:'emerald', name:'Emerald', price:300, className:'cards-emerald' },
-      { id:'blue', name:'Atlantic', price:350, className:'cards-blue' },
-      { id:'royal', name:'Royal', price:500, className:'cards-royal' },
+      { id:'emerald', name:'Emerald', price:280, className:'cards-emerald' },
+      { id:'blue', name:'Atlantic', price:340, className:'cards-blue' },
+      { id:'royal', name:'Royal', price:420, className:'cards-royal' },
+      { id:'sunset', name:'Sunset', price:520, className:'cards-sunset' },
+      { id:'deco', name:'Art Deco', price:640, className:'cards-deco' },
+      { id:'neon', name:'Neon', price:780, className:'cards-neon' },
+      { id:'cherry', name:'Cherry Blossom', price:900, className:'cards-cherry' },
     ],
     felts: [
       { id:'classic', name:'Emerald', price:0, className:'felt-classic' },
-      { id:'black', name:'Onyx', price:180, className:'felt-black' },
-      { id:'burgundy', name:'Burgundy', price:220, className:'felt-burgundy' },
-      { id:'blue', name:'Blue', price:300, className:'felt-blue' },
-      { id:'violet', name:'Violet', price:350, className:'felt-violet' },
-      { id:'champagne', name:'Champagne', price:500, className:'felt-champagne' },
+      { id:'black', name:'Onyx', price:150, className:'felt-black' },
+      { id:'burgundy', name:'Burgundy', price:210, className:'felt-burgundy' },
+      { id:'blue', name:'Blue', price:270, className:'felt-blue' },
+      { id:'violet', name:'Violet', price:340, className:'felt-violet' },
+      { id:'champagne', name:'Champagne', price:420, className:'felt-champagne' },
+      { id:'sunset', name:'Sunset', price:520, className:'felt-sunset' },
+      { id:'lagoon', name:'Lagoon', price:640, className:'felt-lagoon' },
+      { id:'rose', name:'Rosewood', price:760, className:'felt-rose' },
+      { id:'galaxy', name:'Galaxy', price:900, className:'felt-galaxy' },
     ],
     floors: [
       { id:'classic', name:'Casino Crest', price:0, className:'floor-classic' },
-      { id:'diamond', name:'Diamonds', price:150, className:'floor-diamond' },
-      { id:'checker', name:'Checkered', price:220, className:'floor-checker' },
-      { id:'art', name:'Art Deco', price:300, className:'floor-art' },
-      { id:'red', name:'Red Mosaic', price:400, className:'floor-red' },
-      { id:'neon', name:'Neon Grid', price:500, className:'floor-neon' },
+      { id:'diamond', name:'Diamonds', price:140, className:'floor-diamond' },
+      { id:'checker', name:'Checkered', price:200, className:'floor-checker' },
+      { id:'art', name:'Art Deco', price:260, className:'floor-art' },
+      { id:'red', name:'Red Mosaic', price:340, className:'floor-red' },
+      { id:'neon', name:'Neon Grid', price:430, className:'floor-neon' },
+      { id:'constellation', name:'Constellation', price:540, className:'floor-constellation' },
+      { id:'fans', name:'Golden Fans', price:660, className:'floor-fans' },
+      { id:'terrazzo', name:'Terrazzo', price:800, className:'floor-terrazzo' },
+      { id:'cosmic', name:'Cosmic', price:950, className:'floor-cosmic' },
     ],
   };
 
@@ -975,24 +991,43 @@
     return id === 'classic' || cosmetics.purchased.includes(shopKey(category, id));
   }
 
+  let shopTab = 'chips';
+
   function renderShop() {
     const targets = { chips:'shopChips', cards:'shopCards', felts:'shopFelts', floors:'shopFloors' };
     Object.entries(targets).forEach(([category, targetId]) => {
       const target = $(targetId);
       if (!target) return;
-      target.innerHTML = COSMETIC_SETS[category].map((option, i) => {
+      target.innerHTML = COSMETIC_SETS[category].map(option => {
         const owned = isPurchased(category, option.id);
         const equipped = cosmetics.equipped[category] === option.id;
         const previewClass = option.className;
         const label = equipped ? `${option.name}, equipped` : owned ? `${option.name}, owned, equip` : `${option.name}, buy for $${option.price}`;
         return `<button type="button" class="shop-option ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}" data-category="${category}" data-id="${option.id}" aria-pressed="${equipped}" aria-label="${label}">
-          <span class="cosmetic-preview ${previewClass}" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="cosmetic-preview ${previewClass}" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <b>${option.name}</b>
           <small>${equipped ? 'Equipped' : owned ? 'Equip' : `$${option.price}`}</small>
           ${equipped ? '<span class="equip-check" aria-hidden="true">✓</span>' : ''}
         </button>`;
       }).join('');
     });
+    els.sheet.querySelectorAll('[data-shop-tab]').forEach(tab => {
+      const active = tab.dataset.shopTab === shopTab;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-pressed', String(active));
+    });
+    els.sheet.querySelectorAll('[data-shop-category]').forEach(section => {
+      section.hidden = section.dataset.shopCategory !== shopTab;
+    });
+  }
+
+  function setShopTab(category) {
+    if (!COSMETIC_SETS[category] || shopTab === category) return;
+    shopTab = category;
+    renderShop();
+    const scroller = els.sheet.querySelector('.shop-scroll');
+    if (scroller) scroller.scrollTop = 0;
+    haptic(4);
   }
 
   function availableFunds() {
@@ -1073,6 +1108,11 @@
   $('shopDone').addEventListener('click', closeShop);
   els.sheet.querySelector('[data-close]').addEventListener('click', closeShop);
   els.sheet.addEventListener('click', event => {
+    const tab = event.target.closest?.('[data-shop-tab]');
+    if (tab) {
+      setShopTab(tab.dataset.shopTab);
+      return;
+    }
     const option = event.target.closest?.('.shop-option');
     if (!option) return;
     handleShopSelection(option.dataset.category, option.dataset.id);
