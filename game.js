@@ -116,6 +116,7 @@
 
   const state = {
     phase: 'bet',              // bet | deal | player | ai | dealer | result
+    infiniteChips: readStore('goldenAce.infinite.v1', 'off') === 'on',
     bankroll: loadBank(),
     playerBet: 0,
     bets: { player: 0, left: 0, right: 0 },
@@ -180,6 +181,7 @@
      ------------------------------------------------------------ */
   const els = {
     bankroll: $('bankroll'),
+    bankBtn: $('bankBtn'),
     statusText: $('statusText'),
     statusDot: $('statusDot'),
     betReadout: $('betReadout'),
@@ -422,7 +424,9 @@
 
   function refreshChipStates() {
     const betting = state.phase === 'bet';
-    const available = Math.max(0, state.bankroll - (betting ? state.playerBet : 0));
+    const available = state.infiniteChips
+      ? Number.POSITIVE_INFINITY
+      : Math.max(0, state.bankroll - (betting ? state.playerBet : 0));
     els.chipRail.classList.toggle('away', !betting);
     els.chipRail.setAttribute('aria-hidden', String(!betting));
     els.chipRail.querySelectorAll('.rail-chip').forEach(btn => {
@@ -515,7 +519,7 @@
 
   function addBet(value, sourceBtn) {
     if (state.phase !== 'bet' || state.busy) return;
-    if (state.playerBet + value > state.bankroll) {
+    if (!state.infiniteChips && state.playerBet + value > state.bankroll) {
       showToast('Not enough chips in the bank');
       Sound.err();
       haptic(18);
@@ -558,7 +562,13 @@
      UI status / controls
      ------------------------------------------------------------ */
   function updateBank() {
-    els.bankroll.textContent = `$${money(state.bankroll)}`;
+    els.bankroll.textContent = state.infiniteChips ? '∞' : `$${money(state.bankroll)}`;
+    if (els.bankBtn) {
+      els.bankBtn.classList.toggle('infinite', state.infiniteChips);
+      els.bankBtn.setAttribute('aria-label', state.infiniteChips
+        ? 'Infinite chips enabled. Open bankroll code entry'
+        : 'Open bankroll code entry');
+    }
   }
 
   function setStatus(text) {
@@ -675,7 +685,7 @@
 
   function nextHand() {
     if (state.phase !== 'result') return;
-    if (state.bankroll < 1) {
+    if (!state.infiniteChips && state.bankroll < 1) {
       state.bankroll = 100;
       saveBank();
       showToast('The house spots you $100');
@@ -694,7 +704,9 @@
     state.outcomes = {};
     state.bets.player = state.playerBet;
 
-    state.bankroll = Math.round((state.bankroll - state.playerBet) * 100) / 100;
+    if (!state.infiniteChips) {
+      state.bankroll = Math.round((state.bankroll - state.playerBet) * 100) / 100;
+    }
     AI_KEYS.forEach(key => {
       state.ai[key].bal -= state.bets[key];
     });
@@ -922,7 +934,9 @@
       net = Math.round(net * 100) / 100;
 
       if (key === 'player') {
-        state.bankroll = Math.round((state.bankroll + returned) * 100) / 100;
+        if (!state.infiniteChips) {
+          state.bankroll = Math.round((state.bankroll + returned) * 100) / 100;
+        }
       } else {
         state.ai[key].bal += returned;
       }
@@ -969,7 +983,7 @@
       els.captionDealer.textContent = dealerTotal > 21 ? 'DEALER BUST' : dealerBJ ? 'DEALER BLACKJACK' : 'STANDS ON 17';
     }
 
-    if (totalReturned === 0 && state.bankroll < 1) {
+    if (!state.infiniteChips && totalReturned === 0 && state.bankroll < 1) {
       setTimeout(() => showToast('Next hand: the house spots you $100'), 1400);
     }
   }
@@ -1031,6 +1045,7 @@
   }
 
   function availableFunds() {
+    if (state.infiniteChips) return Number.POSITIVE_INFINITY;
     const committed = state.phase === 'bet' ? state.playerBet : 0;
     return Math.max(0, Math.round((state.bankroll - committed) * 100) / 100);
   }
@@ -1046,7 +1061,9 @@
         haptic(18);
         return;
       }
-      state.bankroll = Math.round((state.bankroll - option.price) * 100) / 100;
+      if (!state.infiniteChips) {
+        state.bankroll = Math.round((state.bankroll - option.price) * 100) / 100;
+      }
       cosmetics.purchased.push(shopKey(category, id));
       writeStore(STORE_BANK, String(state.bankroll));
       updateBank();
@@ -1088,6 +1105,57 @@
   }
 
   /* ------------------------------------------------------------
+     bankroll code entry
+     ------------------------------------------------------------ */
+  const codeModal = $('codeModal');
+  const codeForm = $('codeForm');
+  const codeInput = $('codeInput');
+  const codeMessage = $('codeMessage');
+
+  function openCodeEntry() {
+    codeModal.classList.add('open');
+    codeModal.setAttribute('aria-hidden', 'false');
+    els.bankBtn.setAttribute('aria-expanded', 'true');
+    codeMessage.textContent = '';
+    codeMessage.classList.remove('success');
+    codeInput.value = '';
+    setTimeout(() => codeInput.focus(), 180);
+    haptic(6);
+  }
+
+  function closeCodeEntry() {
+    codeModal.classList.remove('open');
+    codeModal.setAttribute('aria-hidden', 'true');
+    els.bankBtn.setAttribute('aria-expanded', 'false');
+    codeInput.blur();
+  }
+
+  els.bankBtn.addEventListener('click', openCodeEntry);
+  $('codeCancel').addEventListener('click', closeCodeEntry);
+  $('codeBackdrop').addEventListener('click', closeCodeEntry);
+  codeForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (codeInput.value === 'DEV_0x8F4B!') {
+      state.infiniteChips = true;
+      writeStore('goldenAce.infinite.v1', 'on');
+      updateBank();
+      refreshChipStates();
+      codeMessage.textContent = 'Developer mode activated — infinite chips.';
+      codeMessage.classList.add('success');
+      showToast('INFINITE CHIPS ENABLED');
+      Sound.win();
+      haptic([12, 30, 12]);
+      setTimeout(closeCodeEntry, 900);
+    } else {
+      codeMessage.textContent = 'Invalid code.';
+      codeMessage.classList.remove('success');
+      codeInput.select();
+      Sound.err();
+      haptic(18);
+    }
+  });
+
+  /* ------------------------------------------------------------
      input wiring
      ------------------------------------------------------------ */
   els.primary.addEventListener('click', () => {
@@ -1120,6 +1188,7 @@
   els.soundBtn.addEventListener('click', toggleSound);
 
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && codeModal.classList.contains('open')) closeCodeEntry();
     if (event.key === 'Escape' && els.sheet.classList.contains('open')) closeShop();
     if (event.key === ' ' && state.phase === 'player') {
       event.preventDefault();
@@ -1136,7 +1205,7 @@
      ------------------------------------------------------------ */
   function boot() {
     applyCosmetics();
-    if (state.bankroll < 1) state.bankroll = 500;
+    if (!state.infiniteChips && state.bankroll < 1) state.bankroll = 500;
     updateBank();
     buildChipRail();
     renderSoundButton();
