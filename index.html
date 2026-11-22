@@ -553,6 +553,89 @@
       <main class="collection-book-list" id="collectionBookList"></main>
     </div>
 
+    <div class="auction-overlay" id="auctionOverlay" hidden aria-label="Private collector auction">
+      <div class="auction-room">
+        <header class="auction-head">
+          <div>
+            <span class="auction-kicker">Private sale · The collector’s room</span>
+            <strong id="auctionTitle">A quiet auction</strong>
+          </div>
+          <button class="auction-skip" id="auctionSkip" type="button">Skip</button>
+        </header>
+
+        <div class="auction-stage" id="auctionStage">
+          <div class="auction-beam" aria-hidden="true"></div>
+          <div class="auction-crowd" aria-hidden="true">
+            <div class="bidder bidder-back-left" data-bidder="0">
+              <span class="bidder-sign">$ 0</span>
+              <span class="bidder-arm"></span>
+              <span class="bidder-head"></span>
+              <span class="bidder-body"></span>
+            </div>
+            <div class="bidder bidder-mid-left" data-bidder="1">
+              <span class="bidder-sign">$ 0</span>
+              <span class="bidder-arm"></span>
+              <span class="bidder-head"></span>
+              <span class="bidder-body"></span>
+            </div>
+            <div class="bidder bidder-back-right" data-bidder="2">
+              <span class="bidder-sign">$ 0</span>
+              <span class="bidder-arm"></span>
+              <span class="bidder-head"></span>
+              <span class="bidder-body"></span>
+            </div>
+            <div class="bidder bidder-mid-right" data-bidder="3">
+              <span class="bidder-sign">$ 0</span>
+              <span class="bidder-arm"></span>
+              <span class="bidder-head"></span>
+              <span class="bidder-body"></span>
+            </div>
+            <div class="bidder bidder-front-left" data-bidder="4">
+              <span class="bidder-sign">$ 0</span>
+              <span class="bidder-arm"></span>
+              <span class="bidder-head"></span>
+              <span class="bidder-body"></span>
+            </div>
+            <div class="bidder bidder-front-right" data-bidder="5">
+              <span class="bidder-sign">$ 0</span>
+              <span class="bidder-arm"></span>
+              <span class="bidder-head"></span>
+              <span class="bidder-body"></span>
+            </div>
+          </div>
+
+          <div class="auction-bid-panel" id="auctionBidPanel" aria-live="polite">
+            <span>Current bid</span>
+            <strong id="auctionBid">$ 0</strong>
+            <em id="auctionBidCount">0 bids</em>
+          </div>
+
+          <div class="auction-podium">
+            <div class="podium-halo" aria-hidden="true"></div>
+            <img id="auctionImg" alt="">
+            <div class="podium-column" aria-hidden="true"></div>
+            <div class="podium-base">
+              <span class="podium-lot" id="auctionLot">LOT 101</span>
+              <strong id="auctionName">Umayyad Gold Dinar</strong>
+            </div>
+          </div>
+
+          <span class="auction-sold-stamp" id="auctionSoldStamp" hidden>SOLD</span>
+        </div>
+
+        <footer class="auction-foot">
+          <div class="auction-status-copy">
+            <span id="auctionStatus">The room is bidding…</span>
+            <b id="auctionGrant" hidden></b>
+          </div>
+          <button class="primary-btn auction-continue" id="auctionContinue" type="button" hidden>
+            <span>Take the money</span>
+            <svg><use href="#i-arrow"></use></svg>
+          </button>
+        </footer>
+      </div>
+    </div>
+
     <div class="toast-layer" id="toastLayer" aria-live="polite"></div>
 
     <div class="modal" id="modal" hidden>

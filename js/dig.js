@@ -1,4 +1,5 @@
 import { drawArtifact, drawArtifactShadow } from './art.js';
+import { paintDirtLayer, paintSaltLayer } from './grime.js';
 import { levelFor } from './data.js';
 
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -217,47 +218,16 @@ export class DigScene {
     ctx.clearRect(0, 0, w, h);
     drawArtifact(ctx, this.artifact.art, this.cx, this.cy, this.relicSize);
 
-    // encrusted overlay, clipped to artifact silhouette
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-atop';
-    ctx.fillStyle = 'rgba(69, 48, 29, .58)';
-    ctx.fillRect(this.cx - this.relicSize, this.cy - this.relicSize, this.relicSize * 2, this.relicSize * 2);
-    const r = seeded(917);
-    for (let i = 0; i < 90; i++) {
-      const a = r() * Math.PI * 2;
-      const rad = r() * this.relicSize * .42;
-      const x = this.cx + Math.cos(a) * rad;
-      const y = this.cy + Math.sin(a) * rad * .9;
-      const size = 1 + r() * 7;
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = r() > .7
-        ? `rgba(215, 200, 170, ${.1 + r() * .22})`
-        : `rgba(48, 31, 17, ${.1 + r() * .28})`;
-      ctx.fill();
-    }
-    // salt bloom
-    for (let i = 0; i < 22; i++) {
-      const a = r() * Math.PI * 2;
-      const rad = r() * this.relicSize * .4;
-      const x = this.cx + Math.cos(a) * rad;
-      const y = this.cy + Math.sin(a) * rad;
-      const size = 2 + r() * 9;
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(233, 228, 209, ${.05 + r() * .14})`;
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // fine specular
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-atop';
-    ctx.beginPath();
-    ctx.ellipse(this.cx - this.relicSize * .2, this.cy - this.relicSize * .22, this.relicSize * .24, this.relicSize * .08, -.6, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 239, 196, .08)';
-    ctx.fill();
-    ctx.restore();
+    // Use the same grime and salt layers as the conservation bench so the
+    // lifted find does not suddenly become dirty on the next screen.
+    const mask = this.makeCanvas();
+    drawArtifact(mask.ctx, this.artifact.art, this.cx, this.cy, this.relicSize);
+    const dirt = this.makeCanvas();
+    const salt = this.makeCanvas();
+    paintDirtLayer(dirt.ctx, w, h, mask.c, 113);
+    paintSaltLayer(salt.ctx, w, h, mask.c, 451);
+    ctx.drawImage(dirt.c, 0, 0, w, h);
+    ctx.drawImage(salt.c, 0, 0, w, h);
   }
 
   paintSand() {
