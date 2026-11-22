@@ -1508,7 +1508,7 @@ svg { display: block; }
   z-index: 3;
   width: 172px;
   height: 172px;
-  margin-bottom: -4px;
+  margin-bottom: -16px;
   object-fit: contain;
   filter: drop-shadow(0 18px 18px rgba(0, 0, 0, .58)) drop-shadow(0 0 16px rgba(255, 225, 163, .12));
   animation: auctionFloat 4.8s ease-in-out infinite;

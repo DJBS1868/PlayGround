@@ -1131,7 +1131,10 @@ function bind() {
     goHome();
     toast('The dunes are waiting.', 1500);
   });
-  $('#auctionSkip').addEventListener('click', finishPrivateAuction);
+  $('#auctionSkip').addEventListener('click', () => {
+    if (auctionSale) auctionSale.count = auctionSale.bids.length;
+    finishPrivateAuction();
+  });
   $('#auctionContinue').addEventListener('click', () => {
     closePrivateAuction();
     goHome();
