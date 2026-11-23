@@ -40,6 +40,9 @@ function loadState() {
       flags: { ...STARTING_STATE.flags, ...(raw.flags || {}) },
       collection: Array.isArray(raw.collection) ? raw.collection : [],
       currentRelic: raw.currentRelic && typeof raw.currentRelic === 'object' ? raw.currentRelic : null,
+      pendingFinds: Array.isArray(raw.pendingFinds)
+        ? raw.pendingFinds.filter(find => find && typeof find === 'object' && ARTIFACTS[find.artifactId])
+        : [],
       selectedSite: Number.isFinite(raw.selectedSite) ? clamp(raw.selectedSite, 0, SITES.length - 1) : 0
     };
   } catch {
@@ -48,6 +51,7 @@ function loadState() {
 }
 
 const state = loadState();
+promotePendingFind();
 
 function save() {
   try {
@@ -249,6 +253,32 @@ function uniqueRecoveredCount() {
   return new Set(state.collection.map(item => item.artifactId)).size;
 }
 
+function pendingFindCount() {
+  return state.pendingFinds?.length || 0;
+}
+
+function haulRemainingCount() {
+  return (state.currentRelic ? 1 : 0) + pendingFindCount();
+}
+
+function promotePendingFind() {
+  if (state.currentRelic || !pendingFindCount()) return false;
+  state.currentRelic = state.pendingFinds.shift();
+  return true;
+}
+
+function newFind(artifactId, siteId) {
+  return {
+    artifactId,
+    siteId,
+    condition: null,
+    dirt: 1,
+    salt: 1,
+    polish: 0,
+    foundAt: Date.now()
+  };
+}
+
 function renderHome() {
   const site = SITES[state.selectedSite];
   const locked = state.renown < site.unlock;
@@ -267,7 +297,10 @@ function renderHome() {
   $('#heroLockText').textContent = `Requires ${site.unlock} renown`;
   const cta = $('#heroCtaText');
   if (state.currentRelic) {
-    cta.textContent = state.currentRelic.condition != null ? 'Appraise your find' : 'Clean your find';
+    const queued = pendingFindCount();
+    cta.textContent = state.currentRelic.condition != null
+      ? 'Appraise your find'
+      : queued ? `Clean the next find · ${queued} more` : 'Clean your find';
   } else if (locked) {
     cta.textContent = `Reach ${site.unlock} renown`;
   } else {
@@ -305,8 +338,13 @@ function renderHome() {
 }
 
 function nextObjective() {
-  if (state.currentRelic?.condition != null) return { text: 'Appraise the find on your bench', reward: 'LAB' };
-  if (state.currentRelic) return { text: 'Finish restoring your latest find', reward: 'LAB' };
+  const queued = pendingFindCount();
+  if (state.currentRelic?.condition != null) {
+    return { text: queued ? `Appraise the find · ${queued} more` : 'Appraise the find on your bench', reward: 'LAB' };
+  }
+  if (state.currentRelic) {
+    return { text: queued ? `Restore the next find · ${queued} more` : 'Finish restoring your latest find', reward: 'LAB' };
+  }
   if (state.collection.length === 0) return { text: 'Recover your first relic', reward: '+150' };
   if (state.renown < SITES[1].unlock) return { text: `Reach ${SITES[1].unlock} renown to open the Salt Temple`, reward: 'RENOWN' };
   if (state.collection.length < 3) return { text: 'Deliver three relics to the gallery', reward: '+200' };
@@ -327,6 +365,7 @@ function selectSite(delta) {
 
 function beginDig() {
   audio.ensure();
+  if (promotePendingFind()) save();
   if (state.currentRelic) {
     routeCurrentRelic();
     return;
@@ -392,14 +431,14 @@ function startDig(site) {
           $('#digSignal').textContent = `Signal ${signal}%`;
           $('#liftBtn').disabled = !found;
           if (found) {
-            $('#digNote').textContent = 'Artifact exposed — lift it before the wind shifts';
-            $('#liftBtn span').textContent = 'Lift the find';
+            $('#digNote').textContent = 'Cluster detected — lift the haul before the wind shifts';
+            $('#liftBtn span').textContent = 'Lift the haul';
           } else if (pct > 28) {
             $('#digNote').textContent = 'Keep sweeping — the signal is getting stronger';
           }
         },
         onFound: () => {
-          toast(`${artifact.shortName} exposed · lift the find`, 2400);
+          toast(`${artifact.shortName} exposed · lift the haul`, 2400);
           $('#digStage').classList.add('is-found');
         },
         onLift: () => {
@@ -412,19 +451,22 @@ function startDig(site) {
             audio.coin();
             updateWallet(true);
           }
-          state.currentRelic = {
-            artifactId,
-            siteId: site.id,
-            condition: null,
-            dirt: 1,
-            salt: 1,
-            polish: 0,
-            bonus,
-            foundAt: Date.now()
-          };
+          // A trench can yield a small cluster: 1 to 5 relics per lift.
+          const haulSize = 1 + Math.floor(Math.random() * 5);
+          const extras = [];
+          for (let i = 1; i < haulSize; i++) {
+            extras.push(newFind(site.artifacts[Math.floor(Math.random() * site.artifacts.length)], site.id));
+          }
+          state.currentRelic = newFind(artifactId, site.id);
+          state.currentRelic.bonus = bonus;
+          state.pendingFinds = extras;
           save();
           stopDig();
-          toast(bonus ? `Find lifted · bonus cache +${money(bonus)}` : 'Find lifted · off to the lab', 2600);
+          clearToasts();
+          const haulNote = haulSize > 1
+            ? `Haul lifted · ${haulSize} relics recovered`
+            : 'Find lifted · off to the lab';
+          toast(bonus ? `${haulNote} · bonus cache +${money(bonus)}` : haulNote, 3000);
           startClean();
         }
       });
@@ -653,6 +695,7 @@ function sellRelic(buyer) {
     date: Date.now()
   });
   state.currentRelic = null;
+  const nextFind = promotePendingFind();
   save();
   updateWallet(true);
   updateBadges();
@@ -676,7 +719,12 @@ function sellRelic(buyer) {
   $('#soldAmount').textContent = money(amount + grant);
   $('#soldRenown').textContent = `+${offers.renown}`;
   const buyerNote = 'Curator Hana places it in the sunrise gallery.';
-  $('#soldFlavor').textContent = grantNote ? `${grantNote} ${buyerNote}` : buyerNote;
+  const remaining = haulRemainingCount();
+  const queueNote = nextFind
+    ? ` ${remaining} more find${remaining === 1 ? '' : 's'} from the haul still ${remaining === 1 ? 'awaits' : 'await'} the bench.`
+    : '';
+  $('#soldFlavor').textContent = grantNote ? `${grantNote} ${buyerNote}${queueNote}` : `${buyerNote}${queueNote}`;
+  $('#soldContinue span').textContent = nextFind ? 'Clean the next find' : 'Return to the dunes';
   $('#soldOverlay').hidden = false;
   audio.coin();
   vibrate([20, 40, 30]);
@@ -798,6 +846,7 @@ function finishPrivateAuction() {
   $('#auctionStatus').textContent = `Sold to the room for ${money(sale.amount)}.`;
   $('#auctionSoldStamp').hidden = false;
   requestAnimationFrame(() => $('#auctionSoldStamp').classList.add('is-visible'));
+  $('#auctionContinue span').textContent = state.currentRelic ? 'Clean the next find' : 'Take the money';
   $('#auctionContinue').hidden = false;
   $('#auctionSkip').hidden = true;
   if (sale.grant > 0) {
@@ -827,6 +876,10 @@ function renderLab() {
   const text = $('#labText');
   const cta = $('#labCta');
   const tip = $('#labTipText');
+  const queued = pendingFindCount();
+  const haul = $('#labHaul');
+  haul.hidden = queued === 0;
+  if (queued > 0) haul.textContent = `+${queued} more in your pack`;
   if (relic) {
     const artifact = artifactFor(relic.artifactId);
     art.innerHTML = `<img src="${artifactImage(artifact.id, 300)}" alt="${artifact.name}" style="width:100%;height:auto;display:block;filter:drop-shadow(0 14px 14px rgba(76,49,18,.2))">`;
@@ -1140,7 +1193,8 @@ function bind() {
   $('#soldContinue').addEventListener('click', () => {
     $('#soldOverlay').hidden = true;
     goHome();
-    toast('The dunes are waiting.', 1500);
+    const left = haulRemainingCount();
+    toast(left ? `${left} find${left === 1 ? '' : 's'} in your pack · the bench is ready` : 'The dunes are waiting.', left ? 2200 : 1500);
   });
   $('#auctionSkip').addEventListener('click', () => {
     if (auctionSale) auctionSale.count = auctionSale.bids.length;
@@ -1149,7 +1203,8 @@ function bind() {
   $('#auctionContinue').addEventListener('click', () => {
     closePrivateAuction();
     goHome();
-    toast('The collector’s money is in your purse.', 1800);
+    const left = haulRemainingCount();
+    toast(left ? 'Money in your purse · the next find is on the bench' : 'The collector’s money is in your purse.', left ? 2200 : 1800);
   });
 
   $('#labCta').addEventListener('click', () => {

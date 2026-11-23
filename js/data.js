@@ -11,6 +11,7 @@ export const STARTING_STATE = {
   },
   collection: [],
   currentRelic: null,
+  pendingFinds: [],
   selectedSite: 0,
   totalEarned: 0,
   flags: {
