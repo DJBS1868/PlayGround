@@ -132,6 +132,10 @@ function updateWallet(bump = false) {
 }
 
 let toastTimer = 0;
+function clearToasts() {
+  clearTimeout(toastTimer);
+  $('#toastLayer').replaceChildren();
+}
 function toast(message, duration = 2500) {
   const layer = $('#toastLayer');
   const el = document.createElement('div');
@@ -241,15 +245,20 @@ function stopClean() {
 /* ---------------------------------------------------------
    Home
    --------------------------------------------------------- */
+function uniqueRecoveredCount() {
+  return new Set(state.collection.map(item => item.artifactId)).size;
+}
+
 function renderHome() {
   const site = SITES[state.selectedSite];
   const locked = state.renown < site.unlock;
+  const uniqueRecovered = uniqueRecoveredCount();
   const hero = $('#hero');
   hero.classList.toggle('is-locked', locked);
   $('#heroArt').innerHTML = sceneSVG(site);
   $('#heroSiteTag').textContent = siteIndexLabel(site);
   $('#heroCoord').textContent = site.coord;
-  $('#heroEyebrow').textContent = `Expedition ${String(site.index).padStart(2, '0')} · ${state.collection.length} relic${state.collection.length === 1 ? '' : 's'} recovered`;
+  $('#heroEyebrow').textContent = `Expedition ${String(site.index).padStart(2, '0')} · ${uniqueRecovered} relic${uniqueRecovered === 1 ? '' : 's'} recovered`;
   $('#heroTitle').innerHTML = formatName(site.name);
   $('#heroSub').textContent = site.subtitle;
   $('#journalKicker').textContent = `Field note · Site ${String(site.index).padStart(2, '0')}`;
@@ -283,10 +292,10 @@ function renderHome() {
     });
   });
 
-  $('#statRecovered').textContent = state.collection.length;
+  $('#statRecovered').textContent = uniqueRecovered;
   $('#statRenown').textContent = state.renown;
   $('#statRank').textContent = '· ' + rankFor(state.renown);
-  $('#fieldBookCount').textContent = `${new Set(state.collection.map(item => item.artifactId)).size} / ${TOTAL_RELICS}`;
+  $('#fieldBookCount').textContent = `${uniqueRecovered} / ${TOTAL_RELICS}`;
 
   const dispatch = nextObjective();
   $('#dispatchText').textContent = dispatch.text;
@@ -689,6 +698,7 @@ function scheduleAuction(fn, delay) {
 
 function startPrivateAuction({ artifact, amount, grant, grantNote, lot }) {
   clearAuctionTimers();
+  clearToasts();
   const overlay = $('#auctionOverlay');
   const bidders = $$('.bidder', overlay);
   const steps = 6;
@@ -710,6 +720,7 @@ function startPrivateAuction({ artifact, amount, grant, grantNote, lot }) {
   $('#auctionBidPanel').classList.remove('is-bump');
   $('#auctionImg').src = artifactImage(artifact.id, 360);
   $('#auctionImg').alt = artifact.name;
+  $('#auctionTitle').textContent = `${artifact.shortName} on the block`;
   $('#auctionName').textContent = artifact.name;
   $('#auctionLot').textContent = `LOT ${String(lot || 101).padStart(3, '0')}`;
   $('#auctionBid').textContent = money(start);
@@ -926,7 +937,7 @@ function renderMuseum() {
   $('#museumRenown').textContent = state.renown;
   $('#museumGrade').textContent = collection.length ? gradeLetter(avg) : '—';
   $('#museumValue').textContent = money(total);
-  $('#bookCount').textContent = `${collection.length} / ${TOTAL_RELICS}`;
+  $('#bookCount').textContent = `${uniqueRecoveredCount()} / ${TOTAL_RELICS}`;
   updateWallet();
 }
 
@@ -1171,7 +1182,8 @@ function bind() {
 
   document.addEventListener('pointerdown', () => audio.ensure(), { once: true });
   document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('canvas')) e.preventDefault();
+    if (e.target.closest('canvas') || e.target.closest('.collection-book-list')) return;
+    e.preventDefault();
   }, { passive: false });
   document.addEventListener('gesturestart', (e) => e.preventDefault());
   document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
