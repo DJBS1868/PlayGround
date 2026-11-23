@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Pixel &amp; Sons — Phone Repair</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e8893a'/%3E%3Crect x='19' y='10' width='26' height='44' rx='6' fill='%23231a14'/%3E%3Crect x='23' y='15' width='18' height='31' rx='2' fill='%23f6eeda'/%3E%3Ccircle cx='32' cy='50' r='2.5' fill='%23f6eeda'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="fit">
+  <div id="stage">
+    <canvas id="scene" width="1200" height="760" aria-label="Top-down phone repair workbench"></canvas>
+
+    <header id="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="7" y="3" width="18" height="32" rx="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="13" y1="30" x2="19" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M24 22l9-9 4 4-9 9-4-4z" fill="#e8893a"/>
+          <path d="M30 9l3-3a4 4 0 015.6 5.6l-3 3" fill="none" stroke="#e8893a" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text"><b>Pixel &amp; Sons</b><span>Phone Repair Co.</span></div>
+      </div>
+      <div class="day-pill"><i></i><span id="dayLabel">DAY 1 / 8</span></div>
+      <div class="top-right">
+        <div class="stat" title="Cash earned"><span class="ico cash">$</span><b id="money">0</b></div>
+        <div class="stat" title="Shop rating"><span class="ico star">★</span><b id="rating">—</b></div>
+        <button id="muteBtn" class="icon-btn" aria-label="Toggle sound" title="Sound on/off">
+          <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <aside id="customerCard">
+      <span class="tape tape-red"></span>
+      <div class="cust-head">
+        <div class="avatar-wrap"><div class="avatar" id="avatar">👩</div><i class="status-dot"></i></div>
+        <div class="cust-meta">
+          <div class="cust-name" id="custName">Maya Chen</div>
+          <div class="cust-day" id="custDay">Monday · 9:02 am</div>
+        </div>
+      </div>
+      <div class="phone-chip">
+        <span class="chip-dot" id="phoneDot"></span>
+        <b id="phoneModel">iFruit 12</b>
+        <span class="chip-issue" id="issueTag">cracked screen</span>
+      </div>
+      <p class="quote" id="custQuote">“I dropped it at the skate park. The glass is a total spiderweb!”</p>
+      <div class="patience">
+        <div class="patience-head"><span>Customer patience</span><span id="patienceWord">calm</span></div>
+        <div class="bar"><i id="patienceFill"></i></div>
+      </div>
+    </aside>
+
+    <aside id="ticket">
+      <span class="tape tape-blue"></span>
+      <div class="ticket-top">
+        <span class="ticket-no" id="ticketNo">TICKET #01</span>
+        <span class="ticket-repair" id="repairTag">SCREEN</span>
+      </div>
+      <div class="ticket-title" id="ticketTitle">Cracked screen</div>
+      <ol id="taskList" class="task-list"></ol>
+      <div class="now-box">
+        <div class="now-label">Next up</div>
+        <div class="now-title" id="nowTitle">Warm the adhesive</div>
+        <div class="now-hint" id="nowHint">Hold the heat gun over the screen for a few seconds.</div>
+        <div class="need-tool" id="needTool"><span></span></div>
+      </div>
+      <div class="ticket-foot"><span id="tipPreview">Tip on the line: $0</span><span id="timer">0:00</span></div>
+    </aside>
+
+    <div id="toolTray" aria-label="Tool tray">
+      <button class="tool" data-tool="heat" title="Heat gun — softens adhesive (1)">
+        <span class="key">1</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="8" width="12" height="9" rx="2.5"/><path d="M15 10.5h4l4-2.5v12l-4-2.5h-4"/><path d="M8 17v6"/><path d="M22 5.5c1.5 1 1.5 3 0 4M24.5 4c2.5 1.8 2.5 6.2 0 8"/></svg>
+        <span class="tool-name">Heat</span>
+      </button>
+      <button class="tool" data-tool="driver" title="Screwdriver — pentalobe screws (2)">
+        <span class="key">2</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="10" y="3" width="8" height="9" rx="3"/><path d="M14 12v11"/><path d="M12 23h4"/><path d="M12.5 7h3"/></svg>
+        <span class="tool-name">Driver</span>
+      </button>
+      <button class="tool" data-tool="suction" title="Suction cup — lifts the screen (3)">
+        <span class="key">3</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="18" r="6.5"/><path d="M14 11.5V6"/><path d="M8.5 6h11"/><path d="M9.5 20.5a5 5 0 005 3.8"/></svg>
+        <span class="tool-name">Suction</span>
+      </button>
+      <button class="tool" data-tool="spudger" title="Spudger — pops connectors (4)">
+        <span class="key">4</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M6 23l4.5 1L24 5.5 22.5 3 6 17z"/><path d="M9 15l4 3"/></svg>
+        <span class="tool-name">Spudger</span>
+      </button>
+      <button class="tool" data-tool="tweezers" title="Tweezers — pulls out broken parts (5)">
+        <span class="key">5</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M7 3l6 17 1 5 1-5 6-17"/><path d="M8.5 7l5.5 6 5.5-6"/></svg>
+        <span class="tool-name">Tweezers</span>
+      </button>
+      <button class="tool" data-tool="cloth" title="Microfibre cloth — cleans and smooths (6)">
+        <span class="key">6</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="5" y="6" width="18" height="17" rx="3"/><path d="M5 12c5-3.5 9 3 18-1"/><path d="M8 20c4-2 8 2 12 0"/></svg>
+        <span class="tool-name">Cloth</span>
+      </button>
+      <button class="tool" data-tool="hand" title="Hand — press, seat and power on (7)">
+        <span class="key">7</span>
+        <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M14 3v10"/><path d="M10 9l4 4 4-4"/><rect x="6" y="17" width="16" height="8" rx="2.5"/></svg>
+        <span class="tool-name">Press</span>
+      </button>
+    </div>
+
+    <div id="toast" role="status"></div>
+    <div id="banner"><span id="bannerText"></span></div>
+
+    <div id="titleScreen" class="overlay">
+      <div class="title-inner">
+        <div class="title-kicker">A tiny game about tiny screws</div>
+        <h1>Pixel <em>&amp;</em> Sons</h1>
+        <div class="title-sub">Phone Repair Co. · Est. 1987</div>
+        <p class="title-copy">Eight customers. Eight broken phones.<br>Open them up, fix them right, and send them home happy.</p>
+        <button id="startBtn" class="big-btn">Start game</button>
+        <div class="how">
+          <div><b>1</b><span>Pick<br>the tool</span></div>
+          <div><b>2</b><span>Work<br>the phone</span></div>
+          <div><b>3</b><span>Test<br>&amp; get paid</span></div>
+        </div>
+        <div class="title-note">Best played with sound on. Headphones recommended.</div>
+      </div>
+      <div class="title-foot">Pixel &amp; Sons is a work of fiction. No phones were harmed. Probably.</div>
+    </div>
+
+    <div id="receipt" class="overlay hidden">
+      <div class="receipt-card">
+        <div class="receipt-head"><span>PIXEL &amp; SONS</span><span>REPAIR RECEIPT</span></div>
+        <div class="dash"></div>
+        <div class="receipt-rows refs">
+          <div><span id="rModel">iFruit 12</span><span id="rTicket">#01</span></div>
+          <div><span>Repair</span><span id="rRepair">Screen replacement</span></div>
+          <div><span>Bench time</span><span id="rTime">1:24</span></div>
+          <div><span>Customer</span><span id="rMood">Delighted</span></div>
+        </div>
+        <div class="dash"></div>
+        <div class="receipt-rows">
+          <div><span>Labour</span><span id="rBase">$120</span></div>
+          <div><span>Tip</span><span id="rTip">$28</span></div>
+          <div class="total"><span>TOTAL</span><span id="rTotal">$148</span></div>
+        </div>
+        <div class="receipt-stars" id="rStars">★★★★★</div>
+        <p class="receipt-comment" id="rComment">“Better than new. I'm telling everyone.”</p>
+        <div class="stamp">PAID</div>
+        <button id="nextBtn" class="big-btn small">Next customer →</button>
+        <div class="receipt-tail">THANK YOU · PLEASE COME AGAIN</div>
+      </div>
+    </div>
+
+    <div id="summary" class="overlay hidden">
+      <div class="receipt-card summary-card">
+        <div class="receipt-head"><span>PIXEL &amp; SONS</span><span>DAY BOOK</span></div>
+        <div class="dash"></div>
+        <div class="summary-kicker">SHOP CLOSED · ALL PHONES FIXED</div>
+        <h2 id="sumRank">Senior Technician</h2>
+        <p id="sumLine">Eight happy customers and a very tired screwdriver.</p>
+        <div class="receipt-rows">
+          <div><span>Phones repaired</span><span id="sumJobs">8</span></div>
+          <div><span>Total earned</span><span id="sumMoney">$1,038</span></div>
+          <div><span>Average rating</span><span id="sumRating">4.8 / 5</span></div>
+          <div><span>Best day</span><span id="sumBest">$248</span></div>
+        </div>
+        <div class="dash"></div>
+        <div class="sum-stars" id="sumStars">★★★★★</div>
+        <p class="receipt-comment" id="sumComment">“The neighborhood's best-kept secret.”</p>
+        <button id="replayBtn" class="big-btn small">Open the shop again</button>
+        <div class="receipt-tail">BEST RUN · <span id="bestRun">$0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="data.js"></script>
+<script src="render.js"></script>
+<script src="effects.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
