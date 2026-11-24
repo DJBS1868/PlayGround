@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#070d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>MEND — Phone Repair Shop</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4.2 4.2 0 0 0-5.5 5.5L4 17l3 3 5.2-5.2a4.2 4.2 0 0 0 5.5-5.5l-2.4 2.4-2.9-2.9 2.3-2.5z"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.6"/><path d="M10 18.6h4"/></symbol>
+  <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2.6"/><path d="M21.5 10v4"/><path d="M11.2 8.4 8.6 12.4h3.1l-1.9 3.3"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="13" rx="3"/><circle cx="12" cy="12.5" r="3.4"/><path d="M8.2 6 9.4 4h5.2L15.8 6"/></symbol>
+  <symbol id="i-port" viewBox="0 0 24 24"><rect x="3" y="8.5" width="18" height="7" rx="3.5"/><path d="M8.5 12h7"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="6" rx="3"/><path d="M7 12h.01M10 12h.01M13 12h.01M16 12h.01"/></symbol>
+  <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 10.5a6 6 0 1 1-12 0C6 9.5 12 3 12 3z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 6.8v10.4M14.6 9.2c-.5-1-1.4-1.5-2.5-1.5-1.6 0-2.8.9-2.8 2.2 0 3.1 5.5 1.6 5.5 4.6 0 1.4-1.3 2.3-2.8 2.3-1.2 0-2.1-.5-2.7-1.5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.4 2.7 5.5 6 .8-4.4 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.3 9.7l6-.8z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.2-4.5-7.2-9.6A4.1 4.1 0 0 1 12 7.1a4.1 4.1 0 0 1 7.2 3.3C19.2 15.5 12 20 12 20z"/></symbol>
+  <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14.7 6.3a4.2 4.2 0 0 0-5.5 5.5L4 17l3 3 5.2-5.2a4.2 4.2 0 0 0 5.5-5.5l-2.4 2.4-2.9-2.9 2.3-2.5z"/></symbol>
+  <symbol id="i-sign" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="10" rx="2.4"/><path d="M12 13.5V21M8 21h8"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M4.5 8h12v6.2a4.3 4.3 0 0 1-4.3 4.3H8.8a4.3 4.3 0 0 1-4.3-4.3z"/><path d="M16.5 9.3h2a2.2 2.2 0 0 1 0 4.4h-2"/><path d="M3.5 21h14"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7"/></symbol>
+  <symbol id="i-sound-on" viewBox="0 0 24 24"><path d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2z"/><path d="M16.2 8.6a4.8 4.8 0 0 1 0 6.8"/><path d="M18.8 6a8.4 8.4 0 0 1 0 12"/></symbol>
+  <symbol id="i-sound-off" viewBox="0 0 24 24"><path d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2z"/><path d="m16 9.5 4.5 5M20.5 9.5 16 14.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m4.5 12.5 5 5L19.8 7"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.8v4M12 17.2v4M2.8 12h4M17.2 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7v5.2l3.2 1.9"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-screw" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 4.5v15M4.5 12h15M6.8 6.8l10.4 10.4M17.2 6.8 6.8 17.2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M14 6.5l5.5 5.5L14 17.5"/></symbol>
+</svg>
+
+<div id="app">
+  <div class="bg" aria-hidden="true">
+    <div class="bg-glow g1"></div>
+    <div class="bg-glow g2"></div>
+    <div class="bg-grid"></div>
+  </div>
+
+  <section class="screen game-screen" id="gameScreen">
+    <header class="hud">
+      <div class="brand">
+        <div class="logo"><svg class="ic"><use href="#i-wrench"/></svg></div>
+        <div class="brand-txt"><b>MEND</b><span>PHONE REPAIR</span></div>
+      </div>
+      <div class="hud-right">
+        <div class="chip day"><span class="dot"></span><span id="hudDay">DAY 1</span></div>
+        <div class="chip money"><svg class="ic"><use href="#i-coin"/></svg><span id="hudMoney">$0</span></div>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings"><svg class="ic"><use href="#i-gear"/></svg></button>
+      </div>
+    </header>
+
+    <section class="customer-bar" id="customerBar">
+      <div class="avatar" id="avatar"></div>
+      <div class="speech">
+        <div class="speech-top">
+          <b id="custName">Maya</b>
+          <span id="custTag">NOVA 12 Pro</span>
+        </div>
+        <p id="custLine">The screen is completely shattered. Can you fix it?</p>
+        <div class="patience-row">
+          <div class="hearts" id="hearts"></div>
+          <div class="patience"><i id="patienceFill"></i></div>
+        </div>
+      </div>
+    </section>
+
+    <main class="bench" id="bench">
+      <div class="mat" aria-hidden="true">
+        <span class="mat-mark">MEND</span>
+        <span class="mat-rule"></span>
+      </div>
+      <div class="stage">
+        <div class="phone-wrap">
+          <div class="phone" id="phone" data-screen="lock" data-job="screen">
+            <div class="phone-frame"></div>
+            <div class="interior" id="interior">
+              <div class="board">
+                <div class="chip c1"></div><div class="chip c2"></div><div class="chip c3"></div><div class="chip c4"></div>
+                <div class="trace t1"></div><div class="trace t2"></div>
+                <div class="chassis-label">NOVA 12 PRO · A2811</div>
+              </div>
+              <div class="slot-outline" data-slot="battery"><span>BATTERY</span></div>
+              <div class="slot-outline" data-slot="camera"><span>CAMERA</span></div>
+              <div class="slot-outline" data-slot="speaker"><span>SPEAKER</span></div>
+              <div class="slot-outline" data-slot="port"><span>PORT</span></div>
+              <div class="slot-outline screen-slot" data-slot="screen"><span>DISPLAY</span></div>
+
+              <div class="part battery" data-part="battery">
+                <span class="batt-cell">4,200<span>mAh</span></span>
+                <span class="batt-bolt">ϟ</span>
+                <span class="batt-flex"></span>
+                <span class="batt-warn">Li-ion</span>
+              </div>
+              <div class="part camera" data-part="camera"><i></i><i></i><b>48</b></div>
+              <div class="part speaker" data-part="speaker"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="part port" data-part="port"><i></i></div>
+              <div class="part display-flex" data-part="displayflex"></div>
+            </div>
+
+            <div class="screen-layer" id="screenLayer">
+              <div class="wallpaper"></div>
+              <div class="statusbar"><span>9:41</span><span class="sb-icons"><i class="sig"></i><i class="wifi"></i><i class="batt"></i></span></div>
+              <div class="lock-screen">
+                <div class="lock-date">TUESDAY, JUNE 4</div>
+                <div class="lock-time">9:41</div>
+                <div class="lock-note"><span class="note-dot"></span><div><b>2 messages</b><small>Maya · now</small></div></div>
+              </div>
+              <div class="home-screen">
+                <div class="home-time">9:41</div>
+                <div class="app-grid">
+                  <i style="--c1:#ff8a3d;--c2:#ff5d2e"></i><i style="--c1:#38e0c0;--c2:#1f9e8a"></i><i style="--c1:#7f8cff;--c2:#4b54d6"></i><i style="--c1:#ffd166;--c2:#e6a52e"></i>
+                  <i style="--c1:#ff6b9d;--c2:#c53b6d"></i><i style="--c1:#8be0ff;--c2:#2e8fb5"></i><i style="--c1:#b6f36b;--c2:#6a9e2c"></i><i style="--c1:#d9a3ff;--c2:#8a4fc2"></i>
+                </div>
+                <div class="home-dock"><i></i><i></i><i></i></div>
+              </div>
+              <div class="boot-screen">
+                <div class="boot-logo">NOVA</div>
+                <div class="boot-bar"><i></i></div>
+                <div class="boot-sub">POWERED BY MEND</div>
+              </div>
+              <div class="cracks" id="cracks">
+                <svg viewBox="0 0 100 200" preserveAspectRatio="none">
+                  <g fill="none" stroke="#eaffff" stroke-linecap="round">
+                    <path d="M64 34 51 58 55 77 40 99 44 122 30 146 33 168" stroke-width=".85" opacity=".85"/>
+                    <path d="M64 34 78 46 76 68 88 82 84 103" stroke-width=".6" opacity=".7"/>
+                    <path d="M51 58 33 56 22 68 8 66" stroke-width=".5" opacity=".6"/>
+                    <path d="M40 99 22 104 14 121" stroke-width=".55" opacity=".6"/>
+                    <path d="M55 77 70 88 66 112 75 130" stroke-width=".5" opacity=".55"/>
+                    <path d="M44 122 58 134 54 154" stroke-width=".45" opacity=".5"/>
+                    <path d="M64 34 60 20 66 8" stroke-width=".5" opacity=".55"/>
+                    <path d="M76 68 92 64 98 72" stroke-width=".45" opacity=".5"/>
+                  </g>
+                  <g fill="#dffcff" opacity=".1">
+                    <path d="M64 34 78 46 76 68 64 60z"/>
+                    <path d="M51 58 40 78 55 77z"/>
+                    <path d="M44 122 58 134 54 154 40 140z"/>
+                  </g>
+                  <circle cx="64" cy="34" r="12" fill="none" stroke="#eaffff" stroke-width=".5" opacity=".45"/>
+                  <circle cx="64" cy="34" r="20" fill="none" stroke="#eaffff" stroke-width=".35" opacity=".25"/>
+                </svg>
+              </div>
+              <div class="screen-shine"></div>
+            </div>
+
+            <div class="screws" id="screws">
+              <button class="screw" data-screw="0" aria-label="Screw 1"><svg class="ic"><use href="#i-screw"/></svg></button>
+              <button class="screw" data-screw="1" aria-label="Screw 2"><svg class="ic"><use href="#i-screw"/></svg></button>
+            </div>
+            <div class="phone-glow"></div>
+          </div>
+        </div>
+        <div class="bench-tool bt-left" aria-hidden="true">
+          <svg viewBox="0 0 60 120"><g fill="none" stroke="#2b4a56" stroke-width="2.4" stroke-linecap="round"><path d="M30 8v30"/><path d="M22 38h16l-3 12H25z"/><path d="M30 50v58"/></g><circle cx="30" cy="10" r="5" fill="#2b4a56"/></svg>
+        </div>
+        <div class="bench-tool bt-right" aria-hidden="true">
+          <svg viewBox="0 0 70 90"><g fill="none" stroke="#2b4a56" stroke-width="2.4" stroke-linecap="round"><path d="M18 10c-5 22 4 38 18 54"/><path d="M52 10c5 22-4 38-18 54"/><circle cx="36" cy="70" r="5"/></g></svg>
+        </div>
+      </div>
+
+      <div class="tray" id="tray">
+        <div class="tray-head"><span>PARTS TRAY</span><span id="trayStatus">READY</span></div>
+        <div class="tray-body">
+          <div class="tray-slot" id="traySlot"><span class="tray-empty">EMPTY BAY</span></div>
+          <div class="screw-cup" id="screwCup">
+            <span>SCREWS</span>
+            <div class="cup-screws"><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="hint-layer" id="hintLayer"></div>
+      <div class="fx-layer" id="fxLayer"></div>
+    </main>
+
+    <footer class="dock">
+      <div class="dock-meta">
+        <div class="step-dots" id="stepDots"></div>
+        <div class="tool-chip" id="toolChip"><svg class="ic"><use href="#i-tools"/></svg><span>TOOL</span></div>
+      </div>
+      <div class="dock-main">
+        <div class="step-copy"><b id="stepTitle">New work order</b><span id="stepSub">Read the complaint, then diagnose.</span></div>
+        <button class="primary" id="actionBtn"><span>Diagnose</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+      </div>
+      <div class="bar"><i id="stepBar"></i></div>
+    </footer>
+  </section>
+
+  <!-- ============ OVERLAYS ============ -->
+  <div class="sheet-wrap" id="diagSheet">
+    <div class="sheet">
+      <div class="grabber"></div>
+      <div class="sheet-head">
+        <span class="eyebrow">DIAGNOSIS</span>
+        <h2>What does this phone need?</h2>
+        <p id="diagHint">Read the complaint. Pick the right repair kit.</p>
+      </div>
+      <div class="kit-list" id="kitList"></div>
+    </div>
+  </div>
+
+  <div class="sheet-wrap" id="paySheet">
+    <div class="sheet pay-sheet">
+      <div class="pay-badge"><svg class="ic"><use href="#i-check"/></svg></div>
+      <span class="eyebrow">REPAIR COMPLETE</span>
+      <h2 id="payTitle">Phone saved.</h2>
+      <div class="pay-stars" id="payStars"></div>
+      <p class="pay-quote" id="payQuote">"You're a lifesaver!"</p>
+      <div class="pay-rows" id="payRows"></div>
+      <button class="primary" id="payNext">Next customer<svg class="ic"><use href="#i-arrow"/></svg></button>
+    </div>
+  </div>
+
+  <div class="sheet-wrap" id="failSheet">
+    <div class="sheet fail-sheet">
+      <div class="fail-avatar" id="failAvatar"></div>
+      <span class="eyebrow danger">CUSTOMER LEFT</span>
+      <h2>They walked out.</h2>
+      <p id="failText">Too slow — they took their phone to the shop across the street.</p>
+      <div class="fail-tip"><svg class="ic"><use href="#i-spark"/></svg><span id="failTip">Keep an eye on the patience bar.</span></div>
+      <button class="primary" id="failNext">Next customer<svg class="ic"><use href="#i-arrow"/></svg></button>
+    </div>
+  </div>
+
+  <div class="sheet-wrap" id="daySheet">
+    <div class="sheet day-sheet">
+      <span class="eyebrow">SHIFT COMPLETE</span>
+      <h2>Day <span id="dayNum">1</span> closed</h2>
+      <div class="stat-grid">
+        <div class="stat"><span>REPAIRS</span><b id="statRepairs">2/2</b></div>
+        <div class="stat"><span>EARNED</span><b id="statEarned">$0</b></div>
+        <div class="stat"><span>RATING</span><b id="statRating">5.0</b></div>
+      </div>
+      <div class="upgrade-head"><span>UPGRADE THE SHOP</span><span id="upgradeMoney">$0</span></div>
+      <div class="upgrade-list" id="upgradeList"></div>
+      <button class="primary" id="nextDayBtn">Open tomorrow<svg class="ic"><use href="#i-arrow"/></svg></button>
+    </div>
+  </div>
+
+  <div class="sheet-wrap" id="howSheet">
+    <div class="sheet how-sheet">
+      <div class="grabber"></div>
+      <span class="eyebrow">HOW TO PLAY</span>
+      <h2>Fix phones. Keep cool.</h2>
+      <div class="how-list">
+        <div class="how-row"><span class="how-num">1</span><div><b>Diagnose</b><p>Read the complaint and choose the right repair kit.</p></div></div>
+        <div class="how-row"><span class="how-num">2</span><div><b>Open it up</b><p>Tap screws, rub to heat adhesive, and lift the display.</p></div></div>
+        <div class="how-row"><span class="how-num">3</span><div><b>Swap the part</b><p>Drag the bad part into the tray, then drag the new one in.</p></div></div>
+        <div class="how-row"><span class="how-num">4</span><div><b>Test &amp; get paid</b><p>Press to connect, boot the phone, and keep the customer happy.</p></div></div>
+      </div>
+      <button class="primary" id="howClose">Got it<svg class="ic"><use href="#i-check"/></svg></button>
+    </div>
+  </div>
+
+  <div class="sheet-wrap" id="settingsSheet">
+    <div class="sheet settings-sheet">
+      <div class="grabber"></div>
+      <span class="eyebrow">SHOP SETTINGS</span>
+      <h2>Options</h2>
+      <button class="setting-row" id="soundRow"><span><svg class="ic"><use href="#i-sound-on"/></svg>Sound</span><b id="soundState">ON</b></button>
+      <button class="setting-row" id="quitRow"><span><svg class="ic"><use href="#i-close"/></svg>Quit to menu</span><b>SAVE</b></button>
+      <button class="setting-row danger-row" id="resetRow"><span><svg class="ic"><use href="#i-clock"/></svg>Reset progress</span><b>RESET</b></button>
+      <p class="settings-note">MEND · made for thumbs · v1.0</p>
+      <button class="primary" id="settingsClose">Back to work</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="day-banner" id="dayBanner"><b>DAY 1</b><span>OPEN FOR BUSINESS</span></div>
+
+  <!-- ============ MENU ============ -->
+  <section class="screen menu-screen" id="menuScreen">
+    <div class="menu-head">
+      <div class="logo big"><svg class="ic"><use href="#i-wrench"/></svg></div>
+      <div class="menu-brand"><b>MEND</b><span>PHONE REPAIR SHOP</span></div>
+    </div>
+    <div class="hero">
+      <div class="hero-glow"></div>
+      <svg viewBox="0 0 300 300" class="hero-art" aria-hidden="true">
+        <defs>
+          <linearGradient id="g-phone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a404a"/><stop offset=".5" stop-color="#101c22"/><stop offset="1" stop-color="#070e12"/></linearGradient>
+          <linearGradient id="g-screen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#57f5d4"/><stop offset=".45" stop-color="#2e9bb2"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient>
+          <linearGradient id="g-tool" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffb066"/><stop offset="1" stop-color="#ff6a2e"/></linearGradient>
+          <filter id="f-glow"><feGaussianBlur stdDeviation="10"/></filter>
+        </defs>
+        <ellipse cx="150" cy="268" rx="92" ry="14" fill="#000" opacity=".55"/>
+        <circle cx="150" cy="140" r="96" fill="none" stroke="#38e0c0" stroke-opacity=".18" stroke-dasharray="2 7"/>
+        <g transform="rotate(-7 150 150)" class="hero-phone">
+          <rect x="92" y="30" width="120" height="224" rx="26" fill="url(#g-phone)" stroke="#43616c" stroke-width="2"/>
+          <rect x="99" y="37" width="106" height="210" rx="21" fill="#061016"/>
+          <rect x="105" y="43" width="94" height="198" rx="17" fill="url(#g-screen)"/>
+          <path d="M105 43h94v198h-94z" fill="#04141a" opacity=".18"/>
+          <path d="M156 64 142 96l12 18-16 26 14 20-10 28" fill="none" stroke="#f2ffff" stroke-width="1.6" opacity=".85"/>
+          <path d="M156 64l18 16-4 24 16 18" fill="none" stroke="#f2ffff" stroke-width="1.1" opacity=".7"/>
+          <path d="M142 96l-20-2-12 12" fill="none" stroke="#f2ffff" stroke-width="1" opacity=".6"/>
+          <circle cx="156" cy="64" r="20" fill="none" stroke="#f2ffff" stroke-width=".8" opacity=".45"/>
+          <rect x="135" y="37" width="34" height="5" rx="2.5" fill="#0a151a"/>
+          <rect x="136" y="225" width="32" height="3.5" rx="1.75" fill="#dffcff" opacity=".55"/>
+          <g fill="#dffcff" opacity=".13"><path d="M156 64l18 16-4 24-14-20z"/><path d="M142 96l12 18-16 26-8-28z"/></g>
+        </g>
+        <g transform="rotate(32 150 150)">
+          <rect x="238" y="70" width="13" height="86" rx="6.5" fill="url(#g-tool)"/>
+          <rect x="240" y="150" width="9" height="62" rx="4.5" fill="#cfdde0"/>
+          <path d="M240 212h9l-4.5 16z" fill="#9fb4ba"/>
+        </g>
+        <g class="hero-sparks" fill="#ffd166">
+          <circle cx="68" cy="84" r="3"/><circle cx="240" cy="206" r="2.4"/><circle cx="234" cy="48" r="2"/>
+          <path d="M72 200l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" opacity=".9"/>
+        </g>
+        <g class="hero-ring" fill="none" stroke="#ff8a3d" stroke-width="1.6" opacity=".7">
+          <circle cx="150" cy="140" r="112" stroke-dasharray="1 10"/>
+        </g>
+      </svg>
+      <div class="hero-tag t1">SAME-DAY FIX</div>
+      <div class="hero-tag t2">NO FIX, NO FEE</div>
+    </div>
+    <div class="menu-copy">
+      <h1>Small shop.<br><em>Big saves.</em></h1>
+      <p>Diagnose it, open it up, and bring every phone back to life. One customer at a time.</p>
+    </div>
+    <div class="menu-actions">
+      <button class="primary" id="playBtn"><span>Start shift</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+      <div class="menu-row">
+        <button class="ghost" id="howBtn"><svg class="ic"><use href="#i-spark"/></svg>How to play</button>
+        <button class="ghost" id="soundBtn"><svg class="ic"><use href="#i-sound-on"/></svg><span>Sound</span></button>
+      </div>
+      <div class="menu-foot"><span id="menuSave">NO SAVE</span><span>·</span><span>v1.0</span></div>
+    </div>
+  </section>
+
+  <div class="rotate-hint">
+    <div class="rotate-phone"></div>
+    <b>Turn your phone upright</b>
+    <span>MEND is a one-thumb, portrait game.</span>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
