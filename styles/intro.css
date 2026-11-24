@@ -14,8 +14,58 @@
   padding: 4px var(--gutter) 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 10px;
   overflow: hidden;
+}
+
+.intro-tools {
+  padding: 0 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.intro-tools-label {
+  font-family: var(--mono);
+  font-size: 6.8px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  color: var(--muted-2);
+  padding-left: 3px;
+}
+.intro-tools-row {
+  display: flex;
+  gap: 6px;
+}
+.intro-tool {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 2px 6px;
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .018));
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.intro-tool .ico {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.6;
+}
+.intro-tool i {
+  max-width: 100%;
+  font-family: var(--mono);
+  font-size: 5.6px;
+  font-style: normal;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .intro-eyebrow {
@@ -344,8 +394,10 @@
 }
 
 @media (max-height: 610px) {
+  .intro-body { justify-content: flex-start; }
   .intro-note { display: none; }
   .ticket-quote { display: none; }
   .ticket-head { margin-bottom: 8px; }
   .ticket-rule { display: none; }
+  .intro-tools { margin-top: auto; padding-bottom: 4px; }
 }

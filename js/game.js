@@ -143,6 +143,7 @@ const DOM = {
   introRepair: $('#introRepair'),
   introDifficulty: $('#introDifficulty'),
   introFee: $('#introFee'),
+  introTools: $('#introTools'),
   introBadge: $('#introBadge'),
   introNote: $('#introNote'),
   miniPhone: $('#miniPhone'),
@@ -386,6 +387,12 @@ function renderIntro() {
   DOM.introRepair.textContent = repair.title
   DOM.introFee.textContent = money(order.fee)
   DOM.introNote.textContent = repair.intro
+  DOM.introTools.innerHTML = repair.tools.map((id) => `
+    <span class="intro-tool" title="${TOOLS[id].full}">
+      ${toolIcon(id)}
+      <i>${TOOLS[id].name}</i>
+    </span>
+  `).join('')
 
   DOM.introDifficulty.innerHTML = Array.from({ length: 3 }, (_, i) =>
     `<svg class="ico ${i < repair.difficulty ? '' : 'off'}" aria-hidden="true"><use href="#ico-wrench"></use></svg>`

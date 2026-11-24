@@ -1,5 +1,13 @@
 # PlayGround
 
+**SCREWED — tiny phone repair co.** is a mobile-first, touch-only repair-shop game. Each day a new customer walks in with a different broken phone: cracked screens, dead batteries, charging ports, speakers, cameras, water damage, power buttons and back glass. Every repair has its own gesture sequence — heat the glue, unscrew, pry, tap connectors, scrub corrosion, fit new parts, close up and test.
+
+- 10-day story with a final shop rank, plus endless mode after Day 10.
+- Stars are lost for wrong tools or sloppy gestures; 3-star jobs pay the full fee and a tip.
+- Progress saves automatically to `localStorage`.
+- Static HTML/CSS/JS — no build step. Serve the folder with any static server (for example `python3 -m http.server 3000`).
+- Designed for portrait phones; landscape shows a rotate prompt.
+
 <!-- omgithub:readme:start -->
 ## 🚀 Build, play, and remix with OMGithub
 
