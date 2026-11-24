@@ -64,6 +64,8 @@ const sfx = {
   win()   { [523, 659, 784, 1046].forEach((f, i) => tone(f, .18, 'sine', .045, 0, i * .07)); },
   boot()  { [330, 440, 554, 660, 880].forEach((f, i) => tone(f, .16, 'sine', .04, 0, i * .11)); },
   cash()  { tone(1180, .09, 'triangle', .04); tone(1560, .14, 'triangle', .035, 0, .07); noise(.05, 2600, .02); },
+  bell()  { tone(1320, .13, 'sine', .03); tone(1760, .18, 'sine', .022, 0, .09); },
+  step()  { tone(120, .07, 'sine', .02, 90); noise(.05, 500, .012); },
   heart() { tone(880, .12, 'sine', .035); tone(1320, .18, 'sine', .03, 0, .06); },
   tick()  { tone(1400, .02, 'square', .008); }
 };
@@ -85,7 +87,7 @@ const CUSTOMERS = [
   { name: 'Jonas', skin: '#e0b090', hair: '#c9a15a', shirt: '#4a6b3c', style: 'short',  glasses: false, bg: '#1a2e2a' },
   { name: 'Kiki',  skin: '#6b432c', hair: '#3b1f2e', shirt: '#b5533c', style: 'curly',  glasses: false, bg: '#2a1c2a' },
   { name: 'Omar',  skin: '#a86b47', hair: '#1c1c1c', shirt: '#2f4a6b', style: 'short',  glasses: true,  bg: '#152530' },
-  { name: 'Lena',  skin: '#f0c8a8', hair: '#d9c7a0', shirt: '#7a4a6b', style: 'long',   glasses: false, bg: '#2a1d2c' },
+  { name: 'Lena',  skin: '#f0c8a8', hair: '#b98f4e', shirt: '#7a4a6b', style: 'long',   glasses: false, bg: '#2a1d2c' },
   { name: 'Theo',  skin: '#c98f68', hair: '#4a2e1a', shirt: '#4c6b5a', style: 'curly',  glasses: false, bg: '#182c2a' }
 ];
 
@@ -242,6 +244,9 @@ const daySheet = $('#daySheet'), dayNum = $('#dayNum'), statRepairs = $('#statRe
 const menuScreen = $('#menuScreen'), playBtn = $('#playBtn'), menuSave = $('#menuSave'),
       howSheet = $('#howSheet'), settingsSheet = $('#settingsSheet'), soundState = $('#soundState'),
       toastEl = $('#toast'), dayBanner = $('#dayBanner');
+const shopScene = $('#shopScene'), visitorFigure = $('#visitorFigure'), askBubble = $('#askBubble'),
+      askName = $('#askName'), askTag = $('#askTag'), askLine = $('#askLine'),
+      acceptBtn = $('#acceptBtn'), shopPhone = $('#shopPhone'), lockName = $('#lockName');
 
 /* ---------------- state ---------------- */
 const SAVE_KEY = 'mend.save.v2';
@@ -255,7 +260,7 @@ const state = {
   patience: 1, hearts: 3, maxHearts: 3, mistakes: 0,
   jobsTotal: 2, jobsDone: 0, jobsWon: 0, earnedToday: 0,
   timerOn: false, sheetOpen: false, started: false,
-  queue: [], lastCustomer: null, todayStars: [],
+  queue: [], lastCustomer: null, todayStars: [], complaint: '',
   saveDay: 0, hasSave: false
 };
 
@@ -412,11 +417,12 @@ function nextCustomer() {
   const job = state.queue[state.jobsDone % state.queue.length] || pick(JOBS);
   state.job = job;
   state.stepIndex = 0; state.stepDone = false;
-  state.phase = 'reading'; state.timerOn = false;
+  state.phase = 'arrival'; state.timerOn = false;
   state.patience = 1; state.maxHearts = 3 + state.upgrades.bench; state.hearts = state.maxHearts;
   state.mistakes = 0; state.mood = '';
   state.customer = pick(CUSTOMERS.filter(c => c !== state.lastCustomer));
   state.lastCustomer = state.customer;
+  state.complaint = pick(job.complaints);
 
   resetPhone(job);
   setCustomer(job);
@@ -424,25 +430,148 @@ function nextCustomer() {
   renderHearts();
   updatePatienceUI(true);
   clearFx(); clearHint();
-  setDock('New work order', 'Read the complaint, then diagnose.', 'READY', 'Diagnose', 'primary');
+  setDock('Customer arriving', 'Listen to the complaint.', 'READY', '', 'primary');
   renderDots(0, false);
   stepBar.style.width = '0%';
   traySlot.className = 'tray-slot';
   traySlot.innerHTML = '<span class="tray-empty">EMPTY BAY</span>';
   trayStatus.textContent = 'READY';
   resetScrewCup();
-  customerBar.classList.remove('in');
-  void customerBar.offsetWidth;
-  customerBar.classList.add('in');
+  showArrival();
 }
 
 function setCustomer(job) {
   const c = state.customer;
   custName.textContent = c.name;
   custTag.textContent = job.phone;
-  custLine.textContent = pick(job.complaints);
+  if (!state.complaint) state.complaint = pick(job.complaints);
+  custLine.textContent = state.complaint;
+  if (lockName) lockName.textContent = `${c.name} · now`;
   renderAvatar('happy');
   state.mood = 'happy';
+}
+
+/* ---------------- shop arrival ---------------- */
+let arrivalTimers = [];
+const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function clearArrivalTimers() { arrivalTimers.forEach(clearTimeout); arrivalTimers = []; }
+function hideShopScene() {
+  clearArrivalTimers();
+  shopScene.classList.remove('show', 'out', 'handoff');
+  shopScene.setAttribute('aria-hidden', 'true');
+  acceptBtn.disabled = true;
+}
+function showArrival() {
+  hideShopScene();
+  if (!state.job || !state.customer) return;
+  const job = state.job, c = state.customer;
+  state.phase = 'arrival';
+  state.timerOn = false;
+  askName.textContent = c.name;
+  askTag.textContent = job.phone;
+  askLine.textContent = '';
+  askBubble.classList.remove('show', 'typing');
+  acceptBtn.disabled = true;
+  acceptBtn.innerHTML = `<span>Listening…</span>${icon('arrow')}`;
+  visitorFigure.innerHTML = avatarSVG(c, 'happy');
+  shopScene.style.setProperty('--skin', c.skin);
+  shopPhone.classList.toggle('cracked', job.id === 'screen');
+  shopPhone.style.opacity = '';
+  shopScene.classList.remove('out', 'handoff', 'show');
+  void shopScene.offsetWidth;
+  shopScene.classList.add('show');
+  shopScene.setAttribute('aria-hidden', 'false');
+  sfx.bell();
+  arrivalTimers.push(setTimeout(() => {
+    if (state.phase !== 'arrival') return;
+    askBubble.classList.add('show', 'typing');
+    typeComplaint(state.complaint);
+  }, 340));
+}
+function finishListening() {
+  if (state.phase !== 'arrival') return;
+  clearArrivalTimers();
+  askLine.textContent = state.complaint;
+  askBubble.classList.remove('typing');
+  if (!acceptBtn.disabled) return;
+  acceptBtn.disabled = false;
+  acceptBtn.innerHTML = `<span>Take the phone</span>${icon('arrow')}`;
+  acceptBtn.classList.add('pop');
+  setTimeout(() => acceptBtn.classList.remove('pop'), 480);
+}
+function typeComplaint(text) {
+  if (reduceMotion()) { finishListening(); return; }
+  let i = 0;
+  const tick = () => {
+    if (state.phase !== 'arrival') return;
+    i = Math.min(text.length, i + 1 + (Math.random() < .5 ? 1 : 0));
+    askLine.textContent = text.slice(0, i);
+    if (i % 6 === 0) sfx.tick();
+    if (i < text.length) arrivalTimers.push(setTimeout(tick, 15));
+    else finishListening();
+  };
+  tick();
+}
+function acceptJob() {
+  if (state.phase !== 'arrival') return;
+  audioUnlock();
+  state.phase = 'handoff';
+  clearArrivalTimers();
+  askLine.textContent = state.complaint;
+  askBubble.classList.remove('typing');
+  acceptBtn.disabled = true;
+  acceptBtn.innerHTML = `<span>Handing over…</span>${icon('arrow')}`;
+  shopScene.classList.add('handoff');
+  sfx.click(); vibrate(8);
+  if (reduceMotion()) { flyPhoneToBench(true); finishArrival(); return; }
+  arrivalTimers.push(setTimeout(() => flyPhoneToBench(false), 340));
+  arrivalTimers.push(setTimeout(finishArrival, 880));
+}
+function flyPhoneToBench(instant) {
+  const from = shopPhone.getBoundingClientRect();
+  shopPhone.style.opacity = '0';
+  if (!from.width) return;
+  const ghost = document.createElement('div');
+  ghost.className = 'shop-phone fly-phone' + (shopPhone.classList.contains('cracked') ? ' cracked' : '');
+  ghost.innerHTML = shopPhone.innerHTML;
+  ghost.style.setProperty('--skin', (state.customer && state.customer.skin) || '#c98a63');
+  Object.assign(ghost.style, {
+    position: 'fixed', left: from.left + 'px', top: from.top + 'px',
+    width: from.width + 'px', height: from.height + 'px',
+    bottom: 'auto', transform: 'none', zIndex: '120', pointerEvents: 'none',
+    borderRadius: '6px', transition: 'none'
+  });
+  document.body.appendChild(ghost);
+  const land = () => {
+    ghost.style.opacity = '0';
+    ghost.style.transition = 'opacity .16s ease';
+    phone.classList.add('receiving');
+    sfx.pop(); vibrate(14);
+    setTimeout(() => { ghost.remove(); phone.classList.remove('receiving'); }, 220);
+  };
+  if (instant) { ghost.remove(); land(); return; }
+  const tx = from.left + from.width / 2, ty = window.innerHeight * .78;
+  requestAnimationFrame(() => {
+    ghost.style.transition = 'transform .66s cubic-bezier(.28,.86,.32,1)';
+    ghost.style.transform = `translate(${tx - (from.left + from.width / 2)}px, ${ty - (from.top + from.height / 2)}px) scale(1.5)`;
+  });
+  setTimeout(land, 670);
+}
+function finishArrival() {
+  if (state.phase !== 'handoff') return;
+  state.phase = 'reading';
+  state.timerOn = false;
+  shopScene.classList.add('out');
+  customerBar.classList.remove('in');
+  void customerBar.offsetWidth;
+  customerBar.classList.add('in');
+  setDock('Work order', 'Diagnose the phone on the bench.', 'READY', 'Diagnose', 'primary');
+  updatePatienceUI(true);
+  toast(`${state.customer.name} hands over the ${state.job.phone}.`, '');
+  arrivalTimers.push(setTimeout(() => {
+    shopScene.classList.remove('show', 'out', 'handoff');
+    shopScene.setAttribute('aria-hidden', 'true');
+  }, 420));
 }
 
 function updatePatienceUI(force) {
@@ -1259,6 +1388,7 @@ function endDay() {
   state.phase = 'day';
   state.timerOn = false;
   cleanupStep();
+  hideShopScene();
   const todayAvg = state.todayStars.length ? state.todayStars.reduce((a, b) => a + b, 0) / state.todayStars.length : 5;
   dayNum.textContent = state.day;
   statRepairs.textContent = `${state.jobsWon}/${state.jobsTotal}`;
@@ -1329,6 +1459,7 @@ function openSettings() {
 function quitToMenu() {
   hideSheet(settingsSheet);
   cleanupStep();
+  hideShopScene();
   state.timerOn = false;
   state.job = null;
   state.phase = 'menu';
@@ -1337,6 +1468,7 @@ function quitToMenu() {
 }
 function resetProgress() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  hideShopScene();
   state.day = 1; state.coins = 0; state.repSum = 0; state.repCount = 0;
   state.upgrades = { tools: 0, sign: 0, bench: 0 };
   state.hasSave = false; state.job = null; state.phase = 'menu';
@@ -1348,6 +1480,15 @@ function resetProgress() {
 }
 
 /* ---------------- wire up ---------------- */
+acceptBtn.addEventListener('click', () => { acceptJob(); });
+askBubble.addEventListener('pointerdown', e => {
+  if (state.phase !== 'arrival') return;
+  e.preventDefault();
+  if (acceptBtn.disabled) finishListening();
+});
+$('.shop-cta').addEventListener('pointerdown', () => {
+  if (state.phase === 'arrival' && acceptBtn.disabled) finishListening();
+});
 actionBtn.addEventListener('click', () => {
   audioUnlock();
   if (state.phase === 'reading') openDiagnosis();
@@ -1451,6 +1592,8 @@ window.MEND = {
     if (btn) chooseKit(btn);
   },
   skip() {
+    if (state.phase === 'arrival') { acceptJob(); return; }
+    if (state.phase === 'handoff') { finishArrival(); return; }
     if (state.phase === 'diag') { this.correct(); return; }
     if (state.phase === 'pay') { payNext.click(); return; }
     if (state.phase === 'fail') { failNext.click(); return; }
@@ -1463,14 +1606,32 @@ window.MEND = {
   },
   jump(id) {
     const j = JOBS.find(x => x.id === id); if (!j) return;
+    hideShopScene();
+    state.complaint = pick(j.complaints);
     state.job = j; state.phase = 'reading'; state.timerOn = false;
     state.stepIndex = 0; state.hearts = 3; state.maxHearts = 3; state.patience = 1;
     resetPhone(j); setCustomer(j); renderHearts(); updatePatienceUI(true);
-    setDock('New work order', 'Read the complaint, then diagnose.', 'READY', 'Diagnose', 'primary');
+    setDock('Work order', 'Diagnose the phone on the bench.', 'READY', 'Diagnose', 'primary');
     renderDots(0, false); setProgress(0);
     menuScreen.classList.add('out');
     setTimeout(() => { menuScreen.style.display = 'none'; }, 420);
     updateDay(); updateMoney();
+  },
+  accept: acceptJob,
+  arrive(id) {
+    const j = JOBS.find(x => x.id === id); if (!j) return;
+    hideShopScene();
+    state.job = j; state.phase = 'arrival'; state.timerOn = false;
+    state.stepIndex = 0; state.hearts = 3; state.maxHearts = 3; state.patience = 1; state.mistakes = 0;
+    state.customer = pick(CUSTOMERS.filter(c => c !== state.lastCustomer));
+    state.lastCustomer = state.customer;
+    state.complaint = pick(j.complaints);
+    resetPhone(j); setCustomer(j); renderHearts(); updatePatienceUI(true);
+    renderDots(0, false); setProgress(0);
+    menuScreen.classList.add('out');
+    setTimeout(() => { menuScreen.style.display = 'none'; }, 420);
+    updateDay(); updateMoney();
+    showArrival();
   },
   setPatience(v) { state.patience = clamp(v, 0, 1); updatePatienceUI(true); },
   endDay, failJob, finishJob,

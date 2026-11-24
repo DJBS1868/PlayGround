@@ -110,7 +110,7 @@
               <div class="lock-screen">
                 <div class="lock-date">TUESDAY, JUNE 4</div>
                 <div class="lock-time">9:41</div>
-                <div class="lock-note"><span class="note-dot"></span><div><b>2 messages</b><small>Maya · now</small></div></div>
+                <div class="lock-note"><span class="note-dot"></span><div><b>2 messages</b><small id="lockName">Maya · now</small></div></div>
               </div>
               <div class="home-screen">
                 <div class="home-time">9:41</div>
@@ -189,6 +189,49 @@
       </div>
       <div class="bar"><i id="stepBar"></i></div>
     </footer>
+
+    <!-- ============ SHOP ARRIVAL ============ -->
+    <section class="shop-scene" id="shopScene" aria-hidden="true">
+      <div class="shop-room">
+        <div class="shop-wall" aria-hidden="true"></div>
+        <div class="shop-ceiling" aria-hidden="true"></div>
+        <div class="shop-lamp" aria-hidden="true"><i></i></div>
+        <div class="shop-sign" aria-hidden="true"><b>MEND</b><span>PHONE REPAIR</span></div>
+        <div class="shop-shelf" aria-hidden="true">
+          <div class="shelf-row"><i class="case c1"></i><i class="case c2"></i><i class="case c3"></i><i class="case c4"></i><i class="case c1"></i></div>
+          <div class="shelf-row"><i class="box"></i><i class="box tall"></i><i class="case c2"></i><i class="box"></i></div>
+        </div>
+        <div class="shop-door" aria-hidden="true">
+          <span class="door-glass"></span>
+          <span class="door-handle"></span>
+          <span class="door-open">OPEN</span>
+        </div>
+        <div class="shop-poster" aria-hidden="true"><b>NO FIX</b><span>NO FEE</span><i></i></div>
+        <div class="shop-clock" aria-hidden="true"><i></i><b></b></div>
+        <div class="shop-floor" aria-hidden="true"></div>
+        <div class="visitor" id="visitor">
+          <div class="visitor-figure" id="visitorFigure"></div>
+        </div>
+        <div class="shop-counter" aria-hidden="true">
+          <span class="counter-top"></span>
+          <span class="counter-front"><span class="counter-mark">MEND</span></span>
+        </div>
+        <div class="shop-plant" aria-hidden="true">
+          <span class="leaf l1"></span><span class="leaf l2"></span><span class="leaf l3"></span><span class="leaf l4"></span><span class="pot"></span>
+        </div>
+        <div class="shop-phone" id="shopPhone" aria-hidden="true">
+          <i class="sp-screen"></i><i class="sp-notch"></i>
+        </div>
+      </div>
+      <div class="ask" id="askBubble">
+        <div class="ask-top"><b id="askName">Maya</b><span id="askTag">NOVA 12 Pro</span></div>
+        <p id="askLine"></p>
+      </div>
+      <div class="shop-cta">
+        <button class="primary wide" id="acceptBtn" disabled><span>Listening…</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+        <span class="cta-note">Take the phone to your bench</span>
+      </div>
+    </section>
   </section>
 
   <!-- ============ OVERLAYS ============ -->
@@ -248,7 +291,7 @@
       <span class="eyebrow">HOW TO PLAY</span>
       <h2>Fix phones. Keep cool.</h2>
       <div class="how-list">
-        <div class="how-row"><span class="how-num">1</span><div><b>Diagnose</b><p>Read the complaint and choose the right repair kit.</p></div></div>
+        <div class="how-row"><span class="how-num">1</span><div><b>Take the job</b><p>Hear the complaint, accept the phone, and choose the right repair kit.</p></div></div>
         <div class="how-row"><span class="how-num">2</span><div><b>Open it up</b><p>Tap screws, rub to heat adhesive, and lift the display.</p></div></div>
         <div class="how-row"><span class="how-num">3</span><div><b>Swap the part</b><p>Drag the bad part into the tray, then drag the new one in.</p></div></div>
         <div class="how-row"><span class="how-num">4</span><div><b>Test &amp; get paid</b><p>Press to connect, boot the phone, and keep the customer happy.</p></div></div>
