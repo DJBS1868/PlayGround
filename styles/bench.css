@@ -537,7 +537,7 @@
     linear-gradient(90deg, #5b5549, #e7dfcf 45%, #867d6c);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
 }
-.cable.plugged { transform: translate(-50%, -82px); }
+.cable.plugged { transform: translate(-50%, -30px); }
 .cable.plugged .plug-head { box-shadow: 0 0 12px rgba(255, 200, 90, .5); }
 
 /* ---------- feedback ---------- */

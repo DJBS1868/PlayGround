@@ -867,7 +867,7 @@
 .phone.screen-off .device-display { background: #030506; }
 .phone.screen-off .screen-ui { opacity: 0; }
 .phone.screen-off .screen-glare { opacity: .35; }
-.phone.screen-off .cracked { opacity: .45; }
+.phone.screen-off.issue-screen .cracked { opacity: .45; }
 
 .boot-mark {
   position: absolute;

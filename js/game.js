@@ -433,6 +433,7 @@ function resetBenchVisuals() {
   DOM.screenBadge.hidden = true
   DOM.testLayer.innerHTML = ''
   DOM.cableWrap.hidden = true
+  DOM.cableWrap.style.bottom = ''
   DOM.cable.classList.remove('plugged', 'dragging')
   DOM.cable.style.transform = ''
   DOM.cable.style.transition = ''
@@ -1373,8 +1374,20 @@ function setupPlug(step) {
   DOM.gestureHint.textContent = 'DRAG THE CABLE INTO THE PORT'
   DOM.gestureHint.style.bottom = '154px'
 
+  // Park the plug just below the charging port so the upward drag reads clearly.
+  const port = $('.part.port', DOM.phone)
+  if (port) {
+    const portRect = port.getBoundingClientRect()
+    const benchRect = DOM.bench.getBoundingClientRect()
+    const cableHeight = DOM.cable.offsetHeight || 123
+    const plugTop = portRect.bottom + 12
+    const wrapBottom = plugTop + 10 + cableHeight
+    DOM.cableWrap.style.bottom = `${Math.round(benchRect.bottom - wrapBottom)}px`
+  }
+
+  let plugged = false
   DOM.cable.onpointerdown = (event) => {
-    if (busy) return
+    if (busy || plugged) return
     if (!requireArmed()) return
     event.preventDefault()
     sfx.duct()
@@ -1395,6 +1408,7 @@ function setupPlug(step) {
       DOM.cable.classList.remove('dragging')
       DOM.cable.style.transition = ''
       if (dy < -52) {
+        plugged = true
         DOM.cable.style.transform = ''
         DOM.cable.classList.add('plugged')
         sfx.duct()
@@ -1460,6 +1474,7 @@ function setupTest(step) {
       if (busy || running) return
       running = true
       hit.classList.remove('armed')
+      hit.style.opacity = '0'
       event.preventDefault()
       sfx.boot()
       vibrate(18)
