@@ -8,7 +8,7 @@
 
   const WORLD = { w: 2400, h: 900, groundY: 720, floorBottom: 900 };
   // Keep the action above the bottom hotbar on short landscape phones.
-  const UI_OFFSET_Y = 44;
+  const UI_OFFSET_Y = 52;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, t) => a + (b - a) * t;
   const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
@@ -307,6 +307,7 @@
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
     scale = Math.max(W / 1600, H / 900);
+    camera.zoom = W <= 960 ? 1.08 : 1;
     viewW = W / (scale * camera.zoom);
     viewH = H / (scale * camera.zoom);
     clampCamera();
@@ -737,16 +738,16 @@
 
   // ---------------------------------------------------------------- ragdolls
   const PART_DIMS = {
-    torso: { w: 50, h: 150 },
-    head: { w: 64, h: 56 },
-    armL1: { w: 19, h: 62 },
-    armL2: { w: 18, h: 56 },
-    armR1: { w: 19, h: 62 },
-    armR2: { w: 18, h: 56 },
-    legL1: { w: 20, h: 66 },
-    legL2: { w: 19, h: 60 },
-    legR1: { w: 20, h: 66 },
-    legR2: { w: 19, h: 60 }
+    torso: { w: 54, h: 104 },
+    head: { w: 72, h: 66 },
+    armL1: { w: 20, h: 44 },
+    armL2: { w: 19, h: 40 },
+    armR1: { w: 20, h: 44 },
+    armR2: { w: 19, h: 40 },
+    legL1: { w: 21, h: 46 },
+    legL2: { w: 20, h: 44 },
+    legR1: { w: 21, h: 46 },
+    legR2: { w: 20, h: 44 }
   };
 
   function createRagdoll(x, feetY, palKey, opts = {}) {
@@ -775,9 +776,10 @@
       severed: new Set()
     };
 
-    const torsoY = feetY - 201;
-    const shoulderY = torsoY - 52;
-    const hipY = torsoY + 75;
+    const torsoY = feetY - 142;
+    const shoulderY = torsoY - 36;
+    const hipY = torsoY + 52;
+    const D = PART_DIMS;
     const bodyOpts = {
       friction: 0.75,
       frictionAir: 0.012,
@@ -787,16 +789,16 @@
       collisionFilter: { category: 0x0002, mask: 0xffffffff }
     };
 
-    const torso = Bodies.rectangle(x, torsoY, 50, 150, bodyOpts);
-    const head = Bodies.rectangle(x, torsoY - 101, 64, 56, { ...bodyOpts, density: 0.003 });
-    const armL1 = Bodies.rectangle(x - 33, shoulderY + 31, 19, 62, bodyOpts);
-    const armL2 = Bodies.rectangle(x - 33, shoulderY + 90, 18, 56, bodyOpts);
-    const armR1 = Bodies.rectangle(x + 33, shoulderY + 31, 19, 62, bodyOpts);
-    const armR2 = Bodies.rectangle(x + 33, shoulderY + 90, 18, 56, bodyOpts);
-    const legL1 = Bodies.rectangle(x - 12, hipY + 33, 20, 66, bodyOpts);
-    const legL2 = Bodies.rectangle(x - 12, hipY + 96, 19, 60, bodyOpts);
-    const legR1 = Bodies.rectangle(x + 12, hipY + 33, 20, 66, bodyOpts);
-    const legR2 = Bodies.rectangle(x + 12, hipY + 96, 19, 60, bodyOpts);
+    const torso = Bodies.rectangle(x, torsoY, D.torso.w, D.torso.h, bodyOpts);
+    const head = Bodies.rectangle(x, torsoY - 85, D.head.w, D.head.h, { ...bodyOpts, density: 0.003 });
+    const armL1 = Bodies.rectangle(x - 35, shoulderY + 22, D.armL1.w, D.armL1.h, bodyOpts);
+    const armL2 = Bodies.rectangle(x - 35, shoulderY + 64, D.armL2.w, D.armL2.h, bodyOpts);
+    const armR1 = Bodies.rectangle(x + 35, shoulderY + 22, D.armR1.w, D.armR1.h, bodyOpts);
+    const armR2 = Bodies.rectangle(x + 35, shoulderY + 64, D.armR2.w, D.armR2.h, bodyOpts);
+    const legL1 = Bodies.rectangle(x - 13, hipY + 23, D.legL1.w, D.legL1.h, bodyOpts);
+    const legL2 = Bodies.rectangle(x - 13, hipY + 68, D.legL2.w, D.legL2.h, bodyOpts);
+    const legR1 = Bodies.rectangle(x + 13, hipY + 23, D.legR1.w, D.legR1.h, bodyOpts);
+    const legR2 = Bodies.rectangle(x + 13, hipY + 68, D.legR2.w, D.legR2.h, bodyOpts);
 
     r.parts = { torso, head, armL1, armL2, armR1, armR2, legL1, legL2, legR1, legR2 };
     Object.entries(r.parts).forEach(([name, body]) => {
@@ -817,15 +819,15 @@
       return c;
     };
 
-    addJoint(torso, head, { x: 0, y: -75 }, { x: 0, y: 26 }, 0.95);
-    addJoint(torso, armL1, { x: -27, y: -52 }, { x: 0, y: -31 });
-    addJoint(armL1, armL2, { x: 0, y: 31 }, { x: 0, y: -28 });
-    addJoint(torso, armR1, { x: 27, y: -52 }, { x: 0, y: -31 });
-    addJoint(armR1, armR2, { x: 0, y: 31 }, { x: 0, y: -28 });
-    addJoint(torso, legL1, { x: -12, y: 75 }, { x: 0, y: -33 }, 0.95);
-    addJoint(legL1, legL2, { x: 0, y: 33 }, { x: 0, y: -30 }, 0.95);
-    addJoint(torso, legR1, { x: 12, y: 75 }, { x: 0, y: -33 }, 0.95);
-    addJoint(legR1, legR2, { x: 0, y: 33 }, { x: 0, y: -30 }, 0.95);
+    addJoint(torso, head, { x: 0, y: -52 }, { x: 0, y: 33 }, 0.95);
+    addJoint(torso, armL1, { x: -27, y: -36 }, { x: 0, y: -22 });
+    addJoint(armL1, armL2, { x: 0, y: 22 }, { x: 0, y: -20 });
+    addJoint(torso, armR1, { x: 27, y: -36 }, { x: 0, y: -22 });
+    addJoint(armR1, armR2, { x: 0, y: 22 }, { x: 0, y: -20 });
+    addJoint(torso, legL1, { x: -13, y: 52 }, { x: 0, y: -23 }, 0.95);
+    addJoint(legL1, legL2, { x: 0, y: 23 }, { x: 0, y: -22 }, 0.95);
+    addJoint(torso, legR1, { x: 13, y: 52 }, { x: 0, y: -23 }, 0.95);
+    addJoint(legR1, legR2, { x: 0, y: 23 }, { x: 0, y: -22 }, 0.95);
 
     Composite.add(world, Object.values(r.parts));
     ragdolls.push(r);
@@ -1174,7 +1176,7 @@
     history.length = 0;
     camera.x = 800;
     camera.y = 450;
-    camera.zoom = 1;
+    camera.zoom = W <= 960 ? 1.08 : 1;
     clampCamera();
     updateVictimCount();
     updateSelectionUI();
@@ -2087,8 +2089,9 @@
     }
 
     // warning sign / wall placard
-    drawWallSign(1660, 170);
-    drawWallSign(300, 180, true);
+    drawWallSign(1660, 270);
+    // The small placard crowds the top-left HUD on short landscape phones.
+    if (W >= 1000 && H >= 700) drawWallSign(300, 180, true);
 
     // faint lab lettering
     if (right > 920 && left < 1400) {
@@ -2225,7 +2228,7 @@
       const height = clamp((WORLD.groundY - r.parts.torso.position.y) / 300, 0, 1);
       ctx.fillStyle = `rgba(0,0,0,${0.22 - height * 0.08})`;
       ctx.beginPath();
-      ctx.ellipse(x, WORLD.groundY + 5, 44 + height * 14, 7 + height * 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, WORLD.groundY + 5, 52 + height * 14, 8 + height * 3, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     for (const b of props) {
@@ -2500,8 +2503,8 @@
       ctx.lineWidth = 16;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(p.torso.position.x, p.torso.position.y - 73);
-      ctx.lineTo(p.head.position.x, p.head.position.y + 17);
+      ctx.moveTo(p.torso.position.x, p.torso.position.y - (p.torso.plugin.h / 2 - 2));
+      ctx.lineTo(p.head.position.x, p.head.position.y + (p.head.plugin.h / 2 - 12));
       ctx.stroke();
       ctx.restore();
     }
@@ -2703,11 +2706,11 @@
     }
     if (r.severed.has('legL1')) {
       ctx.fillStyle = '#6d1010';
-      ctx.beginPath(); ctx.arc(-12, h / 2 - 2, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-13, h / 2 - 2, 8, 0, Math.PI * 2); ctx.fill();
     }
     if (r.severed.has('legR1')) {
       ctx.fillStyle = '#6d1010';
-      ctx.beginPath(); ctx.arc(12, h / 2 - 2, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(13, h / 2 - 2, 8, 0, Math.PI * 2); ctx.fill();
     }
 
     if (r.health < 72 || r.dead) {
@@ -2743,12 +2746,14 @@
     ctx.lineWidth = 4;
     ctx.strokeStyle = pal.line;
     ctx.fillStyle = pal.base;
-    rr(ctx, -w / 2, -h / 2, w, h, 15);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     ctx.save();
-    rr(ctx, -w / 2, -h / 2, w, h, 15);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
     ctx.clip();
     ctx.fillStyle = pal.light;
     ctx.globalAlpha = 0.35;
@@ -2783,8 +2788,8 @@
       ctx.lineWidth = 2;
       for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
-        ctx.moveTo(i * 11, -h / 2 + 8);
-        ctx.quadraticCurveTo(i * 16, 0, i * 10, h / 2 - 8);
+        ctx.moveTo(i * 13, -h / 2 + 8);
+        ctx.quadraticCurveTo(i * 19, 0, i * 12, h / 2 - 8);
         ctx.stroke();
       }
     } else if (pal.type === 'orange' || pal.type === 'lemon') {
@@ -2801,7 +2806,7 @@
       for (let i = 0; i < 5; i++) {
         const a = i / 5 * Math.PI * 2;
         ctx.beginPath();
-        ctx.ellipse(Math.cos(a) * 7, -h / 2 - 2 + Math.sin(a) * 3, 7, 2.4, a, 0, Math.PI * 2);
+        ctx.ellipse(Math.cos(a) * 8, -h / 2 - 2 + Math.sin(a) * 3, 8, 2.6, a, 0, Math.PI * 2);
         ctx.fill(); ctx.stroke();
       }
     } else if (pal.type === 'pear') {
@@ -2821,7 +2826,7 @@
       ctx.beginPath(); ctx.ellipse(8, -h / 2 - 3, 6, 3, -0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.13)';
       for (let i = 0; i < 5; i++) {
-        ctx.beginPath(); ctx.arc(-13 + i * 7, -h / 2 + 9 + (i % 2) * 5, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-16 + i * 8, -h / 2 + 9 + (i % 2) * 5, 3, 0, Math.PI * 2); ctx.fill();
       }
     } else if (pal.type === 'ninja') {
       ctx.fillStyle = '#b5382f';
@@ -2832,7 +2837,7 @@
       ctx.strokeStyle = '#dffaff';
       ctx.lineWidth = 2;
       for (let i = 0; i < 3; i++) {
-        const x = -14 + i * 14;
+        const x = -16 + i * 16;
         ctx.beginPath();
         ctx.moveTo(x, -h / 2 + 2);
         ctx.lineTo(x + 2, -h / 2 - 7);
@@ -2848,8 +2853,8 @@
       ctx.fill(); ctx.stroke();
     }
 
-    const eyeY = -3;
-    const eyeX = 12;
+    const eyeY = -1;
+    const eyeX = 16;
     if (dead) {
       ctx.strokeStyle = '#12140b';
       ctx.lineWidth = 3;
@@ -2861,11 +2866,11 @@
       }
       ctx.fillStyle = '#20100c';
       ctx.beginPath();
-      ctx.ellipse(0, 14, 8, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 17, 9, 7, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#8e1b15';
       ctx.beginPath();
-      ctx.ellipse(0, 16, 4.5, 2.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 19, 4.5, 2.8, 0, 0, Math.PI * 2);
       ctx.fill();
     } else if (blink) {
       ctx.strokeStyle = '#12140b';
@@ -2886,7 +2891,7 @@
       ctx.strokeStyle = '#12140b';
       ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.arc(0, 13, 7, 0.15, Math.PI - 0.15);
+      ctx.arc(0, 17, 9, 0.15, Math.PI - 0.15);
       ctx.stroke();
     }
 
@@ -2903,7 +2908,8 @@
       ctx.globalAlpha = r.hitFlash * 1.5;
       ctx.strokeStyle = '#ff7462';
       ctx.lineWidth = 4;
-      rr(ctx, -w / 2, -h / 2, w, h, 15);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -3287,7 +3293,7 @@
       ctx.ellipse(w.x, WORLD.groundY + 4, 30, 6, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 0.58;
-      ctx.drawImage(cv, w.x - 42, WORLD.groundY - 136, 84, 84);
+      ctx.drawImage(cv, w.x - 44, WORLD.groundY - 76, 88, 88);
       ctx.restore();
     } else if (item.cat === 'build') {
       ctx.save();
