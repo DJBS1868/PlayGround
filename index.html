@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#4b4c50" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Melon Playground</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="game-shell">
+    <canvas id="game" aria-label="Melon Playground physics sandbox"></canvas>
+
+    <div id="ui" class="ui">
+      <header class="hud-top">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span class="brand-seed s1"></span><span class="brand-seed s2"></span><span class="brand-seed s3"></span>
+          </div>
+          <div class="brand-copy">
+            <span class="brand-kicker">PHYSICS SANDBOX</span>
+            <span class="brand-name">MELON <b>PLAYGROUND</b></span>
+          </div>
+          <div class="room-chip"><i></i> LAB 07</div>
+        </div>
+
+        <div class="top-actions">
+          <button class="hud-btn" id="btnUndo" title="Undo spawn" aria-label="Undo">
+            <svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a5 5 0 0 1 5 5v1"/></svg>
+          </button>
+          <button class="hud-btn" id="btnReset" title="Reset scene" aria-label="Reset scene">
+            <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.1"/><path d="M20 4v7h-7"/></svg>
+          </button>
+          <button class="hud-btn" id="btnFullscreen" title="Fullscreen" aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+          </button>
+          <button class="hud-btn" id="btnPause" title="Pause" aria-label="Pause">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="right-rail">
+        <button class="shop-button" id="btnShop" aria-label="Open item shop">
+          <span class="shop-icon">
+            <svg viewBox="0 0 32 32"><path d="M8 11h16l2 16H6L8 11Z"/><path d="M11 11V8a5 5 0 0 1 10 0v3"/><path d="M11 18h10"/></svg>
+          </span>
+          <span class="shop-label">ITEMS</span>
+          <span class="shop-badge">+</span>
+        </button>
+        <button class="rail-btn" id="btnMute" title="Sound on/off" aria-label="Toggle sound">
+          <svg class="icon-sound" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>
+        </button>
+      </div>
+
+      <div class="hint-pill" id="hintPill"><span class="hint-dot"></span><span id="hintText">Drag a melon, or open ITEMS to cause trouble.</span></div>
+
+      <div class="hotbar-wrap">
+        <div class="tool-name" id="toolName">HAND</div>
+        <div class="hotbar" id="hotbar"></div>
+      </div>
+
+      <aside class="drawer" id="drawer" aria-hidden="true">
+        <div class="drawer-head">
+          <div>
+            <div class="drawer-eyebrow">MELON CORP.</div>
+            <h1>ITEM SHOP</h1>
+          </div>
+          <button class="close-btn" id="btnCloseShop" aria-label="Close item shop">
+            <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="drawer-tabs" id="drawerTabs"></div>
+        <div class="drawer-scroll">
+          <div class="item-grid" id="itemGrid"></div>
+        </div>
+        <div class="drawer-foot">
+          <div class="stock"><span class="stock-light"></span> INFINITE STOCK</div>
+          <button class="clear-btn" id="btnClear">CLEAR EVERYTHING</button>
+        </div>
+      </aside>
+
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div class="modal-backdrop" id="pauseModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-stripe"></div>
+        <div class="modal-icon">
+          <svg viewBox="0 0 48 48"><path d="M18 12v24M30 12v24"/></svg>
+        </div>
+        <div class="modal-kicker">SANDBOX PAUSED</div>
+        <h2>TAKE A BREATHER</h2>
+        <p>The melons will wait. Probably.</p>
+        <div class="modal-actions">
+          <button class="primary-btn" id="btnResume">RESUME</button>
+          <button class="ghost-btn" id="btnRestart">RESET SCENE</button>
+          <button class="ghost-btn" id="btnClearPause">CLEAR EVERYTHING</button>
+        </div>
+        <div class="modal-meta"><span>PHYSICS: ON</span><span>VICTIMS: <b id="victimCount">4</b></span></div>
+      </div>
+    </div>
+
+    <div class="rotate-overlay" id="rotateOverlay">
+      <div class="rotate-phone">
+        <div class="phone-body"><span></span></div>
+        <svg class="rotate-arrow" viewBox="0 0 64 64"><path d="M13 33a20 20 0 0 1 33-15"/><path d="m43 9 4 10-11 2"/><path d="M51 31a20 20 0 0 1-33 15"/><path d="m21 55-4-10 11-2"/></svg>
+      </div>
+      <h2>ROTATE YOUR DEVICE</h2>
+      <p>Melon Playground is best served in landscape.</p>
+      <button class="primary-btn" id="btnLandscape">CONTINUE ANYWAY</button>
+    </div>
+  </div>
+
+  <script src="vendor/matter.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
